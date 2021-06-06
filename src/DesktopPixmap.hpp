@@ -18,12 +18,14 @@ enum PixmapFormat
 class DesktopPixmap
 {
 public:
-  inline static xcb_gcontext_t gc_; ///< Graphic context
-  short x;                          ///< TODO Might not need this
-  short y;                          ///< TODO Might not need this
+  inline static xcb_gcontext_t gc_;    ///< Graphic context
+  inline static xcb_connection_t *c_;  ///< Xserver connection
+  inline static xcb_screen_t *screen_; ///< X screen
+  short x;                             ///< x coordinate of the top left corner
+  short y;                             ///< y coordinate of the top left corner
   uint16_t width;
   uint16_t height;
-  uint8_t *image_ptr;     ///< Pointer to the image structure. TODO Make smart
+  uint8_t *image_ptr;     ///< Pointer to the image structure. TODO Make smart?
   uint32_t length;        ///< Length of the XImage data structure
   std::string name;       ///< _NET_WM_NAME of display
   PixmapFormat format;    /* XY_PIXMAP = 1, Z_PIXMAP = 2 */
@@ -31,8 +33,8 @@ public:
 
   DesktopPixmap (short x,         ///< x coordinate of the top left corner
                  short y,         ///< y coordinate of the top left corner
-                 uint16_t height, ///< Height of the display
                  uint16_t width,  ///< Width of the display
+                 uint16_t height, ///< Height of the display
                  const std::string &name ///< Name of the display (_NET_WM_NAME)
   );
   ~DesktopPixmap ();
@@ -40,15 +42,15 @@ public:
   /**
    * TODO Rename to something more fitting
    */
-  void saveImage (xcb_connection_t *c, xcb_screen_t &screen,
-                  PixmapFormat format = kZPixmap // Default to more efficient
-  );
-  void putImage (xcb_connection_t *c, xcb_screen_t &screen);
+  void saveImage (PixmapFormat format = kZPixmap); // Default to more efficient
+  /**
+   * Saves image to the instance's pixmap
+   */
+  void putImage () const;
 
 private:
-  // XXX Do I need static here?
-  static void create_gc (xcb_connection_t *c, xcb_screen_t &screen);
-  void create_pixmap (xcb_connection_t *c, xcb_screen_t &screen);
+  static void create_gc ();
+  void create_pixmap ();
 };
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */
