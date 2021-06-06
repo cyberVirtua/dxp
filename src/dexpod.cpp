@@ -14,7 +14,7 @@ main ()
 
   // NOTE Change dimensions to fit your display
   // NOTE Big values don't work. Can't screenshot entire screen
-  DesktopPixmap d (1080, 0, 1440, 440, "DP-1");
+  DesktopPixmap d (1080, 0, 1440, 1440, "DP-1");
 
   // connect to the X server and get screen
   c = xcb_connect (NULL, NULL);
@@ -41,13 +41,24 @@ main ()
 
   xcb_map_window (c, window_id);
 
-  d.saveImage (c, *screen);
-  d.putImage (c, *screen);
+  d.saveImage ();
+  d.putImage ();
+
+  for (int i = 0; i < 1000; i += 4)
+    {
+      std::cout << static_cast<int> (d.image_ptr[i]) << " "
+                << static_cast<int> (d.image_ptr[i + 1]) << " "
+                << static_cast<int> (d.image_ptr[i + 2]) << "\n";
+    }
+  std::cout << std::endl;
 
   // Mapping pixmap onto window
   while (1)
     {
-      usleep (10000);
+      usleep (1000);
+
+      d.saveImage ();
+      d.putImage ();
 
       xcb_copy_area (c, d.pixmap_id, window_id, DesktopPixmap::gc_, 0, 0, 0, 0,
                      d.height, d.width);
