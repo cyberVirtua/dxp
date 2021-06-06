@@ -30,6 +30,7 @@ public:
   std::string name;       ///< _NET_WM_NAME of display
   PixmapFormat format;    /* XY_PIXMAP = 1, Z_PIXMAP = 2 */
   xcb_pixmap_t pixmap_id; ///< Constant id for the screenshot's pixmap
+  xcb_get_image_reply_t *gi_reply; ///< get_image reply. Saving to free it later
 
   DesktopPixmap (short x,         ///< x coordinate of the top left corner
                  short y,         ///< y coordinate of the top left corner

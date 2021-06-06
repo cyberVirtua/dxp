@@ -23,6 +23,7 @@ DesktopPixmap::DesktopPixmap (
   this->image_ptr = nullptr;
   this->pixmap_id = 0;
   this->length = 0;
+  this->gi_reply = nullptr;
 
   // Connect to X. NULL will use $DISPLAY
   DesktopPixmap::c_ = xcb_connect (NULL, NULL);
@@ -50,9 +51,10 @@ DesktopPixmap::saveImage (PixmapFormat pixmap_format)
 {
   this->format = pixmap_format;
 
-  // FIXME How to free image_ptr?
-  // It causes memory leak, as xcb_get_image always allocates new space
-  // delete[] this->image_ptr;
+  // Not freeing gi_reply causes memory leak,
+  // as xcb_get_image always allocates new space
+  // This deallocates saved image on x server
+  delete[] this->gi_reply;
 
   auto gi_cookie = xcb_get_image (
       DesktopPixmap::c_,            /* Connection */
@@ -63,7 +65,8 @@ DesktopPixmap::saveImage (PixmapFormat pixmap_format)
   );
 
   // TODO Handle errors
-  auto *gi_reply = xcb_get_image_reply (DesktopPixmap::c_, gi_cookie, nullptr);
+  // Saving reply to free it later. Fixes memory leak
+  this->gi_reply = xcb_get_image_reply (DesktopPixmap::c_, gi_cookie, nullptr);
 
   // Casting for later use
   this->length = static_cast<uint32_t> (xcb_get_image_data_length (gi_reply));
