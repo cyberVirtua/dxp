@@ -6,14 +6,13 @@
 
 enum PixmapFormat
 {
-  kXyPixmap = 1,
+  // TODO XY Bitmap does not work
+  kXyPixmap = 1, // 100 times slower than kZPixmap for big pixmap
   kZPixmap = 2
 };
 
 /**
  * Captures and stores desktop screenshot in the specified pixmap format
- *
- * XXX Maybe use static xcb_connection_t?
  */
 class DesktopPixmap
 {
@@ -43,7 +42,7 @@ public:
   /**
    * TODO Rename to something more fitting
    */
-  void saveImage (PixmapFormat format = kZPixmap); // Default to more efficient
+  void saveImage (PixmapFormat format = kZPixmap); // Default to fastest
   /**
    * Saves image to the instance's pixmap
    */

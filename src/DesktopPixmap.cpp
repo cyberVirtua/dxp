@@ -40,12 +40,22 @@ DesktopPixmap::DesktopPixmap (
 
 DesktopPixmap::~DesktopPixmap ()
 {
-  delete[] this->image_ptr;
+  delete[] this->gi_reply;
   xcb_free_pixmap (DesktopPixmap::c_, this->pixmap_id);
   xcb_free_gc (DesktopPixmap::c_, DesktopPixmap::gc_);
   xcb_disconnect (DesktopPixmap::c_);
 }
 
+/**
+ * Saves pointer to the screen image in the specified pixmap_format.
+ *
+ * @param pixmap_format Bit format for the saved image. Defaults to the faster
+ * Z_Pixmap.
+ *
+ * FIXME Implement screenshotter that will not capture entire screen at once
+ * malloc() can reserve only 16711568 bytes for a pixmap.
+ * But ZPixmap of QHD Ultrawide is 3440 * 1440 * 4 = 19814400 bytes long.
+ */
 void
 DesktopPixmap::saveImage (PixmapFormat pixmap_format)
 {
@@ -73,6 +83,9 @@ DesktopPixmap::saveImage (PixmapFormat pixmap_format)
   this->image_ptr = xcb_get_image_data (gi_reply);
 }
 
+/**
+ * Puts image on the instance's pixmap
+ */
 void
 DesktopPixmap::putImage () const
 {

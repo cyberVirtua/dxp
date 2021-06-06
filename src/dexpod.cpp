@@ -13,8 +13,10 @@ main ()
   xcb_screen_t *screen;
 
   // NOTE Change dimensions to fit your display
-  // NOTE Big values don't work. Can't screenshot entire screen
-  DesktopPixmap d (1080, 0, 1440, 1440, "DP-1");
+  // FIXME Implement screenshotter that will not capture entire screen at once
+  // malloc() can reserve only 16711568 bytes for a pixmap
+  // But ZPixmap of QHD Ultrawide is 3440 * 1440 * 4 = 19814400 bytes long
+  DesktopPixmap d (0, 0, 1000, 1000, "DP-1");
 
   // connect to the X server and get screen
   c = xcb_connect (NULL, NULL);
@@ -44,24 +46,13 @@ main ()
   d.saveImage ();
   d.putImage ();
 
-  for (int i = 0; i < 1000; i += 4)
-    {
-      std::cout << static_cast<int> (d.image_ptr[i]) << " "
-                << static_cast<int> (d.image_ptr[i + 1]) << " "
-                << static_cast<int> (d.image_ptr[i + 2]) << "\n";
-    }
-  std::cout << std::endl;
-
   // Mapping pixmap onto window
   while (1)
     {
-      usleep (1000);
-
-      d.saveImage ();
-      d.putImage ();
+      usleep (100000);
 
       xcb_copy_area (c, d.pixmap_id, window_id, DesktopPixmap::gc_, 0, 0, 0, 0,
-                     d.height, d.width);
+                     d.width, d.height);
 
       /* We flush the request */
       xcb_flush (c);
