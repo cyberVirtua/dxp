@@ -17,6 +17,7 @@ DesktopPixmap::DesktopPixmap (
   this->width = width;
   this->height = height;
   this->name = name;
+  this->format = kZPixmap; // Default to the fastest pixmap
 
   // Initializing non built-in types to zeros
   DesktopPixmap::gc_ = 0;
