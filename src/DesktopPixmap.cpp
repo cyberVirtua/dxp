@@ -20,23 +20,26 @@ DesktopPixmap::DesktopPixmap (
   this->format = kZPixmap; // Default to the fastest pixmap
 
   // Initializing non built-in types to zeros
-  DesktopPixmap::gc_ = 0;
   this->image_ptr = nullptr;
   this->pixmap_id = 0;
   this->length = 0;
   this->gi_reply = nullptr;
 
-  // Connect to X. NULL will use $DISPLAY
-  DesktopPixmap::c_ = xcb_connect (NULL, NULL);
-  DesktopPixmap::screen_
-      = xcb_setup_roots_iterator (xcb_get_setup (DesktopPixmap::c_)).data;
+  // Initialize static attributes only when they don't already exist
+  if (!DesktopPixmap::c_ || !DesktopPixmap::screen_ || !DesktopPixmap::gc_)
+    {
+      // Connect to X. NULL will use $DISPLAY
+      DesktopPixmap::c_ = xcb_connect (NULL, NULL);
+      DesktopPixmap::screen_
+          = xcb_setup_roots_iterator (xcb_get_setup (DesktopPixmap::c_)).data;
 
-  // Initialize Graphic Context
-  create_gc ();
+      // Initialize Graphic Context
+      create_gc ();
 
-  // Create a pixmap
-  // TODO This is suboptimal for compressed screenshots
-  create_pixmap ();
+      // Create a pixmap
+      // TODO This is suboptimal for compressed screenshots
+      create_pixmap ();
+    }
 }
 
 DesktopPixmap::~DesktopPixmap ()
