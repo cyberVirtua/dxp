@@ -3,7 +3,7 @@
 #include <ostream>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
-
+#include <math.h>
 DesktopPixmap::DesktopPixmap (
     const short x,          ///< x coordinate of the top left corner
     const short y,          ///< y coordinate of the top left corner
@@ -123,4 +123,53 @@ DesktopPixmap::create_pixmap ()
   xcb_create_pixmap (DesktopPixmap::c_, DesktopPixmap::screen_->root_depth,
                      this->pixmap_id, DesktopPixmap::screen_->root, this->width,
                      this->height);
+}
+void
+DesktopPixmap::resize(int new_dim, char flag){
+  //Optional: add bilinear. See belinear_attempts.cpp. This one is ok,
+  //Under condition old dimension/new dimension>20/13.
+  //Some artifacts can appear however.
+  //O(length)
+  int new_width;
+  int new_height;
+  float  det;
+  float sum=0; 
+  switch (flag)
+  {
+    case 'h':
+      new_height=new_dim;
+      det=float(this->height)/float(new_height);
+      new_width=round(float(this->width)/det);
+      break;
+    case 'w':
+      new_width=new_dim;
+      det=float(this->width)/float(new_width);
+      new_height=round(float(this->height)/det);
+      break;
+  };
+  int upper=int(ceil(det));
+    for(int j=0;j<new_height;j++)//height, rows traversal, pixels!
+    {
+      
+      for(int i=0;i<new_width;i++)//width, bite in row traversal
+        {
+          for(int xi=0; xi<3;xi++)//color channel, r g b 0, r g b 0
+          {
+            for(int k=0;k<upper;k++)//the number of arguments in sum depends on ceil(det)! doesn't switch pixels! 
+            {
+              for(int z=0;z<upper;z++)//the number of arguments in sum depends on ceil(det)! doesn't switch pixels! 
+              {     
+                  sum=sum+this->image_ptr[int((i*det))*4+xi+this->width*4*(int((j*det))+k)+z*4];
+                  //aprox. column bite + color chanell + aprox. row * (cur row counter + count of bites needed by y) + count of bites needed by x * color chanell multiplier
+              };
+            };
+            this->image_ptr[i*4+xi+j*new_width*4]=sum/upper/upper;
+            sum=0;
+        };
+      };
+    };
+  this->length=new_height*new_width*4;
+  this->width=new_width;
+  this->height=new_height;
+  
 }
