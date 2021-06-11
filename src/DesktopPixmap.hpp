@@ -47,7 +47,7 @@ public:
    * Saves image to the instance's pixmap
    */
   void putImage () const;
-
+  void resize(int new_dim, char flag);
 private:
   static void create_gc ();
   void create_pixmap ();
