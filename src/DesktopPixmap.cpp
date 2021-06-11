@@ -35,11 +35,11 @@ DesktopPixmap::DesktopPixmap (
 
       // Initialize Graphic Context
       create_gc ();
-
-      // Create a pixmap
-      // TODO This is suboptimal for compressed screenshots
-      create_pixmap ();
     }
+
+  // Create a pixmap
+  // TODO This is suboptimal for compressed screenshots
+  create_pixmap ();
 }
 
 DesktopPixmap::~DesktopPixmap ()
