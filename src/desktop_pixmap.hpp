@@ -14,7 +14,7 @@ enum PixmapFormat
 /**
  * Captures and stores desktop screenshot in the specified pixmap format
  */
-class DesktopPixmap
+class desktop_pixmap
 {
 public:
   inline static xcb_gcontext_t gc_;    ///< Graphic context
@@ -31,25 +31,36 @@ public:
   xcb_pixmap_t pixmap_id; ///< Constant id for the screenshot's pixmap
   xcb_get_image_reply_t *gi_reply; ///< get_image reply. Saving to free it later
 
-  DesktopPixmap (short x,         ///< x coordinate of the top left corner
-                 short y,         ///< y coordinate of the top left corner
-                 uint16_t width,  ///< Width of the display
-                 uint16_t height, ///< Height of the display
-                 const std::string &name ///< Name of the display (_NET_WM_NAME)
+  desktop_pixmap (
+      short x,                ///< x coordinate of the top left corner
+      short y,                ///< y coordinate of the top left corner
+      uint16_t width,         ///< Width of the display
+      uint16_t height,        ///< Height of the display
+      const std::string &name ///< Name of the display (_NET_WM_NAME)
   );
-  ~DesktopPixmap ();
+  ~desktop_pixmap ();
 
   /**
-   * TODO Rename to something more fitting
+   * Screenshots current desktop and saves it inside instance
    */
-  void saveImage (PixmapFormat format = kZPixmap); // Default to fastest
+  void save_screen (PixmapFormat format = kZPixmap); // Default to fastest
   /**
-   * Saves image to the instance's pixmap
+   * Saves screenshot to the instance's pixmap
    */
-  void putImage () const;
-  void resize(int new_dim, char flag);
+  void put_screen () const;
+  /**
+   * TODO Resizes screenshot to specified dimensions
+   */
+  void resize (int new_dim, char flag);
+
 private:
+  /**
+   * Initializes class-level graphic context
+   */
   static void create_gc ();
+  /**
+   * Initializes instance-level pixmap
+   */
   void create_pixmap ();
 };
 
