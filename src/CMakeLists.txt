@@ -1,6 +1,7 @@
 # Define name of the binary
-add_executable(dexpo dexpo.cpp DesktopPixmap.cpp)
-add_executable(example example_DesktopPixmap_usage.cpp DesktopPixmap.cpp)
+add_executable(dexpo dexpo.cpp desktop_pixmap.cpp drawable.cpp)
+add_executable(example example_desktop_pixmap_usage.cpp desktop_pixmap.cpp
+                       drawable.cpp)
 
 # Tells compiler to link xcb to our build
 target_link_libraries(

@@ -11,12 +11,9 @@ desktop_pixmap::desktop_pixmap (
     const uint16_t width,   ///< width of display
     const uint16_t height,  ///< height of display
     const std::string &name ///< _NET_WM_NAME of display
-)
+    )
+    : drawable (x, y, width, height)
 {
-  this->x = x;
-  this->y = y;
-  this->width = width;
-  this->height = height;
   this->name = name;
   this->format = kZPixmap; // Default to the fastest pixmap
 
@@ -26,15 +23,9 @@ desktop_pixmap::desktop_pixmap (
   this->length = 0;
   this->gi_reply = nullptr;
 
-  // Initialize static attributes only when they don't already exist
-  if (!desktop_pixmap::c_ || !desktop_pixmap::screen_ || !desktop_pixmap::gc_)
+  // Initialize grahic context if it doesn't exist
+  if (!desktop_pixmap::gc_)
     {
-      // Connect to X. NULL will use $DISPLAY
-      desktop_pixmap::c_ = xcb_connect (NULL, NULL);
-      desktop_pixmap::screen_
-          = xcb_setup_roots_iterator (xcb_get_setup (desktop_pixmap::c_)).data;
-
-      // Initialize Graphic Context
       create_gc ();
     }
 
@@ -46,9 +37,8 @@ desktop_pixmap::desktop_pixmap (
 desktop_pixmap::~desktop_pixmap ()
 {
   delete[] this->gi_reply;
-  xcb_free_pixmap (desktop_pixmap::c_, this->pixmap_id);
-  xcb_free_gc (desktop_pixmap::c_, desktop_pixmap::gc_);
-  xcb_disconnect (desktop_pixmap::c_);
+  xcb_free_pixmap (drawable::c_, this->pixmap_id);
+  // TODO Should you destroy grahic context?
 }
 
 /**
@@ -62,7 +52,7 @@ desktop_pixmap::~desktop_pixmap ()
  * But ZPixmap of QHD Ultrawide is 3440 * 1440 * 4 = 19814400 bytes long.
  */
 void
-desktop_pixmap::save_screen (PixmapFormat pixmap_format)
+desktop_pixmap::save_screen (pixmap_format pixmap_format)
 {
   this->format = pixmap_format;
 
@@ -72,16 +62,16 @@ desktop_pixmap::save_screen (PixmapFormat pixmap_format)
   delete[] this->gi_reply;
 
   auto gi_cookie = xcb_get_image (
-      desktop_pixmap::c_,            /* Connection */
-      this->format,                  /* Image format */
-      desktop_pixmap::screen_->root, /* Screenshot relative to root */
+      drawable::c_,            /* Connection */
+      this->format,            /* Image format */
+      drawable::screen_->root, /* Screenshot relative to root */
       this->x, this->y, this->width, this->height, /* Dimensions */
       static_cast<uint32_t> (~0) /* Plane mask (all bits to get all planes) */
   );
 
   // TODO Handle errors
   // Saving reply to free it later. Fixes memory leak
-  this->gi_reply = xcb_get_image_reply (desktop_pixmap::c_, gi_cookie, nullptr);
+  this->gi_reply = xcb_get_image_reply (drawable::c_, gi_cookie, nullptr);
 
   // Casting for later use
   this->length = static_cast<uint32_t> (xcb_get_image_data_length (gi_reply));
@@ -94,11 +84,10 @@ desktop_pixmap::save_screen (PixmapFormat pixmap_format)
 void
 desktop_pixmap::put_screen () const
 {
-  xcb_put_image (desktop_pixmap::c_, this->format,
+  xcb_put_image (drawable::c_, this->format,
                  this->pixmap_id, /* Pixmap to put image on */
                  desktop_pixmap::gc_, this->width, this->height, 0, 0, 0,
-                 desktop_pixmap::screen_->root_depth, this->length,
-                 this->image_ptr);
+                 drawable::screen_->root_depth, this->length, this->image_ptr);
 }
 
 void
@@ -109,21 +98,21 @@ desktop_pixmap::create_gc ()
 
   // TODO Figure out correct mask and values
   mask = XCB_GC_FOREGROUND | XCB_GC_GRAPHICS_EXPOSURES;
-  values[0] = desktop_pixmap::screen_->black_pixel;
+  values[0] = drawable::screen_->black_pixel;
   values[1] = 0;
 
   desktop_pixmap::gc_ = xcb_generate_id (c_);
-  xcb_create_gc (desktop_pixmap::c_, desktop_pixmap::gc_,
-                 desktop_pixmap::screen_->root, mask, values);
+  xcb_create_gc (drawable::c_, desktop_pixmap::gc_, drawable::screen_->root,
+                 mask, values);
 }
 
 void
 desktop_pixmap::create_pixmap ()
 {
-  this->pixmap_id = xcb_generate_id (desktop_pixmap::c_);
-  xcb_create_pixmap (desktop_pixmap::c_, desktop_pixmap::screen_->root_depth,
-                     this->pixmap_id, desktop_pixmap::screen_->root,
-                     this->width, this->height);
+  this->pixmap_id = xcb_generate_id (drawable::c_);
+  xcb_create_pixmap (drawable::c_, drawable::screen_->root_depth,
+                     this->pixmap_id, drawable::screen_->root, this->width,
+                     this->height);
 }
 
 void
