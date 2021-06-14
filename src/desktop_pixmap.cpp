@@ -50,20 +50,19 @@ desktop_pixmap::~desktop_pixmap ()
  * @param pixmap_format Bit format for the saved image. Defaults to the faster
  * Z_Pixmap.
  *
- * FIXME Implement screenshotter that will not capture entire screen at once
+ *
  * malloc() can reserve only 16711568 bytes for a pixmap.
  * But ZPixmap of QHD Ultrawide is 3440 * 1440 * 4 = 19814400 bytes long.
+ * The while() loop in save_screen fixes this.
  */
 void
 desktop_pixmap::save_screen (pixmap_format pixmap_format)
 {
   this->format = pixmap_format;
 
-  // Not freeing gi_reply causes memory leak,
-  // as xcb_get_image always allocates new space
-  // This deallocates saved image on x server
-  uint16_t screen_width = 1920;  // TODO: from conf
-  uint16_t screen_height = 1080; // TODO: from conf
+  
+  uint16_t screen_width = this->width;  // TODO: from conf
+  uint16_t screen_height = this->height; // TODO: from conf
   uint16_t resized_width = 800;  // TODO: from conf
   // resized height!!!!
   uint16_t max_height = MAX_MALLOC / screen_width / 4;
@@ -73,19 +72,20 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
   while (i * MAX_MALLOC < screen_width * screen_height * 4)
     {
 
-      y_exception = i * max_height;
+      y_exception = i * max_height; //sets y point to copy from
+
       if (max_height > screen_height - max_height * i)
         {
           max_height = screen_height - max_height * i;
         }; //
 
+      //gets image or image part
       auto gi_cookie = xcb_get_image (
           drawable::c_,            /* Connection */
           this->format,            /* Image format */
           drawable::screen_->root, /* Screenshot relative to root */
           0, y_exception, screen_width, max_height, /* Dimensions */
-          static_cast<uint32_t> (
-              ~0) /* Plane mask (all bits to get all planes) */
+          uint32_t (~0) /* Plane mask (all bits to get all planes) */
       );
 
       // TODO Handle errors
@@ -94,13 +94,15 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
 
       // Casting for later use
       this->length
-          = static_cast<uint32_t> (xcb_get_image_data_length (gi_reply));
+          = uint32_t (xcb_get_image_data_length (gi_reply));
       this->image_ptr = xcb_get_image_data (gi_reply);
-      y_exception = this->height * i;
-      // this->height is resized_height for i-1 iteration
+
+      y_exception = this->height * i;//sets y point to copy to
+
+      // TODO: add case if resized height is defined instead of width.
       resize (
           screen_width, max_height, resized_width,
-          'w'); // TODO: add case if resized height is defined instead of width.
+          'w'); 
 
       // we use this->height and this-> width because this params change in
       // resize
@@ -110,11 +112,14 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
                      y_exception, 0, drawable::screen_->root_depth,
                      this->length, this->image_ptr);
       i++;
+      // Not freeing gi_reply causes memory leak,
+      // as xcb_get_image always allocates new space
+      // This deallocates saved image on x server
       delete[] this->gi_reply;
     }
   this->width = resized_width;
-  this->height = (1 + (800 / 1920))
-                 * 1080; // resized height from conf! doesn't work otherwise; black area comes from here.
+  this->height = (float(resized_width)/float(screen_width))*screen_height;
+            
 }
 
 void

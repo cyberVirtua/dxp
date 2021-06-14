@@ -47,7 +47,7 @@ main ()
   // Mapping pixmap onto window
   while (1)
     {
-      usleep (10);
+      usleep (10000);
 
       xcb_copy_area (c, d.pixmap_id, window_id, desktop_pixmap::gc_, 0, 0, 0, 0,
                      d.width, d.height);
