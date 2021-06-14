@@ -1,11 +1,11 @@
 #include "desktop_pixmap.hpp"
+#include "config.hpp"
 #include <iostream>
 #include <math.h>
 #include <ostream>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
-#define MAX_MALLOC                                                             \
-  1920 * 1080 / 2 // CHANGE IT. This is done for testing purposes.
+#define MAX_MALLOC 1920 * 1080 / 2
 
 desktop_pixmap::desktop_pixmap (
     const short x,          ///< x coordinate of the top left corner
@@ -31,10 +31,13 @@ desktop_pixmap::desktop_pixmap (
       create_gc ();
     }
 
+  // Calculate pixmap width and height based on config values
+  this->pixmap_width = k_dexpo_width;
+  this->pixmap_height = k_dexpo_width * (this->height / this->width);
+
   // Create a pixmap
   // TODO This is suboptimal for compressed screenshots
-  create_pixmap (800,
-                 (1080 * (800 / 1920 + 1))); // resized width, resized height;
+  create_pixmap (this->pixmap_width, this->pixmap_height);
 }
 
 desktop_pixmap::~desktop_pixmap ()
@@ -62,12 +65,12 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
   // Not freeing gi_reply causes memory leak,
   // as xcb_get_image always allocates new space
   // This deallocates saved image on x server
-  uint16_t screen_width = 1920;  // TODO: from conf
-  uint16_t screen_height = 1080; // TODO: from conf
+  uint16_t screen_width = 3440;  // TODO: from conf
+  uint16_t screen_height = 1440; // TODO: from conf
   uint16_t resized_width = 800;  // TODO: from conf
   // resized height!!!!
   uint16_t max_height = MAX_MALLOC / screen_width / 4;
-  uint16_t y_exception; // max_height might be changed in last iteration,
+  int16_t y_exception; // max_height might be changed in last iteration,
   // y must stay i*previous max_height
   int i = 0;
   while (i * MAX_MALLOC < screen_width * screen_height * 4)
@@ -84,8 +87,7 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
           this->format,            /* Image format */
           drawable::screen_->root, /* Screenshot relative to root */
           0, y_exception, screen_width, max_height, /* Dimensions */
-          static_cast<uint32_t> (
-              ~0) /* Plane mask (all bits to get all planes) */
+          uint32_t (~0) /* Plane mask (all bits to get all planes) */
       );
 
       // TODO Handle errors
@@ -113,8 +115,9 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
       delete[] this->gi_reply;
     }
   this->width = resized_width;
-  this->height = (1 + (800 / 1920))
-                 * 1080; // resized height from conf! doesn't work otherwise; black area comes from here.
+  this->height
+      = (1 + (800 / 1920)) * 1080; // resized height from conf! doesn't work
+                                   // otherwise; black area comes from here.
 }
 
 void
