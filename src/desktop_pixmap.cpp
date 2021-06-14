@@ -1,11 +1,11 @@
 #include "desktop_pixmap.hpp"
+#include "config.hpp"
 #include <iostream>
 #include <math.h>
 #include <ostream>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
-#define MAX_MALLOC                                                             \
-  1920 * 1080 / 2 // CHANGE IT. This is done for testing purposes.
+#define MAX_MALLOC 1920 * 1080 / 2
 
 desktop_pixmap::desktop_pixmap (
     const short x,          ///< x coordinate of the top left corner
@@ -31,10 +31,22 @@ desktop_pixmap::desktop_pixmap (
       create_gc ();
     }
 
+  // Calculate pixmap width and height based on config values
+  this->pixmap_width = k_dexpo_width;
+  this->pixmap_height = k_dexpo_height;
+  if (this->pixmap_width==0)
+  {
+    this->pixmap_width=(float(this->width)/float(this->height))*k_dexpo_height;
+  }
+
+  if (this->pixmap_height==0)
+  {
+    this->pixmap_height=(float(this->height)/float(this->width))*k_dexpo_width;
+  }
+
   // Create a pixmap
   // TODO This is suboptimal for compressed screenshots
-  create_pixmap (800,
-                 (1080 * (800 / 1920 + 1))); // resized width, resized height;
+  create_pixmap (this->pixmap_width, this->pixmap_height);
 }
 
 desktop_pixmap::~desktop_pixmap ()
@@ -60,24 +72,27 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
 {
   this->format = pixmap_format;
 
-  
-  uint16_t screen_width = this->width;  // TODO: from conf
-  uint16_t screen_height = this->height; // TODO: from conf
-  uint16_t resized_width = 800;  // TODO: from conf
-  // resized height!!!!
+  uint16_t screen_width = this->width;
+  uint16_t screen_height = this->height;
+
+  uint16_t resized_width = pixmap_width;
+  uint16_t resized_height = pixmap_height;
+
   uint16_t max_height = MAX_MALLOC / screen_width / 4;
-  uint16_t y_exception; // max_height might be changed in last iteration,
+
+  int16_t y_exception; // max_height might be changed in last iteration,
   // y must stay i*previous max_height
+
   int i = 0;
   while (i * MAX_MALLOC < screen_width * screen_height * 4)
     {
 
       y_exception = i * max_height; //sets y point to copy from
 
-      if (max_height > screen_height - max_height * i)
+      if (max_height > screen_height - max_height * i)//last iteration may receive a smaller than MAX_MALLOC image
         {
           max_height = screen_height - max_height * i;
-        }; //
+        }; 
 
       //gets image or image part
       auto gi_cookie = xcb_get_image (
@@ -111,15 +126,18 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
                      desktop_pixmap::gc_, this->width, this->height, 0,
                      y_exception, 0, drawable::screen_->root_depth,
                      this->length, this->image_ptr);
+
       i++;
+
       // Not freeing gi_reply causes memory leak,
       // as xcb_get_image always allocates new space
       // This deallocates saved image on x server
       delete[] this->gi_reply;
     }
   this->width = resized_width;
-  this->height = (float(resized_width)/float(screen_width))*screen_height;
+  this->height = resized_height;
             
+
 }
 
 void

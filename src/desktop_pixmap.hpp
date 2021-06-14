@@ -25,6 +25,8 @@ public:
   pixmap_format format;   /* XY_PIXMAP = 1, Z_PIXMAP = 2 */
   xcb_pixmap_t pixmap_id; ///< Constant id for the screenshot's pixmap
   xcb_get_image_reply_t *gi_reply; ///< get_image reply. Saving to free it later
+  uint16_t pixmap_width; //<future screenshot pixmap dimension
+  uint16_t pixmap_height;//<future screenshot pixmap dimension
 
   desktop_pixmap (
       short x,                ///< x coordinate of the top left corner
