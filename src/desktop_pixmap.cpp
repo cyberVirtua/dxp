@@ -4,6 +4,8 @@
 #include <ostream>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
+#define MAX_MALLOC                                                             \
+  1920 * 1080 / 2 // CHANGE IT. This is done for testing purposes.
 
 desktop_pixmap::desktop_pixmap (
     const short x,          ///< x coordinate of the top left corner
@@ -31,7 +33,8 @@ desktop_pixmap::desktop_pixmap (
 
   // Create a pixmap
   // TODO This is suboptimal for compressed screenshots
-  create_pixmap ();
+  create_pixmap (800,
+                 (1080 * (800 / 1920 + 1))); // resized width, resized height;
 }
 
 desktop_pixmap::~desktop_pixmap ()
@@ -59,35 +62,59 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
   // Not freeing gi_reply causes memory leak,
   // as xcb_get_image always allocates new space
   // This deallocates saved image on x server
-  delete[] this->gi_reply;
+  uint16_t screen_width = 1920;  // TODO: from conf
+  uint16_t screen_height = 1080; // TODO: from conf
+  uint16_t resized_width = 800;  // TODO: from conf
+  // resized height!!!!
+  uint16_t max_height = MAX_MALLOC / screen_width / 4;
+  uint16_t y_exception; // max_height might be changed in last iteration,
+  // y must stay i*previous max_height
+  int i = 0;
+  while (i * MAX_MALLOC < screen_width * screen_height * 4)
+    {
 
-  auto gi_cookie = xcb_get_image (
-      drawable::c_,            /* Connection */
-      this->format,            /* Image format */
-      drawable::screen_->root, /* Screenshot relative to root */
-      this->x, this->y, this->width, this->height, /* Dimensions */
-      static_cast<uint32_t> (~0) /* Plane mask (all bits to get all planes) */
-  );
+      y_exception = i * max_height;
+      if (max_height > screen_height - max_height * i)
+        {
+          max_height = screen_height - max_height * i;
+        }; //
 
-  // TODO Handle errors
-  // Saving reply to free it later. Fixes memory leak
-  this->gi_reply = xcb_get_image_reply (drawable::c_, gi_cookie, nullptr);
+      auto gi_cookie = xcb_get_image (
+          drawable::c_,            /* Connection */
+          this->format,            /* Image format */
+          drawable::screen_->root, /* Screenshot relative to root */
+          0, y_exception, screen_width, max_height, /* Dimensions */
+          static_cast<uint32_t> (
+              ~0) /* Plane mask (all bits to get all planes) */
+      );
 
-  // Casting for later use
-  this->length = static_cast<uint32_t> (xcb_get_image_data_length (gi_reply));
-  this->image_ptr = xcb_get_image_data (gi_reply);
-}
+      // TODO Handle errors
+      // Saving reply to free it later. Fixes memory leak
+      this->gi_reply = xcb_get_image_reply (drawable::c_, gi_cookie, nullptr);
 
-/**
- * Puts image on the instance's pixmap
- */
-void
-desktop_pixmap::put_screen () const
-{
-  xcb_put_image (drawable::c_, this->format,
-                 this->pixmap_id, /* Pixmap to put image on */
-                 desktop_pixmap::gc_, this->width, this->height, 0, 0, 0,
-                 drawable::screen_->root_depth, this->length, this->image_ptr);
+      // Casting for later use
+      this->length
+          = static_cast<uint32_t> (xcb_get_image_data_length (gi_reply));
+      this->image_ptr = xcb_get_image_data (gi_reply);
+      y_exception = this->height * i;
+      // this->height is resized_height for i-1 iteration
+      resize (
+          screen_width, max_height, resized_width,
+          'w'); // TODO: add case if resized height is defined instead of width.
+
+      // we use this->height and this-> width because this params change in
+      // resize
+      xcb_put_image (drawable::c_, this->format,
+                     this->pixmap_id, /* Pixmap to put image on */
+                     desktop_pixmap::gc_, this->width, this->height, 0,
+                     y_exception, 0, drawable::screen_->root_depth,
+                     this->length, this->image_ptr);
+      i++;
+      delete[] this->gi_reply;
+    }
+  this->width = resized_width;
+  this->height = (1 + (800 / 1920))
+                 * 1080; // resized height from conf! doesn't work otherwise; black area comes from here.
 }
 
 void
@@ -107,16 +134,17 @@ desktop_pixmap::create_gc ()
 }
 
 void
-desktop_pixmap::create_pixmap ()
+desktop_pixmap::create_pixmap (int resized_width, int resized_height)
 {
   this->pixmap_id = xcb_generate_id (drawable::c_);
   xcb_create_pixmap (drawable::c_, drawable::screen_->root_depth,
-                     this->pixmap_id, drawable::screen_->root, this->width,
-                     this->height);
+                     this->pixmap_id, drawable::screen_->root, resized_width,
+                     resized_height);
 }
 
 void
-desktop_pixmap::resize (int new_dimension, char flag)
+desktop_pixmap::resize (int old_width, int old_height, int new_dimension,
+                        char flag)
 {
   // Optional: add bilinear. See belinear_attempts.cpp. This one is ok,
   // Under condition old dimension/new dimension>20/13.
@@ -130,13 +158,13 @@ desktop_pixmap::resize (int new_dimension, char flag)
     {
     case 'h':
       new_height = new_dimension;
-      det = float (this->height) / float (new_height);
-      new_width = round (float (this->width) / det);
+      det = float (old_height) / float (new_height);
+      new_width = round (float (old_width) / det);
       break;
     case 'w':
       new_width = new_dimension;
-      det = float (this->width) / float (new_width);
-      new_height = round (float (this->height) / det);
+      det = float (old_width) / float (new_width);
+      new_height = round (float (old_height) / det);
       break;
     };
 
@@ -158,7 +186,7 @@ desktop_pixmap::resize (int new_dimension, char flag)
                     {
                       sum = sum
                             + this->image_ptr[int ((i * det)) * 4 + xi
-                                              + this->width * 4
+                                              + old_width * 4
                                                     * (int ((j * det)) + k)
                                               + z * 4];
                       // aprox. column bite + color chanell + aprox. row * (cur

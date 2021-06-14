@@ -40,13 +40,9 @@ public:
    */
   void save_screen (pixmap_format format = kZPixmap); // Default to fastest
   /**
-   * Saves screenshot to the instance's pixmap
-   */
-  void put_screen () const;
-  /**
    * TODO Resizes screenshot to specified dimensions
    */
-  void resize (int new_dim, char flag);
+  void resize (int old_width,  int old_height, int new_dim, char flag);
 
 private:
   /**
@@ -56,7 +52,7 @@ private:
   /**
    * Initializes instance-level pixmap
    */
-  void create_pixmap ();
+  void create_pixmap (int res_wid, int res_height);
 };
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */
