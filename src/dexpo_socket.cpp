@@ -1,21 +1,26 @@
 #include "dexpo_socket.hpp"
-#include <algorithm>
-#include <cstdio>
 #include <cstring>
 #include <iostream>
-#include <ostream>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
 
-template <typename t>
+/**
+ * Thrower for custom errors.
+ * To make error throwing fit into one line.
+ */
+template <typename er, typename s>
 void
-handle_error (t var)
+is (s status) // This name looks readable: is<socket_error> (this->fd)
 {
-  if (var == -1)
+  // Check if this is one of the custom errors, because this
+  // won't work for functions that return something other than -1 on error
+  static_assert (std::is_base_of<std::runtime_error, er>::value);
+
+  if (status == -1) // Most of the C libs return -1 on error
     {
-      throw;
+      throw er ();
     }
 }
 
@@ -26,7 +31,6 @@ handle_error (t var)
  * - Create a socket file descriptor
  * - Bind socket to name
  * - Listen (specify max connection number)
- * - Accept
  *
  * If socket exists:
  * - Create a socket file descriptor
@@ -36,34 +40,50 @@ dexpo_socket::dexpo_socket ()
 {
   struct sockaddr_un sock_name = {};
   sock_name.sun_family = AF_UNIX;
+
   // Safely putting socket name into a buffer
   std::strncpy (sock_name.sun_path, SOCKET_PATH,
                 sizeof (sock_name.sun_path) - 1);
-
-  // XXX Make socket abstract
-  // sock_name.sun_path[0] = '\0';
-
-  // Create a socket file descriptor
-  this->fd = socket (AF_UNIX, SOCK_STREAM, 0);
-  handle_error (this->fd);
 
   // Trick compiler into thinking that we pass pointer to sockaddr struct
   // https://stackoverflow.com/questions/21099041
   auto *sock_addr = reinterpret_cast<struct sockaddr *> (&sock_name);
 
-  // Connect to named socket
-  int e = connect (this->fd, sock_addr, sizeof (sock_name));
-  if (e == -1) // Socket doesn't exist
+  // XXX Make socket abstract
+  // sock_name.sun_path[0] = '\0';
+
+  int s; // Return status of functions to check for errors
+  try
     {
-      unlink (SOCKET_PATH);
-      int ret = bind (this->fd, sock_addr, sizeof (sock_name));
-      ret = listen (this->fd, 20);
-      if (ret == -1)
-        {
-          close (this->fd);
-          unlink (SOCKET_PATH);
-          throw;
-        }
+      // Create a socket file descriptor
+      this->fd = socket (AF_UNIX, SOCK_STREAM, 0);
+      is<socket_error> (this->fd);
+
+      // Connect to named socket
+      s = connect (this->fd, sock_addr, sizeof (sock_name));
+      is<connect_error> (s);
+    }
+  catch (const connect_error &e)
+    {
+      // This should be run only for the first connection, as socket may not
+      // exist then.
+      // And should not be run when there are active connections to the socket
+      std::cerr << e.what () << std::endl;
+
+      unlink (SOCKET_PATH); // Remove existing socket
+
+      s = bind (this->fd, sock_addr, sizeof (sock_name)); // Bind name to fd
+      s = listen (this->fd, 2);                           // 2 is arbitrary
+      is<bind_error> (s);
+    }
+  catch (const socket_error &e)
+    {
+      std::cerr << e.what () << std::endl;
+      throw;
+    }
+  catch (...)
+    {
+      throw;
     }
 };
 
@@ -73,69 +93,58 @@ dexpo_socket::~dexpo_socket ()
   unlink (SOCKET_PATH);
 };
 
-void
-dexpo_socket::send (std::vector<dexpo_pixmap> pixmap_array) const
-{
-  // First write -- number of subsequent packets
-  auto num = pixmap_array.size ();
-  write (this->fd, &num, sizeof (num));
-  // Second to `num` -- subsequent packets
-  for (auto &pixmap : pixmap_array)
-    {
-      write (this->fd, &pixmap, sizeof (pixmap));
-    }
-};
-
 /**
  * Request and receive dexpo_pixmaps from daemon
  */
 std::vector<dexpo_pixmap>
 dexpo_socket::get_pixmaps () const
 {
-  // Send pixmap request
+  // Send pixmap request to daemon
   char cmd = kRequestPixmaps;
-  if (write (this->fd, &cmd, 1) == -1)
-    {
-      throw;
-    };
+  auto s = write (this->fd, &cmd, 1);
+  is<write_error> (s);
 
-  dexpo_pixmap pixmap; // Pixmap to copy data in
-  std::vector<dexpo_pixmap> pixmap_array;
+  std::vector<dexpo_pixmap> pixmap_array; // Pixmap array that will be returned
+  dexpo_pixmap pixmap;                    // Pixmap to copy data in
 
   size_t num;
   auto rcv_bytes = read (this->fd, &num, sizeof (num));
+  is<read_error> (rcv_bytes);
 
-  if (rcv_bytes == -1)
-    {
-      throw;
-    }
-  for (; num > 0; num--)
+  for (; num > 0; num--) // Read `num` pixmaps from socket
     {
       rcv_bytes = read (this->fd, &pixmap, sizeof (pixmap));
+      is<read_error> (rcv_bytes);
       pixmap_array.push_back (pixmap);
     }
-  return pixmap_array;
+  return pixmap_array; // Compiler is smart so vector won't be copied here
 };
 
+/**
+ * Starts an infinite loop that listens for the kRequestPixmaps write
+ * and sends pixmaps one by one in return
+ */
 void
-dexpo_socket::send_pixmaps_on_event (daemon_event e,
-                                     std::vector<dexpo_pixmap> &pixmap_array)
+dexpo_socket::send_pixmaps_on_event (std::vector<dexpo_pixmap> &pixmap_array)
 {
-  auto data_fd = accept (this->fd, NULL, NULL);
+  auto data_fd = accept (this->fd, NULL, NULL); // Anonymous socket
   char cmd = -1;
-  this->running = true;
-  while (this->running)
+
+  this->running = true; // Can later turn off the loop
+  while (this->running) // FIXME This loop exit is ugly
     {
-      if (read (data_fd, &cmd, 1) == e)
+      if (read (data_fd, &cmd, 1) == kRequestPixmaps) // Listen for the command
         {
           // First write -- number of subsequent packets
           auto num = pixmap_array.size ();
-          write (data_fd, &num, sizeof (num));
+          auto s = write (data_fd, &num, sizeof (num));
+          is<write_error> (s);
 
-          // Writes from second to `num` -- subsequent packets
+          // Writes from second to `num+1` -- subsequent packets
           for (auto &pixmap : pixmap_array)
             {
-              write (data_fd, &pixmap, sizeof (pixmap));
+              s = write (data_fd, &pixmap, sizeof (pixmap));
+              is<write_error> (s);
             }
         }
     }

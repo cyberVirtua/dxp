@@ -8,14 +8,9 @@
 #include <string>
 #include <thread>
 
+// For random numbers in tests
 #define MAX_NUM 10000000
 #define SMALL_MAX_NUM 38000
-#define SOCKET_NAME "/tmp/dexpo_socket_test_e734b5f823874e3b100b.socket"
-
-std::random_device rd;
-std::mt19937 gen (rd ());
-std::uniform_int_distribution<xcb_pixmap_t> m_rnd (0, MAX_NUM);
-std::uniform_int_distribution<uint16_t> s_rnd (0, SMALL_MAX_NUM);
 
 bool
 operator== (const dexpo_pixmap d1, const dexpo_pixmap d2)
@@ -32,6 +27,12 @@ operator<< (std::ostream &stream, const dexpo_pixmap &d)
          << ", " << d.desktop_number;
 };
 
+// To generate random numbers in tests
+std::random_device rd;
+std::mt19937 gen (rd ());
+std::uniform_int_distribution<xcb_pixmap_t> m_rnd (0, MAX_NUM);
+std::uniform_int_distribution<uint16_t> s_rnd (0, SMALL_MAX_NUM);
+
 BOOST_AUTO_TEST_CASE (send_vecotrs)
 {
   // Initialize test desktop structs
@@ -44,7 +45,7 @@ BOOST_AUTO_TEST_CASE (send_vecotrs)
 
   auto daemon = dexpo_socket ();
   std::thread daemon_thread (&dexpo_socket::send_pixmaps_on_event, &daemon,
-                             kRequestPixmaps, std::ref (v));
+                             std::ref (v)); // Passing by reference
   daemon_thread.detach ();
   BOOST_TEST_MESSAGE ("Started thread");
 
