@@ -46,6 +46,8 @@ public:
    */
   void resize (int old_width,  int old_height, int new_dim, char flag);
 
+  void render_geometries();
+
 private:
   /**
    * Initializes class-level graphic context

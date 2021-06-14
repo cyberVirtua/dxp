@@ -136,7 +136,11 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
     }
   this->width = resized_width;
   this->height = resized_height;
-            
+}
+
+void 
+desktop_pixmap::render_geometries ()
+{
 
 }
 
@@ -182,12 +186,12 @@ desktop_pixmap::resize (int old_width, int old_height, int new_dimension,
     case 'h':
       new_height = new_dimension;
       det = float (old_height) / float (new_height);
-      new_width = round (float (old_width) / det);
+      new_width = std::lround (float (old_width) / det);
       break;
     case 'w':
       new_width = new_dimension;
       det = float (old_width) / float (new_width);
-      new_height = round (float (old_height) / det);
+      new_height = std::lround (float (old_height) / det);
       break;
     };
 
@@ -208,9 +212,9 @@ desktop_pixmap::resize (int old_width, int old_height, int new_dimension,
                             // ceil(det)! doesn't switch pixels!
                     {
                       sum = sum
-                            + this->image_ptr[int ((i * det)) * 4 + xi
+                            + this->image_ptr[std::lround ((i * det)) * 4 + xi
                                               + old_width * 4
-                                                    * (int ((j * det)) + k)
+                                                    * (std::lround ((j * det)) + k)
                                               + z * 4];
                       // aprox. column bite + color chanell + aprox. row * (cur
                       // row counter + count of bites needed by y) + count of
