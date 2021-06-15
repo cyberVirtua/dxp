@@ -131,7 +131,7 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
       // Not freeing gi_reply causes memory leak,
       // as xcb_get_image always allocates new space
       // This deallocates saved image on x server
-      delete[] this->gi_reply;
+      free(this->gi_reply);
     }
   this->width = resized_width;
   this->height = resized_height;
