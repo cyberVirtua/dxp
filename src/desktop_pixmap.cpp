@@ -5,7 +5,7 @@
 #include <ostream>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
-#define MAX_MALLOC 1920 * 1080 / 2
+#define MAX_MALLOC 16711568
 
 desktop_pixmap::desktop_pixmap (
     const short x,          ///< x coordinate of the top left corner
@@ -128,7 +128,6 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
                      this->length, this->image_ptr);
 
       i++;
-
       // Not freeing gi_reply causes memory leak,
       // as xcb_get_image always allocates new space
       // This deallocates saved image on x server
@@ -141,7 +140,7 @@ desktop_pixmap::save_screen (pixmap_format pixmap_format)
 void 
 desktop_pixmap::render_geometries ()
 {
-
+  
 }
 
 void
@@ -161,12 +160,12 @@ desktop_pixmap::create_gc ()
 }
 
 void
-desktop_pixmap::create_pixmap (int resized_width, int resized_height)
+desktop_pixmap::create_pixmap (int pix_width, int pix_height)
 {
   this->pixmap_id = xcb_generate_id (drawable::c_);
   xcb_create_pixmap (drawable::c_, drawable::screen_->root_depth,
-                     this->pixmap_id, drawable::screen_->root, resized_width,
-                     resized_height);
+                     this->pixmap_id, drawable::screen_->root, pix_width,
+                     pix_height);
 }
 
 void
@@ -212,9 +211,9 @@ desktop_pixmap::resize (int old_width, int old_height, int new_dimension,
                             // ceil(det)! doesn't switch pixels!
                     {
                       sum = sum
-                            + this->image_ptr[std::lround ((i * det)) * 4 + xi
+                            + this->image_ptr[std::lround (i * det) * 4 + xi
                                               + old_width * 4
-                                                    * (std::lround ((j * det)) + k)
+                                                    * (std::lround (j * det) + k)
                                               + z * 4];
                       // aprox. column bite + color chanell + aprox. row * (cur
                       // row counter + count of bites needed by y) + count of

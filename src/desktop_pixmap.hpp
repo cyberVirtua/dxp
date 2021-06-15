@@ -35,7 +35,16 @@ public:
       uint16_t height,        ///< Height of the display
       const std::string &name ///< Name of the display (_NET_WM_NAME)
   );
-  ~desktop_pixmap ();
+  //rule of five
+  ~desktop_pixmap (); //deleter
+
+  desktop_pixmap(const desktop_pixmap& other) = delete; // copy constructor
+ 
+  desktop_pixmap(desktop_pixmap&& other) noexcept = delete; // move constructor
+ 
+  desktop_pixmap& operator=(const desktop_pixmap& other) = delete; // copy assignment
+   
+  desktop_pixmap& operator=(desktop_pixmap&& other) = delete; // move assignment
 
   /**
    * Screenshots current desktop and saves it inside instance
@@ -56,7 +65,7 @@ private:
   /**
    * Initializes instance-level pixmap
    */
-  void create_pixmap (int res_wid, int res_height);
+  void create_pixmap (int pix_width, int pix_height);
 };
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */

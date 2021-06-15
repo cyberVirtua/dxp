@@ -21,7 +21,17 @@ public:
             uint16_t width, ///< Width of the display
             uint16_t height ///< Height of the display
   );
-  ~drawable (); // TODO Should you disconnect from Xserver?
+  //rule of five
+  ~drawable  (); //deleter
+
+  drawable(const drawable& other) = delete; // copy constructor
+ 
+  drawable(drawable&& other) noexcept = delete; // move constructor
+ 
+  drawable& operator=(const drawable& other) = delete; // copy assignment
+   
+  drawable& operator=(drawable&& other) = delete; // move assignment
+
 };
 
 #endif /* ifndef DRAWABLE_HPP */
