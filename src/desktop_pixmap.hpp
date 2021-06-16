@@ -22,40 +22,38 @@ public:
   uint8_t *image_ptr;     ///< Pointer to the image structure. TODO Make smart?
   uint32_t length;        ///< Length of the XImage data structure
   std::string name;       ///< _NET_WM_NAME of display
-  pixmap_format format;   /* XY_PIXMAP = 1, Z_PIXMAP = 2 */
   xcb_pixmap_t pixmap_id; ///< Constant id for the screenshot's pixmap
-  xcb_get_image_reply_t *gi_reply; ///< get_image reply. Saving to free it later
-  uint16_t pixmap_width; //<future screenshot pixmap dimension
-  uint16_t pixmap_height;//<future screenshot pixmap dimension
+  uint16_t pixmap_width;  ///< dimensions of pixmap that stores screenshot
+  uint16_t pixmap_height;
 
   desktop_pixmap (
-      short x,                ///< x coordinate of the top left corner
-      short y,                ///< y coordinate of the top left corner
+      int16_t x,              ///< x coordinate of the top left corner
+      int16_t y,              ///< y coordinate of the top left corner
       uint16_t width,         ///< Width of the display
       uint16_t height,        ///< Height of the display
       const std::string &name ///< Name of the display (_NET_WM_NAME)
   );
-  //rule of five
-  ~desktop_pixmap (); //deleter
+  ~desktop_pixmap (); // deleter
 
-  desktop_pixmap(const desktop_pixmap& other) = delete; // copy constructor
- 
-  desktop_pixmap(desktop_pixmap&& other) noexcept = delete; // move constructor
- 
-  desktop_pixmap& operator=(const desktop_pixmap& other) = delete; // copy assignment
-   
-  desktop_pixmap& operator=(desktop_pixmap&& other) = delete; // move assignment
+  // Explicitly deleting unused constructors to comply with rule of five
+  desktop_pixmap (const desktop_pixmap &other) = delete;
+  desktop_pixmap (desktop_pixmap &&other) noexcept = delete;
+  desktop_pixmap &operator= (const desktop_pixmap &other) = delete;
+  desktop_pixmap &operator= (desktop_pixmap &&other) = delete;
 
   /**
    * Screenshots current desktop and saves it inside instance
    */
-  void save_screen (pixmap_format format = kZPixmap); // Default to fastest
+  void save_screen ();
   /**
    * TODO Resizes screenshot to specified dimensions
    */
-  void resize (int old_width,  int old_height, int new_dim, char flag);
+  void resize (const uint8_t *input, uint8_t *output,
+               int image_width, ///< Width of source image
+               int image_height, int target_width,
+               int target_height); ///< Height of source image
 
-  void render_geometries();
+  void render_geometries ();
 
 private:
   /**
@@ -65,7 +63,7 @@ private:
   /**
    * Initializes instance-level pixmap
    */
-  void create_pixmap (int pix_width, int pix_height);
+  void create_pixmap ();
 };
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */
