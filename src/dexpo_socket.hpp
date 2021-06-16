@@ -4,6 +4,7 @@
 #include "desktop_pixmap.hpp"
 #include <atomic>
 #include <cstdint>
+#include <mutex>
 #include <stdexcept>
 #include <sys/socket.h>
 #include <vector>
