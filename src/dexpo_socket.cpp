@@ -1,10 +1,10 @@
 #include "dexpo_socket.hpp"
 #include <cstring>
 #include <iostream>
+#include <mutex>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
-#include <unistd.h>
 
 /**
  * Thrower for custom errors.
@@ -125,7 +125,8 @@ dexpo_socket::get_pixmaps () const
  * and sends pixmaps one by one in return
  */
 void
-dexpo_socket::send_pixmaps_on_event (std::vector<dexpo_pixmap> &pixmap_array)
+dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap> &pixmaps,
+                                     std::mutex &pixmaps_lock)
 {
   auto data_fd = accept (this->fd, NULL, NULL); // Anonymous socket
   char cmd = -1;
@@ -135,13 +136,17 @@ dexpo_socket::send_pixmaps_on_event (std::vector<dexpo_pixmap> &pixmap_array)
     {
       if (read (data_fd, &cmd, 1) == kRequestPixmaps) // Listen for the command
         {
+          // Lock pixmaps to prevent race condition when reading and writing
+          // pixmaps to socket
+          std::scoped_lock<std::mutex> guard (pixmaps_lock);
+
           // First write -- number of subsequent packets
-          auto num = pixmap_array.size ();
+          auto num = pixmaps.size ();
           auto s = write (data_fd, &num, sizeof (num));
           is<write_error> (s);
 
           // Writes from second to `num+1` -- subsequent packets
-          for (auto &pixmap : pixmap_array)
+          for (const auto &pixmap : pixmaps)
             {
               s = write (data_fd, &pixmap, sizeof (pixmap));
               is<write_error> (s);

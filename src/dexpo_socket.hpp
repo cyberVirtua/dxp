@@ -2,6 +2,7 @@
 #define DEXPO_SOCKET
 
 #include "desktop_pixmap.hpp"
+#include <atomic>
 #include <cstdint>
 #include <stdexcept>
 #include <sys/socket.h>
@@ -33,17 +34,15 @@ enum daemon_event
 class dexpo_socket
 {
 public:
-  int fd;       ///< Socket File Descriptor
-  bool running; ///< Thread status
+  int fd;                    ///< Socket File Descriptor
+  std::atomic<bool> running; ///< Thread status
 
   dexpo_socket ();
   ~dexpo_socket ();
 
-  void send (dexpo_pixmap &) const;
-  void send (std::vector<dexpo_pixmap>) const;
-
   std::vector<dexpo_pixmap> get_pixmaps () const;
-  void send_pixmaps_on_event (std::vector<dexpo_pixmap> &);
+  void send_pixmaps_on_event (const std::vector<dexpo_pixmap> &,
+                              std::mutex &pixmaps_lock);
   void server () const;
 };
 
