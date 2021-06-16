@@ -37,13 +37,13 @@ desktop_pixmap::desktop_pixmap (
 
   if (this->pixmap_width == 0)
     {
-      this->pixmap_width = (this->width / this->height) * this->pixmap_height;
+      this->pixmap_width = uint16_t (double (this->width) / this->height
+                                     * this->pixmap_height);
     }
   else if (this->pixmap_height == 0)
     {
       this->pixmap_height
-          = uint16_t (double (this->height) / double (this->width)
-                      * double (this->pixmap_width));
+          = uint16_t (double (this->height) / this->width * this->pixmap_width);
     }
 
   // Create a small pixmap
@@ -111,8 +111,8 @@ desktop_pixmap::save_screen ()
       this->image_ptr = xcb_get_image_data (gi_reply.get ());
 
       int target_width = this->pixmap_width;
-      int target_height = int (float (image_height) / float (image_width)
-                               * float (this->pixmap_width));
+      int target_height
+          = int (float (image_height) / image_width * this->pixmap_width);
 
       auto pixmap = std::make_unique<uint8_t[]> (this->length + 1);
 
