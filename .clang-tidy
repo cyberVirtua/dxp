@@ -1,7 +1,15 @@
 ---
-Checks: 'bugprone-*,clang-analyzer-cplusplus.InnerPointer,cppcoreguidelines-*
-    ,readability-*,clang-analyzer-core-*,clang-analyzer-cplusplus-*
-    ,clang-analyzer-deadcode-*,clang-analyzer-nullability-*'
+Checks: 'bugprone-*,
+        clang-analyzer-cplusplus.InnerPointer,
+        cppcoreguidelines-*,
+        readability-*,
+        clang-analyzer-core-*,
+        clang-analyzer-cplusplus-*,
+        clang-analyzer-deadcode-*,
+        clang-analyzer-nullability-*,
+        -implicit-int-float-conversion,
+        -float-conversion,
+        -cppcoreguidelines-avoid-c-arrays'
 HeaderFilterRegex: ''
 FormatStyle:     file
 
