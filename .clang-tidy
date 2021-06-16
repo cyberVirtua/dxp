@@ -9,6 +9,7 @@ Checks: 'bugprone-*,
         clang-analyzer-nullability-*,
         -implicit-int-float-conversion,
         -float-conversion,
+        -bugprone-narrowing-conversions
         -cppcoreguidelines-avoid-c-arrays'
 HeaderFilterRegex: ''
 FormatStyle:     file
