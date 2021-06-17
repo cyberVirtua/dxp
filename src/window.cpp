@@ -8,24 +8,12 @@
 window::window (const int16_t x,         ///< x coordinate of the top left corner
                 const int16_t y,         ///< y coordinate of the top left corner
                 const uint16_t width,    ///< width of display
-                const uint16_t height,   ///< height of display
-                const std::string &name, ///< _NET_WM_NAME of display
-                const uint32_t parent)
+                const uint16_t height)   ///< height of display
     : drawable (x, y, width, height)
 {
-  this->name = name;
-  this->b_width = 0;
-  this->parent = parent;
-
-  // Connection to X-server, as well as generating id before drawing window
-  // itself
-  // Sets default parent to root
-  if (this->parent == XCB_NONE)
-    {
-      this->id = xcb_generate_id (drawable::c_);
-      this->parent = drawable::screen_->root;
-      create_window ();
-    }
+  this->b_width = dexpo_outer_border;
+  this->id = xcb_generate_id (drawable::c_);
+  create_window();
 };
 
 window::~window () { xcb_destroy_window (drawable::c_, this->id); }
@@ -42,13 +30,14 @@ window::create_window ()
     true
   };
   mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK | XCB_CONFIG_WINDOW_STACK_MODE;
-  values[0] = k_dexpo_bcolor;                               // Background color
-  values[1] = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS; // Will be used in future to handle events
+  values[0] = dexpo_bgcolor;                               // Background color
+  values[1] = XCB_EVENT_MASK_EXPOSURE | 
+  XCB_EVENT_MASK_KEY_PRESS; // Will be used in future to handle events
   values[2] = XCB_STACK_MODE_ABOVE;                               // Places created window on top
   xcb_create_window (window::c_,                    /* Connection, separate from one of daemon */
                      XCB_COPY_FROM_PARENT,          /* depth (same as root)*/
                      this->id,                      /* window Id */
-                     this->parent,                  /* parent window */
+                     drawable::screen_->root,       /* parent window */
                      this->x, this->y,              /* x, y */
                      this->width, this->height,     /* width, height */
                      this->b_width,                 /* border_width */
@@ -70,21 +59,21 @@ window::create_window ()
 };
 
 int
-window::get_screen_position (int DesktopNumber)
+window::get_screen_position (int desktop_number)
  {
    // As all screenshots have at least one common coordinate of corner, we need to find only the second one
-   int coord = k_dexpo_padding;
+   int coord = dexpo_padding;
    for (const auto &dexpo_pixmap : storage)
      {
        // Estimating all space before the screenshot we search
-       if (dexpo_pixmap.desktop_number < DesktopNumber)
+       if (dexpo_pixmap.desktop_number < desktop_number)
          {
-           coord += k_dexpo_padding;
-           if (k_dexpo_height == 0)
+           coord += dexpo_padding;
+           if (dexpo_height == 0)
              {
                coord += dexpo_pixmap.height;
              }
-           else if (k_dexpo_width == 0)
+           else if (dexpo_width == 0)
              {
                coord += dexpo_pixmap.width;
              }
@@ -96,64 +85,57 @@ window::get_screen_position (int DesktopNumber)
      }
  }
 
-void window::highlight_window (int DesktopNumber) 
+void window::highlight_window (int desktop_number, int color) 
 {
-  int16_t x = k_dexpo_padding;
-  int16_t y = k_dexpo_padding;
+  int16_t x = dexpo_padding;
+  int16_t y = dexpo_padding;
   uint32_t values[1]; // mask for changing border's color
 
-  if (k_dexpo_height == 0) 
+  if (dexpo_height == 0) 
     {
-      y = get_screen_position (DesktopNumber);
+      y = get_screen_position (desktop_number);
     }
   else 
     {
-      x = get_screen_position (DesktopNumber);
+      x = get_screen_position (desktop_number);
     }
   
   // We can't control rectangle's thickness, so instead we spawn several close to each other
   xcb_rectangle_t rectangles[] = {
-    {x-k_dexpo_hwidth, y-k_dexpo_hwidth, k_dexpo_hwidth, storage[DesktopNumber].height+2*k_dexpo_hwidth},                       // left border
-    {x+storage[DesktopNumber].width, y-k_dexpo_hwidth, k_dexpo_hwidth, storage[DesktopNumber].height+2*k_dexpo_hwidth},  // right border
-    {x-1, y-k_dexpo_hwidth, storage[DesktopNumber].width+1, k_dexpo_hwidth},                        // top border
-    {x-1, y+storage[DesktopNumber].height, storage[DesktopNumber].width+1, k_dexpo_hwidth}   // bottom border
+    // left border
+      {
+        int16_t  (x - dexpo_hlwidth),                                 /* x */
+        int16_t  (y - dexpo_hlwidth),                                 /* y */
+        uint16_t (dexpo_hlwidth),                                     /* width */
+        uint16_t (storage[desktop_number].height + 2 * dexpo_hlwidth) /* height */
+      },
+    // right border                      
+      {
+        int16_t  (x + storage[desktop_number].width),                 /* x */
+        int16_t  (y - dexpo_hlwidth),                                 /* y */
+        uint16_t (dexpo_hlwidth),                                     /* width */
+        uint16_t (storage[desktop_number].height + 2 * dexpo_hlwidth) /* height */
+      }, 
+    // top border
+      {
+        int16_t  (x - 1),                                             /* x */
+        int16_t  (y - dexpo_hlwidth),                                 /* y */
+        uint16_t (storage[desktop_number].width + 1),                 /* width */
+        uint16_t (dexpo_hlwidth)                                      /* height */
+      },                        
+    // bottom border
+      {
+        int16_t  (x - 1),                                             /* x */
+        int16_t  (y + storage[desktop_number].height),                /* y */
+        uint16_t (storage[desktop_number].width + 1),                 /* width */
+        uint16_t (dexpo_hlwidth)                                      /* height */
+      } 
   };
   // Drawing the highlighting itself
   xcb_poly_fill_rectangle(window::c_, this->id, desktop_pixmap::gc_, 4, rectangles);
 
   // Changing color
   uint32_t mask = XCB_GC_FOREGROUND;
-  values[0] = k_dexpo_hcolor;
-  xcb_change_gc (c_, desktop_pixmap::gc_, mask, &values);
-}
-
-void window::remove_highlight (int DesktopNumber) 
-{
-  int16_t x = k_dexpo_padding;
-  int16_t y = k_dexpo_padding;
-  uint32_t values[1]; // mask for changing border's color
-
-  if (k_dexpo_height == 0) 
-    {
-      y = get_screen_position (DesktopNumber);
-    }
-  else 
-    {
-      x = get_screen_position (DesktopNumber);
-    }
-  
-  // We can't control rectangle's thickness, so instead we spawn several close to each other
-  xcb_rectangle_t rectangles[] = {
-    {x-k_dexpo_hwidth, y-k_dexpo_hwidth, k_dexpo_hwidth, storage[DesktopNumber].height+2*k_dexpo_hwidth},                       // left border
-    {x+storage[DesktopNumber].width, y-k_dexpo_hwidth, k_dexpo_hwidth, storage[DesktopNumber].height+2*k_dexpo_hwidth},  // right border
-    {x-1, y-k_dexpo_hwidth, storage[DesktopNumber].width+1, k_dexpo_hwidth},                        // top border
-    {x-1, y+storage[DesktopNumber].height, storage[DesktopNumber].width+1, k_dexpo_hwidth}   // bottom border
-  };
-  // Drawing the highlighting itself
-  xcb_poly_fill_rectangle(window::c_, this->id, desktop_pixmap::gc_, 4, rectangles);
-
-  // Changing color
-  uint32_t mask = XCB_GC_FOREGROUND;
-  values[0] = k_dexpo_bcolor;
+  values[0] = color;
   xcb_change_gc (c_, desktop_pixmap::gc_, mask, &values);
 }
