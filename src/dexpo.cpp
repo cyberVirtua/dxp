@@ -54,7 +54,7 @@ main ()
         }
     };
 
-  window parent (0, 0, conf_width, conf_height, "Win_1", XCB_NONE);
+  window w (0, 0, conf_width, conf_height, "Win_1", XCB_NONE);
 
   // Mapping pixmap onto window
   while (1)
@@ -65,7 +65,7 @@ main ()
           auto act_width = k_dexpo_padding;
           for (const auto &dexpo_pixmap : v)
             {
-              xcb_copy_area (window::c_, dexpo_pixmap.id, parent.win_id,
+              xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
                              desktop_pixmap::gc_, 0, 0, act_width, 0,
                              dexpo_pixmap.width, dexpo_pixmap.height);
               act_width += dexpo_pixmap.width;
@@ -77,7 +77,7 @@ main ()
           auto act_height = k_dexpo_padding;
           for (const auto &dexpo_pixmap : v)
             {
-              xcb_copy_area (window::c_, dexpo_pixmap.id, parent.win_id,
+              xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
                              desktop_pixmap::gc_, 0, 0, 0, act_height,
                              dexpo_pixmap.width, dexpo_pixmap.height);
               act_height += dexpo_pixmap.height;
