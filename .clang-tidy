@@ -9,7 +9,11 @@ Checks: 'bugprone-*,
         clang-analyzer-nullability-*,
         -implicit-int-float-conversion,
         -float-conversion,
-        -bugprone-narrowing-conversions
+        -bugprone-narrowing-conversions,
+        -cppcoreguidelines-pro-type-reinterpret-cast,
+        -cppcoreguidelines-avoid-non-const-global-variables,
+        -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+        -cppcoreguidelines-narrowing-conversions,
         -cppcoreguidelines-avoid-c-arrays'
 HeaderFilterRegex: ''
 FormatStyle:     file
@@ -30,10 +34,7 @@ CheckOptions:
   - { key: readability-identifier-naming.ConstexprVariableCase,    value: lower_case }
   - { key: readability-identifier-naming.ConstexprVariablePrefix,  value: k_         }
   - { key: readability-identifier-naming.GlobalConstantCase,       value: lower_case }
-  - { key: readability-identifier-naming.GlobalConstantPrefix,     value: k_         }
   - { key: readability-identifier-naming.MemberConstantCase,       value: lower_case }
-  - { key: readability-identifier-naming.MemberConstantPrefix,     value: k_         }
   - { key: readability-identifier-naming.StaticConstantCase,       value: lower_case }
-  - { key: readability-identifier-naming.StaticConstantPrefix,     value: k_         }
   - { key: readability-implicit-bool-conversion.AllowIntegerConditions,  value: 1   }
   - { key: readability-implicit-bool-conversion.AllowPointerConditions,  value: 1   }

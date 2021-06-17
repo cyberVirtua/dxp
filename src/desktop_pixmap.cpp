@@ -4,7 +4,8 @@
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
 
-#define MAX_MALLOC 16711568 // Workaround for xcb_get_image_reply allocation
+// Workaround for xcb_get_image_reply allocation. see save_screen()
+#define MAX_MALLOC 16711568
 
 desktop_pixmap::desktop_pixmap (
     const int16_t x,        ///< x coordinate of the top left corner
@@ -46,7 +47,7 @@ desktop_pixmap::desktop_pixmap (
           = uint16_t (double (this->height) / this->width * this->pixmap_width);
     }
 
-  // Create a small pixmap
+  // Create a small pixmap with the size of downscaled screenshot from config
   create_pixmap ();
 }
 
@@ -59,10 +60,7 @@ desktop_pixmap::~desktop_pixmap ()
 /**
  * Saves pointer to the screen image in the specified pixmap_format.
  *
- * @param pixmap_format Bit format for the saved image. Defaults to the faster
- * Z_Pixmap.
- *
- * malloc() can reserve only 16711568 bytes for a pixmap.
+ * NOTE: malloc() can reserve only 16711568 bytes for a pixmap.
  * But ZPixmap of QHD Ultrawide is 3440 * 1440 * 4 = 19814400 bytes long.
  *
  * The while() loop in save_screen fixes this. It takes multiple screenshots of
@@ -76,7 +74,7 @@ desktop_pixmap::save_screen ()
   uint16_t image_height = uint16_t (MAX_MALLOC / this->width / 4);
   uint16_t image_width = this->width;
 
-  const uint screen_size = (this->width * this->height * 4);
+  const uint screen_size = uint (this->width * this->height * 4);
 
   uint16_t i = 0;
   while (i * MAX_MALLOC < screen_size)
@@ -135,18 +133,18 @@ desktop_pixmap::save_screen ()
 }
 
 /**
- * Definetely copied. Looks like I'm too retarded to code this myself.
+ * Definitely copied. Looks like I'm too retarded to code this myself.
  * https://stackoverflow.com/questions/28566290
  *
- * TODO Optimize and fix warnings
+ * TODO Optimize and fix warnings, comment on names, add anti aliasing
  */
 void
 desktop_pixmap::resize (const uint8_t *input, uint8_t *output,
                         int source_width, /* Source dimensions */
                         int source_height, int target_width, int target_height)
 {
-  const int x_ratio = (int)((source_width << 16) / target_width);
-  const int y_ratio = (int)((source_height << 16) / target_height);
+  const int x_ratio = (source_width << 16) / target_width;
+  const int y_ratio = (source_height << 16) / target_height;
   const int colors = 4;
 
   for (int y = 0; y < target_height; y++)
