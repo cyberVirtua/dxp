@@ -4,4 +4,4 @@ add_executable(daemon daemon.cpp desktop_pixmap.cpp dexpo_socket.cpp drawable.cp
 target_link_libraries(
   daemon
   PRIVATE project_options project_warnings
-  PUBLIC xcb)
+  PUBLIC xcb xcb-randr)

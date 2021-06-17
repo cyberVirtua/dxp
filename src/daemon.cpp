@@ -1,10 +1,12 @@
 #include "desktop_pixmap.hpp"
 #include "dexpo_socket.hpp"
+#include <iostream>
 #include <memory>
 #include <string.h>
 #include <sys/un.h>
 #include <unistd.h>
 #include <vector>
+#include <xcb/randr.h>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
 
@@ -45,6 +47,40 @@ atom_parser (char *atom_name)
   return prop_length ? xcb_get_property_value (prop_reply.get ()) : throw;
 };
 
+void
+get_screen_data ()
+{
+  xcb_randr_get_screen_resources_current_reply_t *reply
+      = xcb_randr_get_screen_resources_current_reply (
+          c, xcb_randr_get_screen_resources_current (c, root), NULL);
+  xcb_timestamp_t timestamp = reply->config_timestamp;
+  xcb_randr_output_t *randr_outputs
+      = xcb_randr_get_screen_resources_current_outputs (reply);
+  int len = xcb_randr_get_screen_resources_current_outputs_length (reply);
+  for (int i = 0; i < len; i++)
+    {
+      xcb_randr_get_output_info_reply_t *output
+          = xcb_randr_get_output_info_reply (
+              c, xcb_randr_get_output_info (c, randr_outputs[i], timestamp),
+              NULL);
+      if (output == NULL)
+        {
+          continue;
+        }
+
+      if (output->crtc == XCB_NONE
+          || output->connection == XCB_RANDR_CONNECTION_DISCONNECTED)
+        {
+          continue;
+        }
+
+      xcb_randr_get_crtc_info_reply_t *crtc = xcb_randr_get_crtc_info_reply (
+          c, xcb_randr_get_crtc_info (c, output->crtc, timestamp), NULL);
+      free (crtc);
+      free (output);
+    }
+}
+
 struct desktop_info
 {
   int desktop_number; // XXX Is it necessary?
@@ -59,7 +95,7 @@ struct desktop_info
  * Get array of desktop_info
  */
 std::vector<desktop_info>
-get_desktop_viewport ()
+get_desktops_info ()
 {
   // TODO Real parser
   /**
@@ -101,7 +137,9 @@ get_current_desktop ()
 int
 main ()
 {
-  auto desktop_viewports = get_desktop_viewport ();
+  get_screen_data ();
+  exit (0);
+  auto desktop_viewports = get_desktops_info ();
   std::vector<desktop_pixmap> desktop_pixmaps;
   for (const auto &d : desktop_viewports)
     {
