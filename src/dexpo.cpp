@@ -61,39 +61,63 @@ main ()
   window w (dexpo_x, dexpo_y, conf_width, conf_height);
   w.pixmaps = v;
   // Mapping pixmap onto window
-  while (1)
+  int highlighted = 0;
+  xcb_generic_event_t *event;
+  while ((event = xcb_wait_for_event (window::c_)))
     {
-      usleep (1000);
-
-      if (dexpo_width == 0)
+      switch (event->response_type & ~0x80)
         {
-          // Drawing screenshots starting from the left top corner
-          auto act_width = dexpo_padding;
-          for (const auto &dexpo_pixmap : v)
+        case XCB_EXPOSE:
+          if (dexpo_width == 0)
             {
-              xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
-                             desktop_pixmap::gc_, 0, 0, act_width,
-                             dexpo_padding, dexpo_pixmap.width,
-                             dexpo_pixmap.height);
-              act_width += dexpo_pixmap.width;
-              act_width += dexpo_padding;
-            };
-        }
-      else if (dexpo_height == 0)
-        {
-          auto act_height = dexpo_padding;
-          for (const auto &dexpo_pixmap : v)
+              // Drawing screenshots starting from the left top corner
+              auto act_width = dexpo_padding;
+              for (const auto &dexpo_pixmap : v)
+                {
+                  xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
+                                 desktop_pixmap::gc_, 0, 0, act_width,
+                                 dexpo_padding, dexpo_pixmap.width,
+                                 dexpo_pixmap.height);
+                  act_width += dexpo_pixmap.width;
+                  act_width += dexpo_padding;
+                };
+            }
+          else if (dexpo_height == 0)
             {
-              xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
-                             desktop_pixmap::gc_, 0, 0, dexpo_padding,
-                             act_height, dexpo_pixmap.width,
-                             dexpo_pixmap.height);
-              act_height += dexpo_pixmap.height;
-              act_height += dexpo_padding;
-            };
+              auto act_height = dexpo_padding;
+              for (const auto &dexpo_pixmap : v)
+                {
+                  xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
+                                 desktop_pixmap::gc_, 0, 0, dexpo_padding,
+                                 act_height, dexpo_pixmap.width,
+                                 dexpo_pixmap.height);
+                  act_height += dexpo_pixmap.height;
+                  act_height += dexpo_padding;
+                };
+            }
+          w.highlight_window (0, dexpo_hlcolor);
+          /* We flush the request */
+          xcb_flush (window::c_);
+          break;
+        case XCB_KEY_PRESS:
+          highlighted += 1;
+          highlighted = highlighted % 3;
+          w.highlight_window (2, dexpo_bgcolor);
+          w.highlight_window (1, dexpo_bgcolor);
+          w.highlight_window (0, dexpo_bgcolor);
+          w.highlight_window (highlighted, dexpo_hlcolor); 
+          
+          break;
+        case XCB_FOCUS_OUT:
+          exit(0);
+          break;
+        case XCB_FOCUS_IN:
+          w.highlight_window (2, dexpo_hlcolor);
+          w.highlight_window (1, dexpo_hlcolor);
+          w.highlight_window (0, dexpo_hlcolor);
+          xcb_flush(w.c_);
+          break;
         }
-      w.highlight_window (1, dexpo_hlcolor);
-      /* We flush the request */
-      xcb_flush (window::c_);
+      xcb_flush (window::c_);  
     }
-}
+} 
