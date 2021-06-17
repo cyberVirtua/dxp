@@ -37,7 +37,8 @@ main ()
   auto conf_height = k_dexpo_height; // Height from config
   if (conf_width == 0)
     {
-      conf_width += k_dexpo_padding; // Add the padding before first screenshot
+      conf_width += k_dexpo_padding;    // Add the padding before first screenshot
+      conf_height += 2*k_dexpo_padding; // Add the paddng at both sizes of interface
       for (const auto &dexpo_pixmap : v)
         {
           conf_width += dexpo_pixmap.width;
@@ -46,7 +47,8 @@ main ()
     }
   else if (conf_height == 0)
     {
-      conf_height += k_dexpo_padding;
+      conf_height += k_dexpo_padding;   // Add the padding before first screenshot
+      conf_width += 2* k_dexpo_padding; // Add the paddng at both sizes of interface
       for (const auto &dexpo_pixmap : v)
         {
           conf_height += dexpo_pixmap.height;
@@ -55,18 +57,20 @@ main ()
     };
 
   window w (0, 0, conf_width, conf_height, "Win_1", XCB_NONE);
-
+  w.storage = v;
   // Mapping pixmap onto window
   while (1)
     {
       usleep (1000);
+
       if (k_dexpo_width == 0)
         {
+          // Drawing screenshots starting from the left top corner
           auto act_width = k_dexpo_padding;
           for (const auto &dexpo_pixmap : v)
             {
               xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
-                             desktop_pixmap::gc_, 0, 0, act_width, 0,
+                             desktop_pixmap::gc_, 0, 0, act_width, k_dexpo_padding,
                              dexpo_pixmap.width, dexpo_pixmap.height);
               act_width += dexpo_pixmap.width;
               act_width += k_dexpo_padding;
@@ -78,13 +82,13 @@ main ()
           for (const auto &dexpo_pixmap : v)
             {
               xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
-                             desktop_pixmap::gc_, 0, 0, 0, act_height,
-                             dexpo_pixmap.width, dexpo_pixmap.height);
+                             desktop_pixmap::gc_, 0, 0, k_dexpo_padding, act_height,
+                            dexpo_pixmap.width, dexpo_pixmap.height);
               act_height += dexpo_pixmap.height;
               act_height += k_dexpo_padding;
             };
         }
-
+      w.highlight_window(0);
       /* We flush the request */
       xcb_flush (window::c_);
     }

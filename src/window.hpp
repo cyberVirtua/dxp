@@ -6,7 +6,10 @@
 #include <vector>
 #include <xcb/xproto.h>
 
-/* Visualizes workspaces previews for user */
+/**
+ * Visualizes workspaces previews for user interface is sized based on config
+ * settings
+ */
 class window : public drawable
 {
 public:
@@ -14,8 +17,9 @@ public:
   uint32_t id;                      // Identificator for Window
   short b_width;    // Border width NOTE: Maybe it could be changed to constant
   std::string name; // _NET_WM_NAME of display, MAYBE UNNEEDED THERE
-  uint32_t parent;
-  // TODO: Add masks
+  uint32_t parent;  // The window in which GUI will spawn, mostly root
+  std::vector <dexpo_pixmap> storage;
+  // TODO: Add masks for events
 
   // The same as for DesktopPixmap
   window (int16_t x,               ///< x coordinate of the top left corner
@@ -32,11 +36,25 @@ public:
   window &operator= (const window &other) = delete;
   window &operator= (window &&other) = delete;
 
-  // /* Gets coordinates of top left corner of screenshot with given number */
-  // int get_screen_position (int DesktopNumber, std::vector<dexpo_pixmap> v);
+  /**
+   * Gets position of top left corner of screenshot with given number
+   */
+  int get_screen_position (int DesktopNumber);
 
-  /* Creates a visible window */
+  /** 
+   * Creates GUI 
+   */
   void create_window ();
+
+  /**
+   * Draws a rectangle around chosen window
+   */
+  void highlight_window (int DesktopNumber);
+
+  /**
+   * Removes a rectangle 
+   */
+  void remove_highlight (int DesktopNumber);
 
 private:
   /**
