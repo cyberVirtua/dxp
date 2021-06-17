@@ -2,6 +2,7 @@
 #include "dexpo_socket.hpp"
 #include <string.h>
 #include <sys/un.h>
+#include <unistd.h>
 #include <vector>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
@@ -124,7 +125,8 @@ main ()
                         { *desktop_pixmaps[i].name.c_str () } });
     }
 
-  auto server = dexpo_socket ();
+  dexpo_socket server{};
+
   std::mutex dexpo_pixmaps_lock;
   server.send_pixmaps_on_event (dexpo_pixmaps, dexpo_pixmaps_lock);
 
