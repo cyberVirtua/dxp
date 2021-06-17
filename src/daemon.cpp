@@ -62,16 +62,19 @@ std::vector<desktop_info>
 get_desktop_viewport ()
 {
   // TODO Real parser
-  //1)Get a number of desktops: 
-  //getatom(c, screen->root, "NET_NUMBER_OF_DESKTOPS")
-  //2)Get their names:
-  //for i in range 0, result of action 1:
-  //char* z[i]=a[i], where a is getatom(c, screen->root, "NET_DESKTOP_NAMES")
-  //3)For each name in c, get their atom . I'll write that. store in smth like z2
-  //may need to rewrite getatom. Do atoms count as drawables?
-  //4)for each atom in z2, get their geometries, (g), viewports (v)
-  //5)d[i]={i,v[2*i], v[2*i+1], g[2*i], g[2*i+1], z[i]}
-  //profit.
+  /**
+   * PLAN:
+   *
+   * 1. Get a number of desktops:
+   *     getatom("NET_NUMBER_OF_DESKTOPS")
+   * 2. Get their names:
+   *     getatom("NET_DESKTOP_NAMES")
+   * 3.  For each name in c, get their atom . I'll write that. store in smth
+   *     like z2 may need to rewrite getatom. Do atoms count as drawables?
+   * 4.  For each atom in z2, get their geometries, (g), viewports (v)
+   * 5.  d[i]={i,v[2*i], v[2*i+1], g[2*i], g[2*i+1], z[i]} profit.
+   */
+
   auto d0 = desktop_info{ 0, 0, 0, 1080, 1920, "Desktop" };
   auto d1 = desktop_info{ 1, 1080, 0, 3440, 1440, "first" };
   auto d2 = desktop_info{ 2, 1080, 0, 3440, 1440, "second" };
