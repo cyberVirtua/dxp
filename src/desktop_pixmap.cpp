@@ -74,7 +74,7 @@ desktop_pixmap::save_screen ()
   uint16_t image_height = uint16_t (MAX_MALLOC / this->width / 4);
   uint16_t image_width = this->width;
 
-  const uint screen_size = (this->width * this->height * 4);
+  const uint screen_size = uint (this->width * this->height * 4);
 
   uint16_t i = 0;
   while (i * MAX_MALLOC < screen_size)
@@ -143,8 +143,8 @@ desktop_pixmap::resize (const uint8_t *input, uint8_t *output,
                         int source_width, /* Source dimensions */
                         int source_height, int target_width, int target_height)
 {
-  const int x_ratio = static_cast<int> ((source_width << 16) / target_width);
-  const int y_ratio = static_cast<int> ((source_height << 16) / target_height);
+  const int x_ratio = (source_width << 16) / target_width;
+  const int y_ratio = (source_height << 16) / target_height;
   const int colors = 4;
 
   for (int y = 0; y < target_height; y++)
