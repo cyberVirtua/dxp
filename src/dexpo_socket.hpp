@@ -41,6 +41,12 @@ public:
   dexpo_socket ();
   ~dexpo_socket ();
 
+  // Explicitly delete unused constructors to comply with rule of five
+  dexpo_socket (const dexpo_socket &other) = delete;
+  dexpo_socket (dexpo_socket &&other) noexcept = delete;
+  dexpo_socket &operator= (const dexpo_socket &other) = delete;
+  dexpo_socket &operator= (dexpo_socket &&other) = delete;
+
   std::vector<dexpo_pixmap> get_pixmaps () const;
   void send_pixmaps_on_event (const std::vector<dexpo_pixmap> &,
                               std::mutex &pixmaps_lock);

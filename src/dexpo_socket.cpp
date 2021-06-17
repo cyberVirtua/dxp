@@ -8,7 +8,7 @@
 
 /**
  * Thrower for custom errors.
- * To make error throwing fit into one line.
+ * Exists to make error throwing fit into one line.
  */
 template <typename er, typename s>
 void
@@ -52,7 +52,7 @@ dexpo_socket::dexpo_socket ()
   // XXX Make socket abstract
   // sock_name.sun_path[0] = '\0';
 
-  int s; // Return status of functions to check for errors
+  int s = 0; // Return status of functions to check for errors
   try
     {
       // Create a socket file descriptor
@@ -105,9 +105,9 @@ dexpo_socket::get_pixmaps () const
   is<write_error> (s);
 
   std::vector<dexpo_pixmap> pixmap_array; // Pixmap array that will be returned
-  dexpo_pixmap pixmap;                    // Pixmap to copy data in
+  dexpo_pixmap pixmap{};                  // Pixmap to copy data in
 
-  size_t num;
+  size_t num = 0;
   auto rcv_bytes = read (this->fd, &num, sizeof (num));
   is<read_error> (rcv_bytes);
 
