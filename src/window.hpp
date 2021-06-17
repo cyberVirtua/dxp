@@ -10,7 +10,8 @@
 class window : public drawable
 {
 public:
-  uint32_t id;      // Identificator for Window
+  inline static xcb_gcontext_t gc_; ///< Graphic context
+  uint32_t id;                      // Identificator for Window
   short b_width;    // Border width NOTE: Maybe it could be changed to constant
   std::string name; // _NET_WM_NAME of display, MAYBE UNNEEDED THERE
   uint32_t parent;
@@ -31,14 +32,17 @@ public:
   window &operator= (const window &other) = delete;
   window &operator= (window &&other) = delete;
 
-  /* Gets coordinates of top left corner of screenshot with given number */
-  int get_screen_position (int DesktopNumber, std::vector<dexpo_pixmap> v);
+  // /* Gets coordinates of top left corner of screenshot with given number */
+  // int get_screen_position (int DesktopNumber, std::vector<dexpo_pixmap> v);
 
   /* Creates a visible window */
   void create_window ();
 
-  /* Creates new window inside the existing one */
-  void connect_to_parent_window (xcb_connection_t *c, xcb_screen_t *screen);
+private:
+  /**
+   * Initializes class-level graphic context
+   */
+  static void create_gc ();
 };
 
 #endif /* ifndef WINDOW_HPP */
