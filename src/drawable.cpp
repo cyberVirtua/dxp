@@ -20,5 +20,3 @@ drawable::drawable (const int16_t x, ///< x coordinate of the top left corner
           = xcb_setup_roots_iterator (xcb_get_setup (drawable::c_)).data;
     }
 }
-
-drawable::~drawable (){};
