@@ -1,5 +1,6 @@
 #include "desktop_pixmap.hpp"
 #include "dexpo_socket.hpp"
+#include <memory>
 #include <string.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -19,47 +20,29 @@ auto root = screen -> root;
  * auto a=atom_parser(c,screen->root, "_NET_NUMBER_OF_DESKTOPS");
  * std::cout<<"Desktops: "<<a[0]<<'\n';
  */
-auto
+void *
 atom_parser (char *atom_name)
 {
-  // get atom itself
-  xcb_intern_atom_cookie_t atom_cookie;
-  xcb_atom_t atom;
-  xcb_intern_atom_reply_t *rep;
+  xcb_atom_t atom = 0;
 
-  atom_cookie = xcb_intern_atom (c, 0, strlen (atom_name), atom_name);
-  rep = xcb_intern_atom_reply (c, atom_cookie, NULL);
-  if (NULL != rep)
-    {
-      atom = rep->atom;
-      free (rep);
-    }
-  else
-    {
-      throw; // TODO Add exception
-    }
+  auto atom_cookie = xcb_intern_atom (c, 0, strlen (atom_name), atom_name);
+  auto atom_reply
+      = std::make_unique<xcb_intern_atom_reply_t> (*xcb_intern_atom_reply (
+          c, atom_cookie, nullptr)); // XXX This may segfault
 
-  // get property from atom
+  atom = atom_reply ? atom_reply->atom : throw; // TODO add proper exception
 
-  xcb_get_property_cookie_t prop_cookie;
-  xcb_get_property_reply_t *reply_prop;
+  /* Getting property from atom */
 
-  prop_cookie
+  auto prop_cookie
       = xcb_get_property (c, 0, root, atom, XCB_GET_PROPERTY_TYPE_ANY, 0, 128);
-  reply_prop = xcb_get_property_reply (c, prop_cookie, nullptr);
+  auto prop_reply
+      = std::make_unique<xcb_get_property_reply_t> (*xcb_get_property_reply (
+          c, prop_cookie, nullptr)); // XXX This may segfault
 
-  int value_len
-      = xcb_get_property_value_length (reply_prop); // kind of handles errors
+  int prop_length = xcb_get_property_value_length (prop_reply.get ());
 
-  if (value_len != 0)
-    {
-      auto a = (uint32_t *)xcb_get_property_value (reply_prop);
-      return a;
-    }
-  else
-    {
-      throw; // TODO Add exception
-    }
+  return prop_length ? xcb_get_property_value (prop_reply.get ()) : throw;
 };
 
 struct desktop_info
