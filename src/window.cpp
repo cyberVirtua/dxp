@@ -22,13 +22,13 @@ window::window (const int16_t x,       ///< x coordinate of the top left corner
   // Sets default parent to root
   if (this->parent == XCB_NONE)
     {
-      this->win_id = xcb_generate_id (drawable::c_);
+      this->id = xcb_generate_id (drawable::c_);
       this->parent = drawable::screen_->root;
       create_window ();
     }
 };
 
-window::~window () { xcb_destroy_window (drawable::c_, this->win_id); }
+window::~window () { xcb_destroy_window (drawable::c_, this->id); }
 
 // TODO: Add support for masks if needed. Also ierarchy
 void
@@ -46,7 +46,7 @@ window::create_window ()
   values[2] = XCB_STACK_MODE_ABOVE;
   xcb_create_window (window::c_, /* Connection, separate from one of daemon */
                      XCB_COPY_FROM_PARENT,          /* depth (same as root)*/
-                     this->win_id,                  /* window Id */
+                     this->id,                      /* window Id */
                      this->parent,                  /* parent window */
                      this->x, this->y,              /* x, y */
                      this->width, this->height,     /* width, height */
@@ -56,8 +56,8 @@ window::create_window ()
                      mask, values);                 /* masks, not used yet */
 
   /* Map the window on the screen */
-  xcb_map_window (window::c_, this->win_id);
-  xcb_flush (this->c_);
+  xcb_map_window (window::c_, this->id);
+  xcb_flush (window::c_);
 };
 
 void
@@ -65,7 +65,7 @@ window::connect_to_parent_window (xcb_connection_t *c, xcb_screen_t *screen)
 {
   window::c_ = c;
   window::screen_ = screen;
-  window::win_id = xcb_generate_id (c);
+  window::id = xcb_generate_id (c);
   create_window ();
   xcb_flush (window::c_);
 };

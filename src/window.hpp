@@ -10,13 +10,9 @@
 class window : public drawable
 {
 public:
-  uint32_t win_id;  // Identificator for Window
-  int16_t x;        // x coordinate of the top left corner
-  int16_t y;        // y coordinate of the top left corner
+  uint32_t id;      // Identificator for Window
   short b_width;    // Border width NOTE: Maybe it could be changed to constant
   std::string name; // _NET_WM_NAME of display, MAYBE UNNEEDED THERE
-  uint16_t width;
-  uint16_t height;
   uint32_t parent;
   // TODO: Add masks
 
