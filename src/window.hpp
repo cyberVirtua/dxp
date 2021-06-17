@@ -15,8 +15,8 @@ class window : public drawable
 public:
   inline static xcb_gcontext_t gc_; ///< Graphic context
   uint32_t id;                      // Identificator for Window
-  short b_width; // Border width NOTE: Maybe it could be changed to constant
-  std::vector<dexpo_pixmap> storage;
+  uint16_t b_width; // Border width NOTE: Maybe it could be changed to constant
+  std::vector<dexpo_pixmap> pixmaps;
   // TODO: Add masks for events
 
   // The same as for DesktopPixmap
@@ -46,7 +46,7 @@ public:
   /**
    * Draws a rectangle around chosen window
    */
-  void highlight_window (int desktop_number, int color);
+  void highlight_window (int desktop_number, uint32_t color);
 
 private:
   /**

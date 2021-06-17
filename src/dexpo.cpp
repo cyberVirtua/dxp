@@ -24,7 +24,7 @@ test_get_vector ()
   dexpo_pixmap d3_1{ 2, d3.pixmap_width, d3.pixmap_height, d3.pixmap_id,
                      "DP-3" };
   return std::vector<dexpo_pixmap>{ d1_1, d2_1, d3_1 };
-};
+}
 
 int
 main ()
@@ -59,7 +59,7 @@ main ()
     };
 
   window w (dexpo_x, dexpo_y, conf_width, conf_height);
-  w.storage = v;
+  w.pixmaps = v;
   // Mapping pixmap onto window
   while (1)
     {
@@ -96,4 +96,4 @@ main ()
       /* We flush the request */
       xcb_flush (window::c_);
     }
-};
+}
