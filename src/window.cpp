@@ -60,37 +60,27 @@ window::create_window ()
   xcb_flush (window::c_);
 };
 
-void
-window::connect_to_parent_window (xcb_connection_t *c, xcb_screen_t *screen)
-{
-  window::c_ = c;
-  window::screen_ = screen;
-  window::id = xcb_generate_id (c);
-  create_window ();
-  xcb_flush (window::c_);
-};
-
-int
-window::get_screen_position (int DesktopNumber, std::vector<dexpo_pixmap> v)
-{
-  int coord = k_dexpo_padding;
-  for (const auto &dexpo_pixmap : v)
-    {
-      if (dexpo_pixmap.desktop_number < DesktopNumber)
-        {
-          coord += k_dexpo_padding;
-          if (k_dexpo_height == 0)
-            {
-              coord += dexpo_pixmap.height;
-            }
-          else
-            {
-              coord += dexpo_pixmap.width;
-            }
-        }
-      else
-        {
-          return coord;
-        }
-    }
-}
+// int
+// window::get_screen_position (int DesktopNumber, std::vector<dexpo_pixmap> v)
+// {
+//   int coord = k_dexpo_padding;
+//   for (const auto &dexpo_pixmap : v)
+//     {
+//       if (dexpo_pixmap.desktop_number < DesktopNumber)
+//         {
+//           coord += k_dexpo_padding;
+//           if (k_dexpo_height == 0)
+//             {
+//               coord += dexpo_pixmap.height;
+//             }
+//           else
+//             {
+//               coord += dexpo_pixmap.width;
+//             }
+//         }
+//       else
+//         {
+//           return coord;
+//         }
+//     }
+// }

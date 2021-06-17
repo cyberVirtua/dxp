@@ -5,14 +5,14 @@
 #include <unistd.h>
 #include <vector>
 
+desktop_pixmap d1 (0, 0, 1920, 1080, "DP-1");
+desktop_pixmap d2 (0, 0, 1920, 1080, "DP-2");
+desktop_pixmap d3 (0, 0, 1920, 1080, "DP-3");
+
 // Used for testing purposes
 std::vector<dexpo_pixmap>
 test_get_vector ()
 {
-  desktop_pixmap d1 (0, 0, 1920, 1080, "DP-1");
-  desktop_pixmap d2 (0, 0, 1920, 1080, "DP-2");
-  desktop_pixmap d3 (0, 0, 1920, 1080, "DP-3");
-
   d1.save_screen ();
   d2.save_screen ();
   d3.save_screen ();
