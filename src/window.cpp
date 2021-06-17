@@ -116,10 +116,10 @@ window::highlight_window (int desktop_number, uint32_t color)
           },
           // right border
           {
-              int16_t (x + width), /* x */
-              int16_t (y - dexpo_hlwidth),                 /* y */
-              uint16_t (dexpo_hlwidth),                    /* width */
-              uint16_t (height + 2 * dexpo_hlwidth)        /* height */
+              int16_t (x + width),                  /* x */
+              int16_t (y - dexpo_hlwidth),          /* y */
+              uint16_t (dexpo_hlwidth),             /* width */
+              uint16_t (height + 2 * dexpo_hlwidth) /* height */
           },
           // top border
           {
@@ -130,10 +130,10 @@ window::highlight_window (int desktop_number, uint32_t color)
           },
           // bottom border
           {
-              int16_t (x - 1),                              /* x */
-              int16_t (y + height), /* y */
-              uint16_t (width + 1),                         /* width */
-              uint16_t (dexpo_hlwidth)                      /* height */
+              int16_t (x - 1),         /* x */
+              int16_t (y + height),    /* y */
+              uint16_t (width + 1),    /* width */
+              uint16_t (dexpo_hlwidth) /* height */
           }
         };
   // Drawing the highlighting itself
