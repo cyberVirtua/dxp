@@ -30,11 +30,11 @@ desktop_pixmap::desktop_pixmap (
     }
 
   // Check if both are set or unset simultaneously
-  static_assert ((k_dexpo_height == 0) != (k_dexpo_width == 0),
+  static_assert ((dexpo_height == 0) != (dexpo_width == 0),
                  "Height and width can't be set or unset simultaneously");
 
-  this->pixmap_width = k_dexpo_width;
-  this->pixmap_height = k_dexpo_height;
+  this->pixmap_width = dexpo_width;
+  this->pixmap_height = dexpo_height;
 
   if (this->pixmap_width == 0)
     {
