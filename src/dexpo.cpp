@@ -101,7 +101,9 @@ main ()
           }
         case XCB_KEY_PRESS:
           {
-            xcb_key_press_event_t *kp = reinterpret_cast<xcb_key_press_event_t *>(event);;
+            xcb_key_press_event_t *kp
+                = reinterpret_cast<xcb_key_press_event_t *> (event);
+            ;
             if (kp->detail == 65) // backspace
               {
                 highlighted += 1;
@@ -117,9 +119,10 @@ main ()
               }
             break;
           }
-        case XCB_MOTION_NOTIFY://pointer motion within window
+        case XCB_MOTION_NOTIFY: // pointer motion within window
           {
-            xcb_motion_notify_event_t *mn = reinterpret_cast<xcb_motion_notify_event_t *>(event);
+            xcb_motion_notify_event_t *mn
+                = reinterpret_cast<xcb_motion_notify_event_t *> (event);
             int det = (mn->event_y - dexpo_padding)
                       / v[0].height; // haha watch me name it like this again
             highlighted = det;
@@ -129,13 +132,13 @@ main ()
             w.highlight_window (highlighted, dexpo_hlcolor);
             break;
           }
-        case XCB_ENTER_NOTIFY://pointer enters window
+        case XCB_ENTER_NOTIFY: // pointer enters window
           {
-            xcb_set_input_focus (w.c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id, 
+            xcb_set_input_focus (w.c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
                                  XCB_TIME_CURRENT_TIME);
             break;
           }
-        case XCB_LEAVE_NOTIFY://pointer leaves window
+        case XCB_LEAVE_NOTIFY: // pointer leaves window
           {
             w.highlight_window (0, dexpo_bgcolor);
             w.highlight_window (1, dexpo_bgcolor);
