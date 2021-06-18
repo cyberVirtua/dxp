@@ -47,9 +47,10 @@ atom_parser (char *atom_name)
   return prop_length ? xcb_get_property_value (prop_reply.get ()) : throw;
 };
 
-void
+std::vector<int>
 get_screen_data ()
 {
+  std::vector<int> mon_dims;
   xcb_randr_get_screen_resources_current_reply_t *reply
       = xcb_randr_get_screen_resources_current_reply (
           c, xcb_randr_get_screen_resources_current (c, root), NULL);
@@ -76,9 +77,14 @@ get_screen_data ()
 
       xcb_randr_get_crtc_info_reply_t *crtc = xcb_randr_get_crtc_info_reply (
           c, xcb_randr_get_crtc_info (c, output->crtc, timestamp), NULL);
+      mon_dims.push_back (crtc->x);
+      mon_dims.push_back (crtc->y);
+      mon_dims.push_back (crtc->width);
+      mon_dims.push_back (crtc->height);
       free (crtc);
       free (output);
     }
+  return mon_dims;
 }
 
 struct desktop_info
@@ -110,14 +116,37 @@ get_desktops_info ()
    * 4.  For each atom in z2, get their geometries, (g), viewports (v)
    * 5.  d[i]={i,v[2*i], v[2*i+1], g[2*i], g[2*i+1], z[i]} profit.
    */
-
-  auto d0 = desktop_info{ 0, 0, 0, 1080, 1920, "Desktop" };
-  auto d1 = desktop_info{ 1, 1080, 0, 3440, 1440, "first" };
-  auto d2 = desktop_info{ 2, 1080, 0, 3440, 1440, "second" };
-  auto d3 = desktop_info{ 3, 1080, 0, 3440, 1440, "third" };
-  auto d4 = desktop_info{ 4, 1080, 0, 3440, 1440, "fourth" };
-
-  return std::vector<desktop_info>{ d0, d1, d2, d3, d4 };
+  auto monitor_info = get_screen_data ();
+  auto workarea = reinterpret_cast<int *> (atom_parser ("_NET_WORKAREA"));
+  auto total_desktops
+      = (reinterpret_cast<int *> (atom_parser ("_NET_NUMBER_OF_DESKTOPS")))[0];
+  auto names =reinterpret_cast<const char **> (atom_parser ("_NET_DESKTOP_NAMES"));
+  std::vector<desktop_info> info;
+  for (int j; j < total_desktops; j++)
+    {
+      int min = 3000;
+      int assigned_monitor = 0;
+      for (int i = 0; i < int (monitor_info.size ()) / 4;
+           i++) // find minimal delta monitors/workareas
+        {
+          if (min > monitor_info[4 * i + 3] - workarea[4 * i + 3])
+            {
+              min = monitor_info[4 * i + 3] - workarea[4 * i + 3];
+              assigned_monitor = i;
+            }
+        }
+      info.push_back ({ j, monitor_info[4 * assigned_monitor],
+                        monitor_info[4 * assigned_monitor + 1],
+                        monitor_info[4 * assigned_monitor + 2],
+                        monitor_info[4 * assigned_monitor + 3], names[j] });
+    }
+  //auto d0 = desktop_info{ 0, 0, 0, 1080, 1920, "Desktop" };
+  //auto d1 = desktop_info{ 1, 1080, 0, 3440, 1440, "first" };
+  //auto d2 = desktop_info{ 2, 1080, 0, 3440, 1440, "second" };
+  //auto d3 = desktop_info{ 3, 1080, 0, 3440, 1440, "third" };
+  //auto d4 = desktop_info{ 4, 1080, 0, 3440, 1440, "fourth" };
+  return info;
+  //return std::vector<desktop_info>{ d0, d1, d2, d3, d4 };
 }
 
 /**
@@ -137,8 +166,8 @@ get_current_desktop ()
 int
 main ()
 {
-  get_screen_data ();
-  exit (0);
+  auto a=get_desktops_info();
+  exit(0);
   auto desktop_viewports = get_desktops_info ();
   std::vector<desktop_pixmap> desktop_pixmaps;
   for (const auto &d : desktop_viewports)
