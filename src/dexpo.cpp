@@ -104,15 +104,29 @@ main ()
             xcb_key_press_event_t *kp
                 = reinterpret_cast<xcb_key_press_event_t *> (event);
             ;
-            if (kp->detail == 65) // backspace
+            if (kp->detail == 114) // right arrow
               {
                 highlighted += 1;
-                highlighted = highlighted % 3;
-                w.highlight_window (0, dexpo_bgcolor);
+                highlighted = highlighted % int(v.size ());
+                w.highlight_window (0,
+                                    dexpo_bgcolor); // TODO: add a function like
+                                                    // unhlight_all or smth
                 w.highlight_window (1, dexpo_bgcolor);
                 w.highlight_window (2, dexpo_bgcolor);
                 w.highlight_window (highlighted, dexpo_hlcolor);
               }
+            if (kp->detail == 113) // left arrow
+            {
+              if (highlighted == 0)
+                {
+                  highlighted = v.size () ;
+                }
+                  highlighted -= 1;
+            }
+            w.highlight_window (0, dexpo_bgcolor);
+            w.highlight_window (1, dexpo_bgcolor);
+            w.highlight_window (2, dexpo_bgcolor);
+            w.highlight_window (highlighted, dexpo_hlcolor);
             if (kp->detail == 9) // escape
               {
                 exit (0);
