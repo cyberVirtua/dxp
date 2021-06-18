@@ -22,7 +22,7 @@ auto root = screen -> root;
  * auto a=atom_parser(c,screen->root, "_NET_NUMBER_OF_DESKTOPS");
  * std::cout<<"Desktops: "<<a[0]<<'\n';
  */
-void *
+std::unique_ptr<xcb_atom_t>
 atom_parser (const char *atom_name)
 {
   xcb_atom_t atom = 0;
@@ -44,7 +44,10 @@ atom_parser (const char *atom_name)
 
   int prop_length = xcb_get_property_value_length (prop_reply.get ());
 
-  return prop_length ? xcb_get_property_value (prop_reply.get ()) : throw;
+  return prop_length
+             ? std::make_unique<xcb_atom_t> (*static_cast<xcb_atom_t *> (
+                 xcb_get_property_value (prop_reply.get ())))
+             : throw;
 };
 
 struct monitor_info
