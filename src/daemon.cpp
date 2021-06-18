@@ -41,16 +41,15 @@ atom_parser (const char *atom_name)
 
   int prop_length = xcb_get_property_value_length (prop_reply.get ());
 
-  auto prop = prop_length // XXX make_unique may or may not segfault
-                  ? std::make_unique<uint32_t> (*reinterpret_cast<uint32_t *> (
-                      xcb_get_property_value (prop_reply.get ())))
-                  : throw;
+  auto *prop = prop_length ? (reinterpret_cast<uint32_t *> (
+                   xcb_get_property_value (prop_reply.get ())))
+                           : throw;
 
   std::vector<uint32_t> atom_data;
 
   for (int i = 0; i < prop_length; i++)
     {
-      atom_data.push_back (prop.get ()[i]);
+      atom_data.push_back (prop[i]);
     }
 
   return atom_data;
