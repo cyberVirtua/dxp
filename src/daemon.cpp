@@ -23,7 +23,7 @@ auto root = screen -> root;
  * std::cout<<"Desktops: "<<a[0]<<'\n';
  */
 std::vector<uint32_t>
-atom_parser (const char *atom_name)
+get_property_value (const char *atom_name)
 {
   auto atom_cookie = xcb_intern_atom (c, 0, strlen (atom_name), atom_name);
   auto atom_reply = std::unique_ptr<xcb_intern_atom_reply_t> (
@@ -64,7 +64,7 @@ struct monitor_info
 };
 
 std::vector<monitor_info>
-get_screen_data ()
+get_monitors ()
 {
   std::vector<monitor_info> monitors;
 
@@ -120,13 +120,13 @@ struct desktop_info
  * FIXME Uses EWMH and won't work if WM doesn't support large desktops
  */
 std::vector<desktop_info>
-get_desktops_info ()
+get_desktops ()
 {
-  auto monitors = get_screen_data ();
+  auto monitors = get_monitors ();
 
-  auto number_of_desktops = atom_parser ("_NET_NUMBER_OF_DESKTOPS")[0];
+  auto number_of_desktops = get_property_value ("_NET_NUMBER_OF_DESKTOPS")[0];
 
-  auto viewport = atom_parser ("_NET_DESKTOP_VIEWPORT");
+  auto viewport = get_property_value ("_NET_DESKTOP_VIEWPORT");
 
   // TODO Parse names
 
@@ -163,57 +163,61 @@ get_desktops_info ()
 }
 
 /**
- * Get value of _NET_CURRENT_DESKTOP atom
+ * Get value of _NET_CURRENT_DESKTOP
  */
 int
 get_current_desktop ()
 {
-  return 1;
+  return int (get_property_value ("_NET_CURRENT_DESKTOP")[0]);
 };
 
 /**
  * Parse monitor dimensions and initialize appropriate desktop_pixmaps.
- * At a timeout check current display and screenshot it (in a separate
- * thread). Start a socket listner.
+ *
+ * At a timeout check current display and screenshot it.
+ * Start a socket listner.
+ *
+ * TODO Handle workspace deletions
+ * TODO Handle errors
  */
 int
 main ()
 {
-  auto a = get_desktops_info ();
-  exit (0);
-  auto desktop_viewports = get_desktops_info ();
-  std::vector<desktop_pixmap> desktop_pixmaps;
-  for (const auto &d : desktop_viewports)
+  auto desktops = get_desktops ();
+
+  /* Initializing desktop_pixmap objects */
+  std::vector<desktop_pixmap> pixmaps;
+  for (const auto &d : desktops)
     {
-      desktop_pixmaps.push_back (
-          desktop_pixmap (d.x, d.y, d.width, d.height, d.name));
+      pixmaps.push_back (desktop_pixmap (d.x, d.y, d.width, d.height, d.name));
     }
 
-  std::vector<dexpo_pixmap> dexpo_pixmaps;
-
-  for (size_t i = 0; i < desktop_pixmaps.size (); i++)
+  /* Initializing pixmaps that will be shared over socket */
+  std::vector<dexpo_pixmap> socket_pixmaps;
+  for (size_t i = 0; i < pixmaps.size (); i++)
     {
-      dexpo_pixmaps.push_back (
-          dexpo_pixmap{ static_cast<int> (i),
-                        desktop_pixmaps[i].width,
-                        desktop_pixmaps[i].height,
-                        desktop_pixmaps[i].pixmap_id,
-                        { *desktop_pixmaps[i].name.c_str () } });
+      socket_pixmaps.push_back (dexpo_pixmap{ static_cast<int> (i),
+                                              pixmaps[i].width,
+                                              pixmaps[i].height,
+                                              pixmaps[i].pixmap_id,
+                                              { *pixmaps[i].name.c_str () } });
     }
 
-  dexpo_socket server{};
+  dexpo_socket server;
 
-  std::mutex dexpo_pixmaps_lock;
-  server.send_pixmaps_on_event (dexpo_pixmaps, dexpo_pixmaps_lock);
+  std::mutex socket_pixmaps_lock;
+  server.send_pixmaps_on_event (socket_pixmaps, socket_pixmaps_lock);
 
   bool running = true;
   while (running)
     {
       size_t c = size_t (get_current_desktop ());
-      dexpo_pixmaps_lock.lock ();
-      desktop_pixmaps[c].save_screen ();
-      dexpo_pixmaps_lock.unlock ();
-      sleep (2);
+
+      socket_pixmaps_lock.lock ();
+      pixmaps[c].save_screen ();
+      socket_pixmaps_lock.unlock ();
+
+      sleep (1);
     };
 
   return 0;
