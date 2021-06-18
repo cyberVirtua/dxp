@@ -21,13 +21,6 @@ public:
             uint16_t width, ///< Width of the display
             uint16_t height ///< Height of the display
   );
-  ~drawable ();
-
-  // Explicitly delete unused constructors to comply with rule of five
-  drawable (const drawable &other) = delete;
-  drawable (drawable &&other) noexcept = delete;
-  drawable &operator= (const drawable &other) = delete;
-  drawable &operator= (drawable &&other) = delete;
 };
 
 #endif /* ifndef DRAWABLE_HPP */
