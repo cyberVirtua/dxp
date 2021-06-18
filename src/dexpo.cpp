@@ -4,7 +4,6 @@
 #include "window.hpp"
 #include <unistd.h>
 #include <vector>
-
 desktop_pixmap d1 (0, 0, 1920, 1080, "DP-1");
 desktop_pixmap d2 (0, 0, 1920, 1080, "DP-2");
 desktop_pixmap d3 (0, 0, 1920, 1080, "DP-3");
@@ -104,45 +103,45 @@ main ()
             xcb_key_press_event_t *kp
                 = reinterpret_cast<xcb_key_press_event_t *> (event);
             ;
-            if (kp->detail == 114) // right arrow
+            if (kp->detail == 114
+                or kp->detail == 116) // right arrow or up arrow
               {
+                w.highlight_window (highlighted, dexpo_bgcolor);
                 highlighted += 1;
-                highlighted = highlighted % int(v.size ());
-                w.highlight_window (0,
-                                    dexpo_bgcolor); // TODO: add a function like
-                                                    // unhlight_all or smth
-                w.highlight_window (1, dexpo_bgcolor);
-                w.highlight_window (2, dexpo_bgcolor);
+                highlighted = highlighted % int (v.size ());
                 w.highlight_window (highlighted, dexpo_hlcolor);
               }
-            if (kp->detail == 113) // left arrow
-            {
-              if (highlighted == 0)
-                {
-                  highlighted = v.size () ;
-                }
-                  highlighted -= 1;
-            }
-            w.highlight_window (0, dexpo_bgcolor);
-            w.highlight_window (1, dexpo_bgcolor);
-            w.highlight_window (2, dexpo_bgcolor);
+            if (kp->detail == 113
+                or kp->detail == 111) // left arrow or down arrow
+              {
+                w.highlight_window (highlighted, dexpo_bgcolor);
+                if (highlighted == 0)
+                  {
+                    highlighted = v.size ();
+                  }
+                highlighted -= 1;
+              }
             w.highlight_window (highlighted, dexpo_hlcolor);
             if (kp->detail == 9) // escape
               {
                 exit (0);
               }
             break;
+            if (kp->detail == 36) // enter
+              {
+                break;
+              }
+            break;
           }
+
         case XCB_MOTION_NOTIFY: // pointer motion within window
           {
             xcb_motion_notify_event_t *mn
                 = reinterpret_cast<xcb_motion_notify_event_t *> (event);
             int det = (mn->event_y - dexpo_padding)
                       / v[0].height; // haha watch me name it like this again
+            w.highlight_window (highlighted, dexpo_bgcolor);
             highlighted = det;
-            w.highlight_window (0, dexpo_bgcolor);
-            w.highlight_window (1, dexpo_bgcolor);
-            w.highlight_window (2, dexpo_bgcolor);
             w.highlight_window (highlighted, dexpo_hlcolor);
             break;
           }
@@ -154,9 +153,7 @@ main ()
           }
         case XCB_LEAVE_NOTIFY: // pointer leaves window
           {
-            w.highlight_window (0, dexpo_bgcolor);
-            w.highlight_window (1, dexpo_bgcolor);
-            w.highlight_window (2, dexpo_bgcolor);
+            w.highlight_window (highlighted, dexpo_bgcolor);
             xcb_set_input_focus (w.c_, XCB_INPUT_FOCUS_POINTER_ROOT,
                                  w.screen_->root, XCB_TIME_CURRENT_TIME);
             break;
