@@ -68,56 +68,83 @@ main ()
       switch (event->response_type & ~0x80)
         {
         case XCB_EXPOSE:
-          if (dexpo_width == 0)
-            {
-              // Drawing screenshots starting from the left top corner
-              auto act_width = dexpo_padding;
-              for (const auto &dexpo_pixmap : v)
-                {
-                  xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
-                                 desktop_pixmap::gc_, 0, 0, act_width,
-                                 dexpo_padding, dexpo_pixmap.width,
-                                 dexpo_pixmap.height);
-                  act_width += dexpo_pixmap.width;
-                  act_width += dexpo_padding;
-                };
-            }
-          else if (dexpo_height == 0)
-            {
-              auto act_height = dexpo_padding;
-              for (const auto &dexpo_pixmap : v)
-                {
-                  xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
-                                 desktop_pixmap::gc_, 0, 0, dexpo_padding,
-                                 act_height, dexpo_pixmap.width,
-                                 dexpo_pixmap.height);
-                  act_height += dexpo_pixmap.height;
-                  act_height += dexpo_padding;
-                };
-            }
-          w.highlight_window (0, dexpo_hlcolor);
-          /* We flush the request */
-          xcb_flush (window::c_);
-          break;
+          {
+            if (dexpo_width == 0)
+              {
+                // Drawing screenshots starting from the left top corner
+                auto act_width = dexpo_padding;
+                for (const auto &dexpo_pixmap : v)
+                  {
+                    xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
+                                   desktop_pixmap::gc_, 0, 0, act_width,
+                                   dexpo_padding, dexpo_pixmap.width,
+                                   dexpo_pixmap.height);
+                    act_width += dexpo_pixmap.width;
+                    act_width += dexpo_padding;
+                  };
+              }
+            else if (dexpo_height == 0)
+              {
+                auto act_height = dexpo_padding;
+                for (const auto &dexpo_pixmap : v)
+                  {
+                    xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
+                                   desktop_pixmap::gc_, 0, 0, dexpo_padding,
+                                   act_height, dexpo_pixmap.width,
+                                   dexpo_pixmap.height);
+                    act_height += dexpo_pixmap.height;
+                    act_height += dexpo_padding;
+                  };
+              }
+            w.highlight_window (0, dexpo_hlcolor);
+            break;
+          }
         case XCB_KEY_PRESS:
-          highlighted += 1;
-          highlighted = highlighted % 3;
-          w.highlight_window (2, dexpo_bgcolor);
-          w.highlight_window (1, dexpo_bgcolor);
-          w.highlight_window (0, dexpo_bgcolor);
-          w.highlight_window (highlighted, dexpo_hlcolor); 
-          
-          break;
-        case XCB_FOCUS_OUT:
-          exit(0);
-          break;
-        case XCB_FOCUS_IN:
-          w.highlight_window (2, dexpo_hlcolor);
-          w.highlight_window (1, dexpo_hlcolor);
-          w.highlight_window (0, dexpo_hlcolor);
-          xcb_flush(w.c_);
-          break;
+          {
+            xcb_key_press_event_t *kp = reinterpret_cast<xcb_key_press_event_t *>(event);;
+            if (kp->detail == 65) // backspace
+              {
+                highlighted += 1;
+                highlighted = highlighted % 3;
+                w.highlight_window (0, dexpo_bgcolor);
+                w.highlight_window (1, dexpo_bgcolor);
+                w.highlight_window (2, dexpo_bgcolor);
+                w.highlight_window (highlighted, dexpo_hlcolor);
+              }
+            if (kp->detail == 9) // escape
+              {
+                exit (0);
+              }
+            break;
+          }
+        case XCB_MOTION_NOTIFY://pointer motion within window
+          {
+            xcb_motion_notify_event_t *mn = reinterpret_cast<xcb_motion_notify_event_t *>(event);
+            int det = (mn->event_y - dexpo_padding)
+                      / v[0].height; // haha watch me name it like this again
+            highlighted = det;
+            w.highlight_window (0, dexpo_bgcolor);
+            w.highlight_window (1, dexpo_bgcolor);
+            w.highlight_window (2, dexpo_bgcolor);
+            w.highlight_window (highlighted, dexpo_hlcolor);
+            break;
+          }
+        case XCB_ENTER_NOTIFY://pointer enters window
+          {
+            xcb_set_input_focus (w.c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id, 
+                                 XCB_TIME_CURRENT_TIME);
+            break;
+          }
+        case XCB_LEAVE_NOTIFY://pointer leaves window
+          {
+            w.highlight_window (0, dexpo_bgcolor);
+            w.highlight_window (1, dexpo_bgcolor);
+            w.highlight_window (2, dexpo_bgcolor);
+            xcb_set_input_focus (w.c_, XCB_INPUT_FOCUS_POINTER_ROOT,
+                                 w.screen_->root, XCB_TIME_CURRENT_TIME);
+            break;
+          }
         }
-      xcb_flush (window::c_);  
+      xcb_flush (w.c_);
     }
-} 
+}

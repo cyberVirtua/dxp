@@ -31,7 +31,9 @@ window::create_window ()
   values[0] = dexpo_bgcolor; // Background color
   // Will be used in future to handle events
   values[1] = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS
-              | XCB_EVENT_MASK_BUTTON_PRESS|XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_FOCUS_CHANGE;
+              | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_KEY_RELEASE
+              | XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_POINTER_MOTION
+              | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_ENTER_WINDOW;;
   values[2] = XCB_STACK_MODE_ABOVE; // Places created window on top
   xcb_create_window (window::c_, /* Connection, separate from one of daemon */
                      XCB_COPY_FROM_PARENT,          /* depth (same as root)*/
@@ -52,7 +54,7 @@ window::create_window ()
   /* Map the window on the screen */
   xcb_map_window (window::c_, this->id);
 
-  //Set the focus. Doing it after mapping window is crucial.
+  // Set the focus. Doing it after mapping window is crucial.
   xcb_set_input_focus (c_, XCB_INPUT_FOCUS_POINTER_ROOT, id,
                        XCB_TIME_CURRENT_TIME);
 
