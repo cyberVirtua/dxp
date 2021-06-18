@@ -115,61 +115,51 @@ struct desktop_info
 };
 
 /**
- * Get array of desktop_info
+ * Get an array of desktop_info.
+ *
+ * FIXME Uses EWMH and won't work if WM doesn't support large desktops
  */
 std::vector<desktop_info>
 get_desktops_info ()
 {
-  // TODO Real parser
-  /**
-   * PLAN:
-   *
-   * 1. Get a number of desktops:
-   *     getatom("NET_NUMBER_OF_DESKTOPS")
-   * 2. Get their names:
-   *     getatom("NET_DESKTOP_NAMES")
-   * 3.  For each name in c, get their atom . I'll write that. store in smth
-   *     like z2 may need to rewrite getatom. Do atoms count as drawables?
-   * 4.  For each atom in z2, get their geometries, (g), viewports (v)
-   * 5.  d[i]={i,v[2*i], v[2*i+1], g[2*i], g[2*i+1], z[i]} profit.
-   */
-  auto monitor_info = get_screen_data ();
-  auto *workarea = reinterpret_cast<int *> (atom_parser ("_NET_WORKAREA"));
+  auto monitors = get_screen_data ();
 
-  auto total_desktops
-      = (reinterpret_cast<int *> (atom_parser ("_NET_NUMBER_OF_DESKTOPS")))[0];
+  auto number_of_desktops = atom_parser ("_NET_NUMBER_OF_DESKTOPS")[0];
 
-  auto *names
-      = reinterpret_cast<const char **> (atom_parser ("_NET_DESKTOP_NAMES"));
+  auto viewport = atom_parser ("_NET_DESKTOP_VIEWPORT");
+
+  // TODO Parse names
 
   std::vector<desktop_info> info;
 
-  for (int d_num = 0; d_num < total_desktops; d_num++)
+  for (size_t i = 0; i < number_of_desktops; i++)
     {
-      int min = 3000;
-      int assigned_monitor = 0;
+      int x = int (viewport[i * 2]);
+      int y = int (viewport[i * 2 + 1]);
+      int width = 0;
+      int height = 0;
 
-      // Find minimal delta monitors/workareas
-      for (int size = 0; size < int (monitor_info.size ()) / 4; size++)
+      for (const auto &monitor : monitors)
         {
-          if (min > monitor_info[4 * size + 3] - workarea[4 * size + 3])
+          // Finding monitor on which the desktop is located
+          if (monitor.x == x && monitor.y == y)
             {
-              min = monitor_info[4 * size + 3] - workarea[4 * size + 3];
-              assigned_monitor = size;
+              width = monitor.width;
+              height = monitor.height;
             }
         }
-      info.push_back ({ d_num, monitor_info[4 * assigned_monitor],
-                        monitor_info[4 * assigned_monitor + 1],
-                        monitor_info[4 * assigned_monitor + 2],
-                        monitor_info[4 * assigned_monitor + 3], names[d_num] });
+
+      // This should not happen
+      // May happen if monitors have some weird configuration
+      if (width == 0 || height == 0)
+        {
+          throw; // TODO Log errors
+        }
+
+      info.push_back (desktop_info{ int (i), x, y, width, height, "" });
     }
-  // auto d0 = desktop_info{ 0, 0, 0, 1080, 1920, "Desktop" };
-  // auto d1 = desktop_info{ 1, 1080, 0, 3440, 1440, "first" };
-  // auto d2 = desktop_info{ 2, 1080, 0, 3440, 1440, "second" };
-  // auto d3 = desktop_info{ 3, 1080, 0, 3440, 1440, "third" };
-  // auto d4 = desktop_info{ 4, 1080, 0, 3440, 1440, "fourth" };
+
   return info;
-  // return std::vector<desktop_info>{ d0, d1, d2, d3, d4 };
 }
 
 /**
