@@ -15,12 +15,9 @@ auto *screen = xcb_setup_roots_iterator (xcb_get_setup (c)).data;
 auto root = screen -> root;
 
 /**
+ * Get a vector with EWMH property values
  *
- * @return array
- *
- * usage:
- * auto a=atom_parser(c,screen->root, "_NET_NUMBER_OF_DESKTOPS");
- * std::cout<<"Desktops: "<<a[0]<<'\n';
+ * @note vector size is inconsistent so vector may contain other data
  */
 std::vector<uint32_t>
 get_property_value (const char *atom_name)
@@ -41,6 +38,8 @@ get_property_value (const char *atom_name)
 
   int prop_length = xcb_get_property_value_length (prop_reply.get ());
 
+  // This shouldn't be unique_ptr as it belongs to prop_reply and
+  // will be freed by prop_reply
   auto *prop = prop_length ? (reinterpret_cast<uint32_t *> (
                    xcb_get_property_value (prop_reply.get ())))
                            : throw;
@@ -55,6 +54,11 @@ get_property_value (const char *atom_name)
   return atom_data;
 };
 
+/**
+ * Information about your connected monitor.
+ *
+ * Used to calculate sizes of virtual desktops
+ */
 struct monitor_info
 {
   int x;
@@ -63,6 +67,9 @@ struct monitor_info
   int height;
 };
 
+/**
+ * Get monitor_info for each connected monitor
+ */
 std::vector<monitor_info>
 get_monitors ()
 {
@@ -73,12 +80,16 @@ get_monitors ()
           xcb_randr_get_screen_resources_current_reply (
               c, xcb_randr_get_screen_resources_current (c, root), nullptr));
 
+  // This shouldn't be unique_ptr as it belongs to screen_resources_reply and
+  // will be freed by screen_resources_reply
   auto *randr_outputs = xcb_randr_get_screen_resources_current_outputs (
       screen_resources_reply.get ());
 
   int len = xcb_randr_get_screen_resources_current_outputs_length (
       screen_resources_reply.get ());
 
+  // Iterating over all randr outputs. They correspond to GPU ports and other
+  // things so a lot are disconnected. Such monitors will be caught with if
   for (int i = 0; i < len; i++)
     {
       auto output_cookie = xcb_randr_get_output_info (c, randr_outputs[i],
@@ -175,7 +186,7 @@ get_current_desktop ()
  * Parse monitor dimensions and initialize appropriate desktop_pixmaps.
  *
  * At a timeout check current display and screenshot it.
- * Start a socket listner.
+ * Start a socket listener.
  *
  * TODO Handle workspace deletions
  * TODO Handle errors
@@ -206,6 +217,7 @@ main ()
   dexpo_socket server;
 
   std::mutex socket_pixmaps_lock;
+  // Start a server that will share pixmaps over socket in a separate thread
   server.send_pixmaps_on_event (socket_pixmaps, socket_pixmaps_lock);
 
   bool running = true;
