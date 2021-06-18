@@ -22,32 +22,38 @@ auto root = screen -> root;
  * auto a=atom_parser(c,screen->root, "_NET_NUMBER_OF_DESKTOPS");
  * std::cout<<"Desktops: "<<a[0]<<'\n';
  */
-std::unique_ptr<xcb_atom_t>
+std::vector<uint32_t>
 atom_parser (const char *atom_name)
 {
-  xcb_atom_t atom = 0;
-
   auto atom_cookie = xcb_intern_atom (c, 0, strlen (atom_name), atom_name);
-  auto atom_reply
-      = std::make_unique<xcb_intern_atom_reply_t> (*xcb_intern_atom_reply (
-          c, atom_cookie, nullptr)); // XXX This may segfault
+  auto atom_reply = std::unique_ptr<xcb_intern_atom_reply_t> (
+      xcb_intern_atom_reply (c, atom_cookie, nullptr));
 
-  atom = atom_reply ? atom_reply->atom : throw; // TODO add proper exception
+  // TODO add proper exception
+  auto atom = atom_reply ? atom_reply->atom : throw;
 
   /* Getting property from atom */
 
-  auto prop_cookie
-      = xcb_get_property (c, 0, root, atom, XCB_GET_PROPERTY_TYPE_ANY, 0, 128);
-  auto prop_reply
-      = std::make_unique<xcb_get_property_reply_t> (*xcb_get_property_reply (
-          c, prop_cookie, nullptr)); // XXX This may segfault
+  auto prop_cookie = xcb_get_property (
+      c, 0, root, atom, XCB_GET_PROPERTY_TYPE_ANY, 0, UINT32_MAX);
+  auto prop_reply = std::unique_ptr<xcb_get_property_reply_t> (
+      xcb_get_property_reply (c, prop_cookie, nullptr));
 
   int prop_length = xcb_get_property_value_length (prop_reply.get ());
 
-  return prop_length
-             ? std::make_unique<xcb_atom_t> (*static_cast<xcb_atom_t *> (
-                 xcb_get_property_value (prop_reply.get ())))
-             : throw;
+  auto prop = prop_length // XXX make_unique may or may not segfault
+                  ? std::make_unique<uint32_t> (*reinterpret_cast<uint32_t *> (
+                      xcb_get_property_value (prop_reply.get ())))
+                  : throw;
+
+  std::vector<uint32_t> atom_data;
+
+  for (int i = 0; i < prop_length; i++)
+    {
+      atom_data.push_back (prop.get ()[i]);
+    }
+
+  return atom_data;
 };
 
 struct monitor_info
