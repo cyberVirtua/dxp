@@ -69,25 +69,23 @@ get_screen_data ()
   std::vector<monitor_info> monitors;
 
   auto screen_resources_reply
-      = std::make_unique<xcb_randr_get_screen_resources_current_reply_t> (
-          *xcb_randr_get_screen_resources_current_reply (
+      = std::unique_ptr<xcb_randr_get_screen_resources_current_reply_t> (
+          xcb_randr_get_screen_resources_current_reply (
               c, xcb_randr_get_screen_resources_current (c, root), nullptr));
 
-  auto randr_outputs = std::make_unique<xcb_randr_output_t> (
-      *xcb_randr_get_screen_resources_current_outputs (
-          screen_resources_reply.get ()));
+  auto *randr_outputs = xcb_randr_get_screen_resources_current_outputs (
+      screen_resources_reply.get ());
 
   int len = xcb_randr_get_screen_resources_current_outputs_length (
       screen_resources_reply.get ());
 
   for (int i = 0; i < len; i++)
     {
-      auto output = std::make_unique<xcb_randr_get_output_info_reply_t> (
-          *xcb_randr_get_output_info_reply (
-              c,
-              xcb_randr_get_output_info (c, randr_outputs.get ()[i],
-                                         XCB_CURRENT_TIME),
-              nullptr));
+      auto output_cookie = xcb_randr_get_output_info (c, randr_outputs[i],
+                                                      XCB_TIME_CURRENT_TIME);
+
+      auto output = std::unique_ptr<xcb_randr_get_output_info_reply_t> (
+          xcb_randr_get_output_info_reply (c, output_cookie, nullptr));
 
       if (output == nullptr || output->crtc == XCB_NONE
           || output->connection == XCB_RANDR_CONNECTION_DISCONNECTED)
@@ -95,9 +93,10 @@ get_screen_data ()
           continue;
         }
 
-      xcb_randr_get_crtc_info_reply_t *crtc = xcb_randr_get_crtc_info_reply (
-          c, xcb_randr_get_crtc_info (c, output->crtc, XCB_CURRENT_TIME),
-          nullptr);
+      auto crtc = std::unique_ptr<xcb_randr_get_crtc_info_reply_t> (
+          xcb_randr_get_crtc_info_reply (
+              c, xcb_randr_get_crtc_info (c, output->crtc, XCB_CURRENT_TIME),
+              nullptr));
 
       monitor_info m{ crtc->x, crtc->y, crtc->width, crtc->height };
       monitors.push_back (m);
