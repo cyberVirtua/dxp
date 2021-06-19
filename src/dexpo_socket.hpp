@@ -50,7 +50,7 @@ public:
 
   std::vector<dexpo_pixmap *> get_pixmaps () const;
   void send_pixmaps_on_event (const std::vector<dexpo_pixmap *> &,
-                              std::mutex &pixmaps_lock);
+                              std::mutex &pixmaps_lock) const;
   void server () const;
 };
 

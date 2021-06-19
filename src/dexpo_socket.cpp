@@ -69,7 +69,6 @@ dexpo_socket::dexpo_socket ()
       // This should be run only for the first connection, as socket may not
       // exist then.
       // And should not be run when there are active connections to the socket
-      std::cerr << e.what () << std::endl;
 
       unlink (SOCKET_PATH); // Remove existing socket
 
@@ -135,15 +134,13 @@ dexpo_socket::get_pixmaps () const
  */
 void
 dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap *> &pixmaps,
-                                     std::mutex &pixmaps_lock)
+                                     std::mutex &pixmaps_lock) const
 {
-  auto data_fd = accept (this->fd, nullptr, nullptr); // Anonymous socket
-  char cmd = -1;
+  int data_fd = 0; // Socket file descriptor
 
-  this->running = true; // Can later turn off the loop
-
-  while (this->running) // FIXME This loop exit is ugly
+  while ((data_fd = accept (this->fd, nullptr, nullptr)))
     {
+      char cmd = -1;
       if (read (data_fd, &cmd, 1) == kRequestPixmaps) // Listen for the command
         {
           // Lock pixmaps to prevent race condition when reading and writing
