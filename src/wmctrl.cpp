@@ -1,17 +1,13 @@
 #include "window.hpp"
-#include <iostream>
-#include <memory>
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include "wmctrl.hpp"
 #include <string.h>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h> 
 
-void send_message(xcb_connection_t *c, xcb_screen_t *screen, char *msg,
-                    unsigned long data0, unsigned long data1,
-                    unsigned long data2, unsigned long data3,
-                    unsigned long data4)
+void send_message(xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
+                    unsigned long data0, unsigned long data1=0,
+                    unsigned long data2=0, unsigned long data3=0,
+                    unsigned long data4=0)
 {
     xcb_client_message_event_t event;
     xcb_intern_atom_cookie_t atom_cookie;
@@ -34,11 +30,11 @@ void send_message(xcb_connection_t *c, xcb_screen_t *screen, char *msg,
     event.data.data32[3] = data3;
     event.data.data32[4] = data4;
     xcb_send_event(c, 0, screen->root,  XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT, (const char *)&event);
-   
+    xcb_flush(c);
     free(atom_reply);
 }
 
 void ewmh_change_desktop(xcb_connection_t *c, xcb_screen_t *screen, int destkop_number)
 { 
-    send_message(c, screen, "_NET_CURRENT_DESKTOP", destkop_number, 0, 0, 0, 0);
+    send_message(c, screen, "_NET_CURRENT_DESKTOP", destkop_number);
 }

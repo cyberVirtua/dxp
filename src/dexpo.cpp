@@ -4,7 +4,7 @@
 #include "window.hpp"
 #include <unistd.h>
 #include <vector>
-#include "wmctrl.cpp"
+#include  "wmctrl.hpp"
 desktop_pixmap d1 (0, 0, 1920, 1080, "DP-1");
 desktop_pixmap d2 (0, 0, 1920, 1080, "DP-2");
 desktop_pixmap d3 (0, 0, 1920, 1080, "DP-3");
@@ -125,17 +125,17 @@ main ()
             w.highlight_window (highlighted, dexpo_hlcolor);
             if (kp->detail == 9) // escape
               {
+                
                 exit (0);
               }
-            break;
             if (kp->detail == 36) // enter
               {
-                ewmh_change_desktop(window::c_, window::screen_, 5);
-                break;
+                w.highlight_window (highlighted, dexpo_bgcolor);
+                ewmh_change_desktop(window::c_, window::screen_, highlighted);
+                exit(0);
               }
+         }
             break;
-          }
-
         case XCB_MOTION_NOTIFY: // pointer motion within window
           {
             xcb_motion_notify_event_t *mn
