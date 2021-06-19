@@ -88,16 +88,12 @@ dexpo_socket::dexpo_socket ()
     }
 };
 
-dexpo_socket::~dexpo_socket ()
-{
-  close (this->fd);
-  unlink (SOCKET_PATH);
-};
+dexpo_socket::~dexpo_socket () { close (this->fd); };
 
 /**
  * Request and receive dexpo_pixmaps from daemon
  */
-std::vector<dexpo_pixmap>
+std::vector<dexpo_pixmap *>
 dexpo_socket::get_pixmaps () const
 {
   // Send pixmap request to daemon
@@ -105,18 +101,30 @@ dexpo_socket::get_pixmaps () const
   auto s = write (this->fd, &cmd, 1);
   is<write_error> (s);
 
-  std::vector<dexpo_pixmap> pixmap_array; // Pixmap array that will be returned
-  dexpo_pixmap pixmap{};                  // Pixmap to copy data in
+  std::vector<dexpo_pixmap *>
+      pixmap_array; // Pixmap array that will be returned
 
   size_t num = 0;
   auto rcv_bytes = read (this->fd, &num, sizeof (num));
+
+  std::cout << num << std::endl;
   is<read_error> (rcv_bytes);
 
   for (; num > 0; num--) // Read `num` pixmaps from socket
     {
-      rcv_bytes = read (this->fd, &pixmap, sizeof (pixmap));
+      dexpo_pixmap *p = (dexpo_pixmap *)malloc (sizeof (dexpo_pixmap));
+
+      rcv_bytes = read (this->fd, p, sizeof (dexpo_pixmap));
       is<read_error> (rcv_bytes);
-      pixmap_array.push_back (pixmap);
+
+      std::cout << p->pixmap_len << std::endl;
+
+      uint8_t *pixmap_ptr = (uint8_t *)malloc (p->pixmap_len);
+      rcv_bytes = read (this->fd, pixmap_ptr, p->pixmap_len);
+      is<read_error> (rcv_bytes);
+      p->pixmap = pixmap_ptr;
+
+      pixmap_array.push_back (p);
     }
   return pixmap_array; // Compiler is smart so vector won't be copied here
 };
@@ -126,13 +134,14 @@ dexpo_socket::get_pixmaps () const
  * and sends pixmaps one by one in return
  */
 void
-dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap> &pixmaps,
+dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap *> &pixmaps,
                                      std::mutex &pixmaps_lock)
 {
-  auto data_fd = accept (this->fd, NULL, NULL); // Anonymous socket
+  auto data_fd = accept (this->fd, nullptr, nullptr); // Anonymous socket
   char cmd = -1;
 
   this->running = true; // Can later turn off the loop
+
   while (this->running) // FIXME This loop exit is ugly
     {
       if (read (data_fd, &cmd, 1) == kRequestPixmaps) // Listen for the command
@@ -142,14 +151,19 @@ dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap> &pixmaps,
           std::scoped_lock<std::mutex> guard (pixmaps_lock);
 
           // First write -- number of subsequent packets
-          auto num = pixmaps.size ();
+          size_t num = pixmaps.size ();
           auto s = write (data_fd, &num, sizeof (num));
           is<write_error> (s);
 
           // Writes from second to `num+1` -- subsequent packets
-          for (const auto &pixmap : pixmaps)
+          for (const auto *p : pixmaps)
             {
-              s = write (data_fd, &pixmap, sizeof (pixmap));
+              std::cout << p->pixmap_len << std::endl;
+
+              s = write (data_fd, p, sizeof (dexpo_pixmap));
+              is<write_error> (s);
+
+              s = write (data_fd, p->pixmap, p->pixmap_len);
               is<write_error> (s);
             }
         }

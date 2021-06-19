@@ -1,9 +1,11 @@
+#include "config.hpp"
 #include "desktop_pixmap.hpp"
 #include "dexpo_socket.hpp"
 #include <iostream>
 #include <memory>
 #include <string.h>
 #include <sys/un.h>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 #include <xcb/randr.h>
@@ -137,7 +139,9 @@ get_desktops ()
 
   auto number_of_desktops = get_property_value ("_NET_NUMBER_OF_DESKTOPS")[0];
 
-  auto viewport = get_property_value ("_NET_DESKTOP_VIEWPORT");
+  auto viewport = !dexpo_viewport.empty ()
+                      ? dexpo_viewport
+                      : get_property_value ("_NET_DESKTOP_VIEWPORT");
 
   // TODO Parse names
 
@@ -197,29 +201,45 @@ main ()
   auto desktops = get_desktops ();
 
   /* Initializing desktop_pixmap objects */
-  std::vector<desktop_pixmap> pixmaps;
+  std::vector<desktop_pixmap> pixmaps{};
   for (const auto &d : desktops)
     {
       pixmaps.push_back (desktop_pixmap (d.x, d.y, d.width, d.height, d.name));
     }
 
   /* Initializing pixmaps that will be shared over socket */
-  std::vector<dexpo_pixmap> socket_pixmaps;
+  std::vector<dexpo_pixmap *> socket_pixmaps{};
   for (size_t i = 0; i < pixmaps.size (); i++)
     {
-      socket_pixmaps.push_back (dexpo_pixmap{ static_cast<int> (i),
-                                              pixmaps[i].width,
-                                              pixmaps[i].height,
-                                              pixmaps[i].pixmap_id,
-                                              { *pixmaps[i].name.c_str () } });
+      pixmaps[i].save_screen ();
+
+      uint32_t pixmap_len
+          = pixmaps[i].pixmap_width * pixmaps[i].pixmap_height * 4;
+
+      dexpo_pixmap *p = (dexpo_pixmap *)malloc (sizeof (dexpo_pixmap));
+
+      p->desktop_number = int (i);
+      p->pixmap_len = pixmap_len;
+      p->width = pixmaps[i].pixmap_width;
+      p->height = pixmaps[i].pixmap_height;
+
+      uint8_t *pixmap_ptr = (uint8_t *)malloc (pixmap_len);
+      p->pixmap = pixmap_ptr;
+
+      memcpy (p->pixmap, pixmaps[i].pixmap_ptr, pixmap_len);
+
+      socket_pixmaps.push_back (p);
     }
 
   dexpo_socket server;
 
   std::mutex socket_pixmaps_lock;
   // Start a server that will share pixmaps over socket in a separate thread
-  server.send_pixmaps_on_event (socket_pixmaps, socket_pixmaps_lock);
+  std::thread daemon_thread (&dexpo_socket::send_pixmaps_on_event, &server,
+                             std::ref (socket_pixmaps),
+                             std::ref (socket_pixmaps_lock));
 
+  sleep (10);
   bool running = true;
   while (running)
     {
@@ -227,9 +247,11 @@ main ()
 
       socket_pixmaps_lock.lock ();
       pixmaps[c].save_screen ();
+      memcpy (&socket_pixmaps[c]->pixmap, pixmaps[c].pixmap_ptr,
+              socket_pixmaps[c]->pixmap_len);
       socket_pixmaps_lock.unlock ();
 
-      sleep (1);
+      usleep (100000);
     };
 
   return 0;

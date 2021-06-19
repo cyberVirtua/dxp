@@ -5,32 +5,14 @@
 #include <unistd.h>
 #include <vector>
 
-desktop_pixmap d1 (0, 0, 1920, 1080, "DP-1");
-desktop_pixmap d2 (0, 0, 1920, 1080, "DP-2");
-desktop_pixmap d3 (0, 0, 1920, 1080, "DP-3");
-
-// Used for testing purposes
-std::vector<dexpo_pixmap>
-test_get_vector ()
-{
-  d1.save_screen ();
-  d2.save_screen ();
-  d3.save_screen ();
-
-  dexpo_pixmap d1_1{ 0, d1.pixmap_width, d1.pixmap_height, d1.pixmap_id,
-                     "DP-1" };
-  dexpo_pixmap d2_1{ 1, d2.pixmap_width, d2.pixmap_height, d2.pixmap_id,
-                     "DP-2" };
-  dexpo_pixmap d3_1{ 2, d3.pixmap_width, d3.pixmap_height, d3.pixmap_id,
-                     "DP-3" };
-  return std::vector<dexpo_pixmap>{ d1_1, d2_1, d3_1 };
-}
+desktop_pixmap d0 (0, 0, 1080, 1920, "");
 
 int
 main ()
 {
   // Gets width, height and screenshot of every desktop
-  auto v = test_get_vector ();
+  dexpo_socket client;
+  auto v = client.get_pixmaps ();
 
   // Calculates size of GUI's window
   auto conf_width = dexpo_width;   // Width from config
@@ -42,7 +24,7 @@ main ()
           += 2 * dexpo_padding; // Add the paddng at both sizes of interface
       for (const auto &dexpo_pixmap : v)
         {
-          conf_width += dexpo_pixmap.width;
+          conf_width += dexpo_pixmap->width;
           conf_width += dexpo_padding;
         }
     }
@@ -53,7 +35,7 @@ main ()
           += 2 * dexpo_padding; // Add the paddng at both sizes of interface
       for (const auto &dexpo_pixmap : v)
         {
-          conf_height += dexpo_pixmap.height;
+          conf_height += dexpo_pixmap->height;
           conf_height += dexpo_padding;
         }
     };
@@ -63,36 +45,56 @@ main ()
   // Mapping pixmap onto window
   while (1)
     {
-      usleep (1000);
+      usleep (10000);
 
       if (dexpo_width == 0)
         {
           // Drawing screenshots starting from the left top corner
           auto act_width = dexpo_padding;
-          for (const auto &dexpo_pixmap : v)
+          for (const auto &pixmap : w.pixmaps)
             {
-              xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
-                             desktop_pixmap::gc_, 0, 0, act_width,
-                             dexpo_padding, dexpo_pixmap.width,
-                             dexpo_pixmap.height);
-              act_width += dexpo_pixmap.width;
+
+              xcb_put_image (desktop_pixmap::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
+                             w.id,                /* Pixmap to put image on */
+                             desktop_pixmap::gc_, /* Graphic context */
+                             pixmap->width, pixmap->height, /* Dimensions */
+                             0, /* Destination X coordinate */
+                             0, /* Destination Y coordinate */
+                             0, drawable::screen_->root_depth,
+                             pixmap->pixmap_len, /* Image size in bytes */
+                             pixmap->pixmap);
+
+              // xcb_copy_area (window::c_, dexpo_pixmap->id, w.id, window::gc_,
+              // 0,
+              //                0, act_width, dexpo_padding,
+              //                dexpo_pixmap->width, dexpo_pixmap.height);
+              act_width += pixmap->width;
               act_width += dexpo_padding;
             };
         }
       else if (dexpo_height == 0)
         {
           auto act_height = dexpo_padding;
-          for (const auto &dexpo_pixmap : v)
+          for (const auto &pixmap : w.pixmaps)
             {
-              xcb_copy_area (window::c_, dexpo_pixmap.id, w.id,
-                             desktop_pixmap::gc_, 0, 0, dexpo_padding,
-                             act_height, dexpo_pixmap.width,
-                             dexpo_pixmap.height);
-              act_height += dexpo_pixmap.height;
+              xcb_put_image (desktop_pixmap::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
+                             w.id,                /* Pixmap to put image on */
+                             desktop_pixmap::gc_, /* Graphic context */
+                             pixmap->width, pixmap->height, /* Dimensions */
+                             0, /* Destination X coordinate */
+                             0, /* Destination Y coordinate */
+                             0, drawable::screen_->root_depth,
+                             pixmap->pixmap_len, /* Image size in bytes */
+                             pixmap->pixmap);
+              // xcb_copy_area (window::c_, dexpo_pixmap.id, w.id, window::gc_,
+              // 0,
+              //                0, dexpo_padding, act_height,
+              //                dexpo_pixmap.width, dexpo_pixmap.height);
+              act_height += pixmap->height;
               act_height += dexpo_padding;
             };
         }
-      w.highlight_window (1, dexpo_hlcolor);
+      w.highlight_window (0, dexpo_hlcolor);
       /* We flush the request */
       xcb_flush (window::c_);
     }

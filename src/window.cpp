@@ -62,19 +62,19 @@ window::get_screen_position (int desktop_number)
   // As all screenshots have at least one common coordinate of corner, we need
   // to find only the second one
   int coord = dexpo_padding;
-  for (const auto &dexpo_pixmap : pixmaps)
+  for (const auto &dexpo_pixmap : this->pixmaps)
     {
       // Estimating all space before the screenshot we search
-      if (dexpo_pixmap.desktop_number < desktop_number)
+      if (dexpo_pixmap->desktop_number < desktop_number)
         {
           coord += dexpo_padding;
           if (dexpo_height == 0)
             {
-              coord += dexpo_pixmap.height;
+              coord += dexpo_pixmap->height;
             }
           else if (dexpo_width == 0)
             {
-              coord += dexpo_pixmap.width;
+              coord += dexpo_pixmap->width;
             }
         }
       else
@@ -92,8 +92,8 @@ window::highlight_window (int desktop_number, uint32_t color)
   int16_t y = dexpo_padding;
   uint32_t values[1]; // mask for changing border's color
 
-  uint16_t width = this->pixmaps[size_t (desktop_number)].width;
-  uint16_t height = this->pixmaps[size_t (desktop_number)].height;
+  uint16_t width = this->pixmaps[size_t (desktop_number)]->width;
+  uint16_t height = this->pixmaps[size_t (desktop_number)]->height;
 
   if (dexpo_height == 0)
     {
