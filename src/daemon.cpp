@@ -237,7 +237,7 @@ main ()
                              std::ref (socket_pixmaps),
                              std::ref (socket_pixmaps_lock));
 
-  int running = 10;
+  bool running = true;
   while (running)
     {
       size_t c = size_t (get_current_desktop ());
@@ -247,9 +247,8 @@ main ()
       memcpy (socket_pixmaps[c]->pixmap, pixmaps[c].pixmap_ptr,
               socket_pixmaps[c]->pixmap_len);
       socket_pixmaps_lock.unlock ();
-      running--;
 
-      sleep (1);
+      sleep (dexpo_screenshot_timeout);
     };
 
   return 0;
