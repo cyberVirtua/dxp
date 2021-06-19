@@ -21,4 +21,4 @@ drawable::drawable (const int16_t x, ///< x coordinate of the top left corner
     }
 }
 
-drawable::~drawable (){};
+drawable::~drawable (){}

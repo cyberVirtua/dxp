@@ -17,6 +17,7 @@ public:
   uint32_t id;                      // Identificator for Window
   uint16_t b_width; // Border width NOTE: Maybe it could be changed to constant
   std::vector<dexpo_pixmap> pixmaps;
+  int highlighted;
   // TODO: Add masks for events
 
   // The same as for DesktopPixmap
@@ -39,7 +40,7 @@ public:
   int get_screen_position (int desktop_number);
 
   /**
-   * Creates GUI
+   * Creates empty window to later place gui in it
    */
   void create_window ();
 
@@ -47,6 +48,11 @@ public:
    * Draws a rectangle around chosen window
    */
   void highlight_window (int desktop_number, uint32_t color);
+
+  /**
+   * Draws GUI inside of the pre-created window
+   */
+  void draw_gui ();
 
 private:
   /**
