@@ -139,6 +139,7 @@ desktop_pixmap::save_screen ()
 
 /**
  * Definitely copied. Looks like I'm too retarded to code this myself.
+ * I have done custom resize! You killed it.
  * https://stackoverflow.com/questions/28566290
  *
  * TODO Optimize and fix warnings, comment on names, add anti aliasing
@@ -190,10 +191,6 @@ desktop_pixmap::create_gc ()
 void
 desktop_pixmap::create_pixmap ()
 {
-  // this->pixmap_id = xcb_generate_id (drawable::c_);
-  // xcb_create_pixmap (drawable::c_, drawable::screen_->root_depth,
-  //                    this->pixmap_id, drawable::screen_->root,
-  //                    this->pixmap_width, this->pixmap_height);
   this->pixmap_ptr
       = (uint8_t *)malloc (this->pixmap_width * this->pixmap_height * 4);
 }

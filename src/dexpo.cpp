@@ -2,6 +2,7 @@
 #include "desktop_pixmap.hpp"
 #include "dexpo_socket.hpp"
 #include "window.hpp"
+#include "wmctrl.hpp"
 #include <unistd.h>
 #include <vector>
 
@@ -43,59 +44,132 @@ main ()
   window w (dexpo_x, dexpo_y, conf_width, conf_height);
   w.pixmaps = v;
   // Mapping pixmap onto window
-  while (1)
+  xcb_generic_event_t *event;
+  while ((event = xcb_wait_for_event (window::c_)))
     {
-      usleep (10000);
-
-      if (dexpo_width == 0)
+      switch (event->response_type & ~0x80)
         {
-          // Drawing screenshots starting from the left top corner
-          auto act_width = dexpo_padding;
-          for (const auto &pixmap : w.pixmaps)
-            {
+        case XCB_EXPOSE:
+          {
+            w.draw_gui ();
+            w.highlight_window (0, dexpo_hlcolor);
+            break;
+          }
+        case XCB_KEY_PRESS:
+          {
+            xcb_key_press_event_t *kp
+                = reinterpret_cast<xcb_key_press_event_t *> (event);
+            if (kp->detail == 114
+                or kp->detail == 116) // right arrow or up arrow
+              {
+                w.highlight_window (w.highlighted, dexpo_bgcolor);
+                w.highlighted += 1;
+                w.highlighted = w.highlighted % int (v.size ());
+                w.highlight_window (w.highlighted, dexpo_hlcolor);
+              }
+            if (kp->detail == 113
+                or kp->detail == 111) // left arrow or down arrow
+              {
+                w.highlight_window (w.highlighted, dexpo_bgcolor);
+                w.highlighted = (w.highlighted == 0) ? int (v.size () - 1)
+                                                     : w.highlighted - 1;
+              }
+            w.highlight_window (w.highlighted, dexpo_hlcolor);
+            if (kp->detail == 9) // escape
+              {
 
-              xcb_put_image (desktop_pixmap::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
-                             w.id,                /* Pixmap to put image on */
-                             desktop_pixmap::gc_, /* Graphic context */
-                             pixmap->width, pixmap->height, /* Dimensions */
-                             0, /* Destination X coordinate */
-                             0, /* Destination Y coordinate */
-                             0, drawable::screen_->root_depth,
-                             pixmap->pixmap_len, /* Image size in bytes */
-                             pixmap->pixmap);
+                exit (0);
+              }
+            if (kp->detail == 36) // enter
 
-              // xcb_copy_area (window::c_, dexpo_pixmap->id, w.id, window::gc_,
-              // 0,
-              //                0, act_width, dexpo_padding,
-              //                dexpo_pixmap->width, dexpo_pixmap.height);
-              act_width += pixmap->width;
-              act_width += dexpo_padding;
-            };
+              {
+                w.highlight_window (w.highlighted, dexpo_bgcolor);
+                ewmh_change_desktop (window::c_, window::screen_,
+                                     w.highlighted);
+              }
+          }
+          break;
+        case XCB_MOTION_NOTIFY: // pointer motion within window
+          {
+            xcb_motion_notify_event_t *mn
+                = reinterpret_cast<xcb_motion_notify_event_t *> (event);
+            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
+                                 XCB_TIME_CURRENT_TIME);
+            int det = -1;
+            // TODO: Keep coordinates of pixmap in window class instead
+            // of this hardcoding
+            for (const auto &dexpo_pixmap : w.pixmaps)
+              {
+                if (dexpo_height == 0)
+                  {
+                    if ((mn->event_x - dexpo_padding > 0)
+                        and (mn->event_x - dexpo_padding < dexpo_pixmap->width)
+                        and (mn->event_y
+                                 - w.get_screen_position (
+                                     dexpo_pixmap->desktop_number)
+                             > 0)
+                        and (mn->event_y
+                                 - w.get_screen_position (
+                                     dexpo_pixmap->desktop_number)
+                             < dexpo_pixmap->height))
+                      {
+                        det = dexpo_pixmap->desktop_number;
+                        break;
+                      }
+                  }
+                else if (dexpo_width == 0)
+                  {
+                    if ((mn->event_x
+                             - w.get_screen_position (
+                                 dexpo_pixmap->desktop_number)
+                         > 0)
+                        and (mn->event_x
+                                 - w.get_screen_position (
+                                     dexpo_pixmap->desktop_number)
+                             < dexpo_pixmap->width)
+                        and (mn->event_y - dexpo_padding > 0)
+                        and (mn->event_y - dexpo_padding
+                             < dexpo_pixmap->height))
+                      {
+                        det = dexpo_pixmap->desktop_number;
+                        break;
+                      }
+                  }
+              }
+            w.highlight_window (w.highlighted, dexpo_bgcolor);
+            if (det > -1)
+              {
+                w.highlighted = det;
+                w.highlight_window (w.highlighted, dexpo_hlcolor);
+              }
+            break;
+          }
+        case XCB_ENTER_NOTIFY: // pointer enters window
+          {
+            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
+                                 XCB_TIME_CURRENT_TIME);
+            break;
+          }
+        case XCB_LEAVE_NOTIFY: // pointer leaves window
+          {
+            w.highlight_window (w.highlighted, dexpo_bgcolor);
+            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
+                                 window::screen_->root, XCB_TIME_CURRENT_TIME);
+            break;
+          }
+        case XCB_BUTTON_PRESS: // mouse click
+          {
+            w.highlight_window (w.highlighted, dexpo_bgcolor);
+            ewmh_change_desktop (window::c_, window::screen_, w.highlighted);
+            break;
+          }
+        case XCB_FOCUS_OUT:
+          {
+            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
+                                 XCB_TIME_CURRENT_TIME);
+            break;
+          }
         }
-      else if (dexpo_height == 0)
-        {
-          auto act_height = dexpo_padding;
-          for (const auto &pixmap : w.pixmaps)
-            {
-              xcb_put_image (desktop_pixmap::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
-                             w.id,                /* Pixmap to put image on */
-                             desktop_pixmap::gc_, /* Graphic context */
-                             pixmap->width, pixmap->height, /* Dimensions */
-                             0, /* Destination X coordinate */
-                             0, /* Destination Y coordinate */
-                             0, drawable::screen_->root_depth,
-                             pixmap->pixmap_len, /* Image size in bytes */
-                             pixmap->pixmap);
-              // xcb_copy_area (window::c_, dexpo_pixmap.id, w.id, window::gc_,
-              // 0,
-              //                0, dexpo_padding, act_height,
-              //                dexpo_pixmap.width, dexpo_pixmap.height);
-              act_height += pixmap->height;
-              act_height += dexpo_padding;
-            };
-        }
-      w.highlight_window (0, dexpo_hlcolor);
-      /* We flush the request */
       xcb_flush (window::c_);
     }
 }

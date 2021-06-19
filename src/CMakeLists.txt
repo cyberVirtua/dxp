@@ -1,7 +1,7 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -pthread")
 
 add_executable(dexpo dexpo.cpp desktop_pixmap.cpp dexpo_socket.cpp drawable.cpp
-                     window.cpp)
+                     wmctrl.cpp window.cpp)
 
 target_link_libraries(
   dexpo
@@ -15,3 +15,4 @@ target_link_libraries(
   daemon
   PRIVATE project_options project_warnings
   PUBLIC xcb xcb-randr)
+ 
