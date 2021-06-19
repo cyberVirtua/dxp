@@ -51,7 +51,7 @@ dexpo_socket::dexpo_socket ()
   auto *sock_addr = reinterpret_cast<struct sockaddr *> (&sock_name);
 
   // XXX Make socket abstract
-  // sock_name.sun_path[0] = '\0';
+  sock_name.sun_path[0] = '\0';
 
   int s = 0; // Return status of functions to check for errors
   try
