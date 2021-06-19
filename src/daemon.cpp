@@ -211,8 +211,6 @@ main ()
   std::vector<dexpo_pixmap *> socket_pixmaps{};
   for (size_t i = 0; i < pixmaps.size (); i++)
     {
-      pixmaps[i].save_screen ();
-
       uint32_t pixmap_len
           = pixmaps[i].pixmap_width * pixmaps[i].pixmap_height * 4;
 
@@ -239,19 +237,19 @@ main ()
                              std::ref (socket_pixmaps),
                              std::ref (socket_pixmaps_lock));
 
-  sleep (10);
-  bool running = true;
+  int running = 10;
   while (running)
     {
       size_t c = size_t (get_current_desktop ());
 
       socket_pixmaps_lock.lock ();
       pixmaps[c].save_screen ();
-      memcpy (&socket_pixmaps[c]->pixmap, pixmaps[c].pixmap_ptr,
+      memcpy (socket_pixmaps[c]->pixmap, pixmaps[c].pixmap_ptr,
               socket_pixmaps[c]->pixmap_len);
       socket_pixmaps_lock.unlock ();
+      running--;
 
-      usleep (100000);
+      sleep (1);
     };
 
   return 0;
