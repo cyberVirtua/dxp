@@ -76,7 +76,6 @@ main ()
           {
             xcb_key_press_event_t *kp
                 = reinterpret_cast<xcb_key_press_event_t *> (event);
-            ;
             if (kp->detail == 114
                 or kp->detail == 116) // right arrow or up arrow
               {
@@ -111,6 +110,8 @@ main ()
           {
             xcb_motion_notify_event_t *mn
                 = reinterpret_cast<xcb_motion_notify_event_t *> (event);
+            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
+                                 XCB_TIME_CURRENT_TIME);
             int det = -1;
             // TODO: Keep coordinates of pixmap in window class instead
             // of this hardcoding
@@ -176,6 +177,13 @@ main ()
           {
             w.highlight_window (w.highlighted, dexpo_bgcolor);
             ewmh_change_desktop (window::c_, window::screen_, w.highlighted);
+            break;
+          }
+        case XCB_FOCUS_OUT:
+          {
+          xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
+                                 XCB_TIME_CURRENT_TIME);
+          break;
           }
         }
       xcb_flush (window::c_);
