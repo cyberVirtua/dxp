@@ -145,6 +145,7 @@ desktop_pixmap::save_screen ()
 
 /**
  * Definitely copied. Looks like I'm too retarded to code this myself.
+ * I have done custom resize! You killed it.
  * https://stackoverflow.com/questions/28566290
  *
  * TODO Optimize and fix warnings, comment on names, add anti aliasing
