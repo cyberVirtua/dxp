@@ -4,6 +4,7 @@
 #include "window.hpp"
 #include <unistd.h>
 #include <vector>
+#include "wmctrl.cpp"
 desktop_pixmap d1 (0, 0, 1920, 1080, "DP-1");
 desktop_pixmap d2 (0, 0, 1920, 1080, "DP-2");
 desktop_pixmap d3 (0, 0, 1920, 1080, "DP-3");
@@ -129,6 +130,7 @@ main ()
             break;
             if (kp->detail == 36) // enter
               {
+                ewmh_change_desktop(window::c_, window::screen_, 5);
                 break;
               }
             break;
