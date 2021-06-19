@@ -57,6 +57,17 @@ desktop_pixmap::~desktop_pixmap ()
   // TODO Add separate class to manage graphic context's destructor
 }
 
+desktop_pixmap::desktop_pixmap (const desktop_pixmap &src)
+    : drawable (src.x, src.y, src.width, src.height)
+{
+  this->image_ptr = src.image_ptr;
+  this->length = src.length;
+  this->name = src.name;
+  this->pixmap_id = src.pixmap_id;
+  this->pixmap_width = src.pixmap_width;
+  this->pixmap_height = src.pixmap_height;
+}
+
 /**
  * Saves pointer to the screen image in the specified pixmap_format.
  *

@@ -34,11 +34,8 @@ public:
   );
   ~desktop_pixmap ();
 
-  // Explicitly deleting unused constructors to comply with rule of five
-  desktop_pixmap (const desktop_pixmap &other) = delete;
-  desktop_pixmap (desktop_pixmap &&other) noexcept = delete;
-  desktop_pixmap &operator= (const desktop_pixmap &other) = delete;
-  desktop_pixmap &operator= (desktop_pixmap &&other) = delete;
+  // Declaring copy operator to use it in vector
+  desktop_pixmap (const desktop_pixmap &);
 
   /**
    * Screenshots current desktop, downsizes it and stores inside instance
