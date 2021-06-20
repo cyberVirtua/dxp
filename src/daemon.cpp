@@ -248,7 +248,7 @@ main ()
   while (running)
     {
       size_t c = size_t (get_current_desktop ());
-      if (c >= dexpo_viewport.size () / 2)
+      if (!dexpo_viewport.empty () && c >= dexpo_viewport.size () / 2)
         {
           throw std::runtime_error (
               "The amount of virtual desktops specified in the config does not "
