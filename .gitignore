@@ -1,4 +1,5 @@
 .gdb_history
+src/config.hpp
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
