@@ -137,10 +137,17 @@ get_desktops ()
 {
   auto monitors = get_monitors ();
 
-  auto number_of_desktops = get_property_value ("_NET_NUMBER_OF_DESKTOPS")[0];
+  auto number_of_desktops
+      = !dexpo_viewport.empty () /* If config is not empty: */
+            // Set desktop amount to specified in the config
+            ? dexpo_viewport.size () / 2
+            // Otherwise parse amount of desktops
+            : get_property_value ("_NET_NUMBER_OF_DESKTOPS")[0];
 
-  auto viewport = !dexpo_viewport.empty ()
+  auto viewport = !dexpo_viewport.empty () /* If config is not empty: */
+                      // Set viewport to the one specified in the config
                       ? dexpo_viewport
+                      // Otherwise parse viewport
                       : get_property_value ("_NET_DESKTOP_VIEWPORT");
 
   // TODO Parse names
@@ -241,6 +248,12 @@ main ()
   while (running)
     {
       size_t c = size_t (get_current_desktop ());
+      if (c >= dexpo_viewport.size () / 2)
+        {
+          throw std::runtime_error (
+              "The amount of virtual desktops specified in the config does not "
+              "match the amount of your virtual deskops in your system.");
+        }
 
       socket_pixmaps_lock.lock ();
       pixmaps[c].save_screen ();
@@ -248,7 +261,7 @@ main ()
               socket_pixmaps[c]->pixmap_len);
       socket_pixmaps_lock.unlock ();
 
-      sleep (dexpo_screenshot_timeout);
+      usleep (dexpo_screenshot_timeout * 1000000); // usec to sec
     };
 
   return 0;
