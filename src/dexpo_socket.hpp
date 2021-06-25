@@ -36,8 +36,8 @@ enum daemon_event
 class dexpo_socket
 {
 public:
-  int fd;                    ///< Socket File Descriptor
-  std::atomic<bool> running; ///< Thread status
+  int fd;                           ///< Socket File Descriptor
+  std::atomic<bool> running = true; ///< Thread status
 
   dexpo_socket ();
   ~dexpo_socket ();

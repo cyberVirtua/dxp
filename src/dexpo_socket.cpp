@@ -103,10 +103,8 @@ dexpo_socket::get_pixmaps () const
   std::vector<dexpo_pixmap *>
       pixmap_array; // Pixmap array that will be returned
 
-  size_t num = 0;
+  size_t num = 0; // Amount of pixmaps that will be received
   auto rcv_bytes = read (this->fd, &num, sizeof (num));
-
-  std::cout << num << std::endl;
   is<read_error> (rcv_bytes);
 
   for (; num > 0; num--) // Read `num` pixmaps from socket
@@ -115,8 +113,6 @@ dexpo_socket::get_pixmaps () const
 
       rcv_bytes = read (this->fd, p, sizeof (dexpo_pixmap));
       is<read_error> (rcv_bytes);
-
-      std::cout << p->pixmap_len << std::endl;
 
       uint8_t *pixmap_ptr = (uint8_t *)malloc (p->pixmap_len);
       rcv_bytes = read (this->fd, pixmap_ptr, p->pixmap_len);
@@ -138,7 +134,7 @@ dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap *> &pixmaps,
 {
   int data_fd = 0; // Socket file descriptor
 
-  while ((data_fd = accept (this->fd, nullptr, nullptr)))
+  while ((data_fd = accept (this->fd, nullptr, nullptr)) && this->running)
     {
       char cmd = -1;
       if (read (data_fd, &cmd, 1) == kRequestPixmaps) // Listen for the command

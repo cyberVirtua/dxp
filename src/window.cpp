@@ -13,7 +13,7 @@ window::window (const int16_t x,       ///< x coordinate of the top left corner
 {
   this->b_width = dexpo_outer_border;
   this->id = xcb_generate_id (drawable::c_);
-  this->highlighted = 0;
+  this->highlighted = 0; // Id of the preselected desktop
   create_window ();
 }
 
@@ -35,7 +35,7 @@ window::create_window ()
               | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_KEY_RELEASE
               | XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_POINTER_MOTION
               | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_ENTER_WINDOW;
-  ;
+
   values[2] = XCB_STACK_MODE_ABOVE; // Places created window on top
   xcb_create_window (window::c_, /* Connection, separate from one of daemon */
                      XCB_COPY_FROM_PARENT,          /* depth (same as root)*/
