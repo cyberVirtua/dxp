@@ -177,7 +177,7 @@ dexpo_socket::get_pixmaps () const
  * and sends pixmaps one by one in return
  */
 void
-dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap> pixmaps,
+dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap> &pixmaps,
                                      std::mutex &pixmaps_lock) const
 {
   int data_fd = 0; // Socket file descriptor
