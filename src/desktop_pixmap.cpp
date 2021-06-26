@@ -6,7 +6,8 @@
 #include <xcb/xproto.h>
 
 // Workaround for xcb_get_image_reply allocation. see save_screen()
-#define MAX_MALLOC 16711568
+// Represents maximum pixmap size in bytes that xcb_get_image can allocate
+constexpr int k_max_malloc = 16711568;
 
 desktop_pixmap::desktop_pixmap (
     const int16_t x,        ///< x coordinate of the top left corner
@@ -75,20 +76,20 @@ desktop_pixmap::desktop_pixmap (const desktop_pixmap &src)
  * But ZPixmap of QHD Ultrawide is 3440 * 1440 * 4 = 19814400 bytes long.
  *
  * The while() loop in save_screen fixes this. It takes multiple screenshots of
- * the screen (top to bottom), each taking up less than MAX_MALLOC. It downsizes
- * each screenshot and puts it on the pixmap.
+ * the screen (top to bottom), each taking up less than k_max_malloc. It
+ * downsizes each screenshot and puts it on the pixmap.
  */
 void
 desktop_pixmap::save_screen ()
 {
-  // Set height so that screenshots won't exceed MAX_MALLOC size
-  uint16_t image_height = uint16_t (MAX_MALLOC / this->width / 4);
+  // Set height so that screenshots won't exceed k_max_malloc size
+  uint16_t image_height = uint16_t (k_max_malloc / this->width / 4);
   uint16_t image_width = this->width;
 
   const uint screen_size = uint (this->width * this->height * 4);
 
   uint16_t i = 0;
-  while (i * MAX_MALLOC < screen_size)
+  while (i * k_max_malloc < screen_size)
     {
       // Set screen height that we have already captured
       // New screenshots will be captured with Y offset = image_height_offset

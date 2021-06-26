@@ -92,15 +92,15 @@ dexpo_socket::dexpo_socket ()
   sock_name.sun_family = AF_UNIX;
 
   // Safely putting socket name into a buffer
-  std::strncpy (sock_name.sun_path, SOCKET_PATH,
-                sizeof (sock_name.sun_path) - 1);
+  std::strncpy (&sock_name.sun_path[0], k_socket_path,
+                std::strlen (k_socket_path) + 1);
 
   // Trick compiler into thinking that we pass pointer to sockaddr struct
   // https://stackoverflow.com/questions/21099041
   auto *sock_addr = reinterpret_cast<struct sockaddr *> (&sock_name);
 
   // XXX Make socket abstract
-  sock_name.sun_path[0] = '\0';
+  // sock_name.sun_path[0] = '\0';
 
   int s = 0; // Return status of functions to check for errors
   try
@@ -119,7 +119,7 @@ dexpo_socket::dexpo_socket ()
       // exist then.
       // And should not be run when there are active connections to the socket
 
-      unlink (SOCKET_PATH); // Remove existing socket
+      unlink (k_socket_path); // Remove existing socket
 
       s = bind (this->fd, sock_addr, sizeof (sock_name)); // Bind name to fd
       s = listen (this->fd, 2);                           // 2 is arbitrary

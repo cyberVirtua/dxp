@@ -9,8 +9,7 @@
 #include <sys/socket.h>
 #include <vector>
 
-#define SOCKET_PATH "@/tmp/dexpo.socket"
-#define DESKTOP_NAME_MAX_LEN 255
+constexpr const char *k_socket_path = "/tmp/dexpo.socket";
 
 /**
  * Screenshot pixmap struct
