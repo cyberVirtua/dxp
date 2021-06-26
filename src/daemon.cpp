@@ -207,31 +207,35 @@ main ()
 {
   auto desktops = get_desktops ();
 
-  /* Initializing desktop_pixmap objects */
+  /* Initializing desktop_pixmap objects. They are each binded to a separate
+   * virtual desktop */
+
   std::vector<desktop_pixmap> pixmaps{};
   for (const auto &d : desktops)
     {
       pixmaps.push_back (desktop_pixmap (d.x, d.y, d.width, d.height, d.name));
     }
 
-  /* Initializing pixmaps that will be shared over socket */
-  std::vector<dexpo_pixmap *> socket_pixmaps{};
+  /* Initializing pixmaps that will be shared over socket They are a different
+   * datatype from the desktop pixmaps as they don't store useless data.
+   *
+   * Only copying useful data from the desktop_pixmap objects. */
+
+  std::vector<dexpo_pixmap> socket_pixmaps{};
   for (size_t i = 0; i < pixmaps.size (); i++)
     {
       uint32_t pixmap_len
           = pixmaps[i].pixmap_width * pixmaps[i].pixmap_height * 4;
 
-      dexpo_pixmap *p = (dexpo_pixmap *)malloc (sizeof (dexpo_pixmap));
+      dexpo_pixmap p;
 
-      p->desktop_number = int (i);
-      p->pixmap_len = pixmap_len;
-      p->width = pixmaps[i].pixmap_width;
-      p->height = pixmaps[i].pixmap_height;
+      p.desktop_number = int (i);
+      p.pixmap_len = pixmap_len;
+      p.width = pixmaps[i].pixmap_width;
+      p.height = pixmaps[i].pixmap_height;
 
-      uint8_t *pixmap_ptr = (uint8_t *)malloc (pixmap_len);
-      p->pixmap = pixmap_ptr;
-
-      memcpy (p->pixmap, pixmaps[i].pixmap_ptr, pixmap_len);
+      // Copying pixmap from desktops into socket pixmaps
+      p.pixmap = pixmaps[i].pixmap; // Should be as fast as memcpy
 
       socket_pixmaps.push_back (p);
     }
@@ -257,8 +261,12 @@ main ()
 
       socket_pixmaps_lock.lock ();
       pixmaps[c].save_screen ();
-      memcpy (socket_pixmaps[c]->pixmap, pixmaps[c].pixmap_ptr,
-              socket_pixmaps[c]->pixmap_len);
+
+      // Copying pixmap from desktops into socket pixmaps
+      socket_pixmaps[c].pixmap = pixmaps[c].pixmap;
+
+      // memcpy (socket_pixmaps[c].pixmap.data (), pixmaps[c].pixmap.data (),
+      //        socket_pixmaps[c].pixmap_len);
       socket_pixmaps_lock.unlock ();
 
       usleep (dexpo_screenshot_timeout * 1000000); // usec to sec
