@@ -1,6 +1,6 @@
 #include "config.hpp"
-#include "desktop_pixmap.hpp"
-#include "dexpo_socket.hpp"
+#include "desktop.hpp"
+#include "socket.hpp"
 #include <iostream>
 #include <memory>
 #include <string.h>
@@ -11,6 +11,28 @@
 #include <xcb/randr.h>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
+
+/**
+ * Information about your connected monitor.
+ *
+ * Used to calculate sizes of virtual desktops
+ */
+struct monitor_info
+{
+  int x;
+  int y;
+  int width;
+  int height;
+};
+
+struct desktop_info
+{
+  int id; // XXX Is it necessary?
+  int x;
+  int y;
+  int width;
+  int height;
+};
 
 auto *c = xcb_connect (nullptr, nullptr);
 auto *screen = xcb_setup_roots_iterator (xcb_get_setup (c)).data;
@@ -54,19 +76,6 @@ get_property_value (const char *atom_name)
     }
 
   return atom_data;
-};
-
-/**
- * Information about your connected monitor.
- *
- * Used to calculate sizes of virtual desktops
- */
-struct monitor_info
-{
-  int x;
-  int y;
-  int width;
-  int height;
 };
 
 /**
@@ -117,15 +126,6 @@ get_monitors ()
   return monitors;
 }
 
-struct desktop_info
-{
-  int desktop_number; // XXX Is it necessary?
-  int x;
-  int y;
-  int width;
-  int height;
-};
-
 /**
  * Get an array of desktop_info.
  *
@@ -160,13 +160,13 @@ get_desktops ()
       int width = 0;
       int height = 0;
 
-      for (const auto &monitor : monitors)
+      for (const auto &m : monitors)
         {
           // Finding monitor on which the desktop is located
-          if (monitor.x == x && monitor.y == y)
+          if (m.x == x && m.y == y)
             {
-              width = monitor.width;
-              height = monitor.height;
+              width = m.width;
+              height = m.height;
             }
         }
 
@@ -204,15 +204,15 @@ get_current_desktop ()
 int
 main ()
 {
-  auto desktops = get_desktops ();
+  auto desktops_info = get_desktops ();
 
   /* Initializing desktop_pixmap objects. They are each binded to a separate
    * virtual desktop */
 
-  std::vector<desktop_pixmap> pixmaps{};
-  for (const auto &d : desktops)
+  std::vector<dxp_desktop> desktops{};
+  for (const auto &d : desktops_info)
     {
-      pixmaps.push_back (desktop_pixmap (d.x, d.y, d.width, d.height));
+      desktops.push_back (dxp_desktop (d.x, d.y, d.width, d.height));
     }
 
   /* Initializing pixmaps that will be shared over socket They are a different
@@ -220,32 +220,32 @@ main ()
    *
    * Only copying useful data from the desktop_pixmap objects. */
 
-  std::vector<dexpo_pixmap> socket_pixmaps{};
-  for (size_t i = 0; i < pixmaps.size (); i++)
+  std::vector<dxp_socket_desktop> socket_desktops{};
+  for (size_t i = 0; i < desktops.size (); i++)
     {
       uint32_t pixmap_len
-          = pixmaps[i].pixmap_width * pixmaps[i].pixmap_height * 4;
+          = desktops[i].pixmap_width * desktops[i].pixmap_height * 4;
 
-      dexpo_pixmap p;
+      dxp_socket_desktop p;
 
-      p.desktop_number = int (i);
+      p.id = int (i);
       p.pixmap_len = pixmap_len;
-      p.width = pixmaps[i].pixmap_width;
-      p.height = pixmaps[i].pixmap_height;
+      p.width = desktops[i].pixmap_width;
+      p.height = desktops[i].pixmap_height;
 
       // Copying pixmap from desktops into socket pixmaps
-      p.pixmap = pixmaps[i].pixmap; // Should be as fast as memcpy
+      p.pixmap = desktops[i].pixmap; // Should be as fast as memcpy
 
-      socket_pixmaps.push_back (p);
+      socket_desktops.push_back (p);
     }
 
-  dexpo_socket server;
+  dxp_socket server;
 
-  std::mutex socket_pixmaps_lock;
+  std::mutex socket_desktops_lock;
   // Start a server that will share pixmaps over socket in a separate thread
-  std::thread daemon_thread (&dexpo_socket::send_pixmaps_on_event, &server,
-                             std::ref (socket_pixmaps),
-                             std::ref (socket_pixmaps_lock));
+  std::thread daemon_thread (&dxp_socket::send_pixmaps_on_event, &server,
+                             std::ref (socket_desktops),
+                             std::ref (socket_desktops_lock));
 
   bool running = true;
   while (running)
@@ -258,15 +258,15 @@ main ()
               "match the amount of your virtual deskops in your system.");
         }
 
-      socket_pixmaps_lock.lock ();
-      pixmaps[c].save_screen ();
+      socket_desktops_lock.lock ();
+      desktops[c].save_screen ();
 
       // Copying pixmap from desktops into socket pixmaps
-      socket_pixmaps[c].pixmap = pixmaps[c].pixmap;
+      socket_desktops[c].pixmap = desktops[c].pixmap;
 
       // memcpy (socket_pixmaps[c].pixmap.data (), pixmaps[c].pixmap.data (),
       //        socket_pixmaps[c].pixmap_len);
-      socket_pixmaps_lock.unlock ();
+      socket_desktops_lock.unlock ();
 
       usleep (dexpo_screenshot_timeout * 1000000); // usec to sec
     };

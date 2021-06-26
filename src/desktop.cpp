@@ -1,4 +1,4 @@
-#include "desktop_pixmap.hpp"
+#include "desktop.hpp"
 #include "config.hpp"
 #include <memory>
 #include <xcb/xcb.h>
@@ -8,7 +8,7 @@
 // Represents maximum pixmap size in bytes that xcb_get_image can allocate
 constexpr int k_max_malloc = 16711568;
 
-desktop_pixmap::desktop_pixmap (
+dxp_desktop::dxp_desktop (
     const int16_t x,      ///< x coordinate of the top left corner
     const int16_t y,      ///< y coordinate of the top left corner
     const uint16_t width, ///< width of display
@@ -18,10 +18,9 @@ desktop_pixmap::desktop_pixmap (
 {
   // Initializing non built-in types to zeros
   this->image_ptr = nullptr;
-  this->length = 0;
 
   // Initialize graphic context if it doesn't exist
-  if (!desktop_pixmap::gc_)
+  if (!dxp_desktop::gc_)
     {
       create_gc ();
     }
@@ -48,17 +47,16 @@ desktop_pixmap::desktop_pixmap (
   create_pixmap ();
 }
 
-desktop_pixmap::~desktop_pixmap ()
+dxp_desktop::~dxp_desktop ()
 {
   // xcb_free_pixmap (drawable::c_, this->pixmap_);
   // TODO Add separate class to manage graphic context's destructor
 }
 
-desktop_pixmap::desktop_pixmap (const desktop_pixmap &src)
+dxp_desktop::dxp_desktop (const dxp_desktop &src)
     : drawable (src.x, src.y, src.width, src.height)
 {
   this->image_ptr = src.image_ptr;
-  this->length = src.length;
   this->pixmap = src.pixmap;
   this->pixmap_width = src.pixmap_width;
   this->pixmap_height = src.pixmap_height;
@@ -75,7 +73,7 @@ desktop_pixmap::desktop_pixmap (const desktop_pixmap &src)
  * downsizes each screenshot and puts it on the pixmap.
  */
 void
-desktop_pixmap::save_screen ()
+dxp_desktop::save_screen ()
 {
   // Set height so that screenshots won't exceed k_max_malloc size
   uint16_t image_height = uint16_t (k_max_malloc / this->width / 4);
@@ -111,15 +109,12 @@ desktop_pixmap::save_screen ()
       auto gi_reply = std::unique_ptr<xcb_get_image_reply_t> (
           xcb_get_image_reply (drawable::c_, gi_cookie, nullptr));
 
-      // Casting for later use
-      this->length = uint32_t (xcb_get_image_data_length (gi_reply.get ()));
       this->image_ptr = xcb_get_image_data (gi_reply.get ());
 
       int target_width = this->pixmap_width;
       int target_height
           = int (float (image_height) / image_width * this->pixmap_width);
 
-      this->length = uint (target_width * target_height * 4);
       int target_height_offset
           = int (float (image_height_offset) * pixmap_width / image_width);
 
@@ -139,9 +134,9 @@ desktop_pixmap::save_screen ()
  * TODO Optimize and fix warnings, comment on names, add anti aliasing
  */
 void
-desktop_pixmap::resize (const uint8_t *input, uint8_t *output,
-                        int source_width, /* Source dimensions */
-                        int source_height, int target_width, int target_height)
+dxp_desktop::resize (const uint8_t *input, uint8_t *output,
+                     int source_width, /* Source dimensions */
+                     int source_height, int target_width, int target_height)
 {
   const int x_ratio = (source_width << 16) / target_width;
   const int y_ratio = (source_height << 16) / target_height;
@@ -167,7 +162,7 @@ desktop_pixmap::resize (const uint8_t *input, uint8_t *output,
 }
 
 void
-desktop_pixmap::create_gc ()
+dxp_desktop::create_gc ()
 {
   uint32_t mask = 0;
   uint32_t values[2];
@@ -177,13 +172,13 @@ desktop_pixmap::create_gc ()
   values[0] = drawable::screen_->black_pixel;
   values[1] = 0;
 
-  desktop_pixmap::gc_ = xcb_generate_id (c_);
-  xcb_create_gc (drawable::c_, desktop_pixmap::gc_, drawable::screen_->root,
-                 mask, &values);
+  dxp_desktop::gc_ = xcb_generate_id (c_);
+  xcb_create_gc (drawable::c_, dxp_desktop::gc_, drawable::screen_->root, mask,
+                 &values);
 }
 
 void
-desktop_pixmap::create_pixmap ()
+dxp_desktop::create_pixmap ()
 {
   this->pixmap.resize (this->pixmap_width * this->pixmap_height * 4);
 }

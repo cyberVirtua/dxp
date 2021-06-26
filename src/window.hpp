@@ -1,7 +1,7 @@
 #ifndef WINDOW_HPP
 #define WINDOW_HPP
 
-#include "dexpo_socket.hpp"
+#include "socket.hpp"
 #include <string>
 #include <vector>
 #include <xcb/xproto.h>
@@ -14,10 +14,9 @@ class window : public drawable
 {
 public:
   inline static xcb_gcontext_t gc_; ///< Graphic context
-  uint32_t id;                      // Identificator for Window
-  uint16_t b_width; // Border width NOTE: Maybe it could be changed to constant
-  std::vector<dexpo_pixmap> pixmaps;
-  int highlighted;
+  uint32_t xcb_id;                  // Identificator for Window
+  std::vector<dxp_socket_desktop> desktops;
+  int desktop_sel;
   // TODO: Add masks for events
 
   // The same as for DesktopPixmap

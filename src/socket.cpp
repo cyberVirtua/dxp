@@ -1,8 +1,7 @@
-#include "dexpo_socket.hpp"
+#include "socket.hpp"
 #include <cstring>
 #include <iostream>
 #include <mutex>
-#include <signal.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -86,7 +85,7 @@ write_unix (int fd, D *src, size_t length)
  * - Create a socket file descriptor
  * - Connect to socket
  */
-dexpo_socket::dexpo_socket ()
+dxp_socket::dxp_socket ()
 {
   struct sockaddr_un sock_name = {};
   sock_name.sun_family = AF_UNIX;
@@ -136,19 +135,20 @@ dexpo_socket::dexpo_socket ()
     }
 };
 
-dexpo_socket::~dexpo_socket () { close (this->fd); };
+dxp_socket::~dxp_socket () { close (this->fd); };
 
 /**
  * Request and receive dexpo_pixmaps from daemon
  */
-std::vector<dexpo_pixmap>
-dexpo_socket::get_pixmaps () const
+std::vector<dxp_socket_desktop>
+dxp_socket::get_pixmaps () const
 {
   // Send pixmap request to daemon
   char cmd = kRequestPixmaps;
   write_unix (this->fd, &cmd, 1);
 
-  std::vector<dexpo_pixmap> pixmap_array; // Pixmap array that will be returned
+  std::vector<dxp_socket_desktop>
+      pixmap_array; // Pixmap array that will be returned
 
   size_t num = 0; // Amount of pixmaps that will be received
   read_unix (this->fd, &num, sizeof (num));
@@ -156,10 +156,10 @@ dexpo_socket::get_pixmaps () const
   for (; num > 0; num--) // Read `num` pixmaps from socket
     {
       // TODO Check for errors here
-      dexpo_pixmap p;
+      dxp_socket_desktop p;
 
       // Reading everything except raw pixmap
-      read_unix (this->fd, &p, offsetof (dexpo_pixmap, pixmap));
+      read_unix (this->fd, &p, offsetof (dxp_socket_desktop, pixmap));
 
       // Allocating space for an incoming pixmap
       p.pixmap.resize (p.pixmap_len);
@@ -177,8 +177,9 @@ dexpo_socket::get_pixmaps () const
  * and sends pixmaps one by one in return
  */
 void
-dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap> &pixmaps,
-                                     std::mutex &pixmaps_lock) const
+dxp_socket::send_pixmaps_on_event (
+    const std::vector<dxp_socket_desktop> &pixmaps,
+    std::mutex &pixmaps_lock) const
 {
   int data_fd = 0; // Socket file descriptor
 
@@ -202,7 +203,7 @@ dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap> &pixmaps,
           for (const auto &p : pixmaps)
             {
               // Sending everything except raw pixmap
-              write_unix (data_fd, &p, offsetof (dexpo_pixmap, pixmap));
+              write_unix (data_fd, &p, offsetof (dxp_socket_desktop, pixmap));
 
               // Sending pixmap
               write_unix (data_fd, p.pixmap.data (), p.pixmap_len);

@@ -1,4 +1,4 @@
-#include "wmctrl.hpp"
+#include "ewmh.hpp"
 #include "window.hpp"
 #include <string.h>
 #include <xcb/xcb.h>
@@ -39,8 +39,7 @@ send_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
 }
 
 void
-ewmh_change_desktop (xcb_connection_t *c, xcb_screen_t *screen,
-                     int destkop_number)
+ewmh_change_desktop (xcb_connection_t *c, xcb_screen_t *screen, int destkop_id)
 {
-  send_message (c, screen, "_NET_CURRENT_DESKTOP", destkop_number);
+  send_message (c, screen, "_NET_CURRENT_DESKTOP", destkop_id);
 }
