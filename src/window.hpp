@@ -35,7 +35,7 @@ public:
   /**
    * Gets position of top left corner of screenshot with given number
    */
-  int get_screen_position (int desktop_number);
+  int get_desktop_coordinates (int desktop_id);
 
   /**
    * Creates empty window to later place gui in it
@@ -45,7 +45,7 @@ public:
   /**
    * Draws a rectangle around chosen window
    */
-  void highlight_window (int desktop_number, uint32_t color);
+  void highlight_window (int desktop_id, uint32_t color);
 
   /**
    * Draws GUI inside of the pre-created window

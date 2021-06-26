@@ -28,10 +28,6 @@ public:
                int16_t y,        ///< y coordinate of the top left corner
                uint16_t width,   ///< Width of the display
                uint16_t height); ///< Height of the display
-  ~dxp_desktop ();
-
-  // Declaring copy operator to use it in vector
-  dxp_desktop (const dxp_desktop &);
 
   /**
    * Screenshots current desktop, downsizes it and stores inside instance

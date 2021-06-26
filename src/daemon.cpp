@@ -13,7 +13,7 @@
 #include <xcb/xproto.h>
 
 /**
- * Information about your connected monitor.
+ * Monitor information
  *
  * Used to calculate sizes of virtual desktops
  */
@@ -25,6 +25,9 @@ struct monitor_info
   int height;
 };
 
+/**
+ * Virtual desktop information
+ */
 struct desktop_info
 {
   int id; // XXX Is it necessary?
@@ -138,21 +141,23 @@ get_desktops ()
 
   auto number_of_desktops
       = !dexpo_viewport.empty () /* If config is not empty: */
-            // Set desktop amount to specified in the config
+            // Set amount of desktops to the one specified in the config
             ? dexpo_viewport.size () / 2
-            // Otherwise parse amount of desktops
+            // Otherwise parse amount of desktops from EWMH
             : get_property_value ("_NET_NUMBER_OF_DESKTOPS")[0];
 
   auto viewport = !dexpo_viewport.empty () /* If config is not empty: */
                       // Set viewport to the one specified in the config
                       ? dexpo_viewport
-                      // Otherwise parse viewport
+                      // Otherwise parse viewport from EWMH
                       : get_property_value ("_NET_DESKTOP_VIEWPORT");
 
   // TODO Parse names
 
   std::vector<desktop_info> info;
 
+  // Figuring out width and height of a desktop based on existing
+  // monitors and desktop x, y coordinates
   for (size_t i = 0; i < number_of_desktops; i++)
     {
       int x = int (viewport[i * 2]);
@@ -162,7 +167,7 @@ get_desktops ()
 
       for (const auto &m : monitors)
         {
-          // Finding monitor on which the desktop is located
+          // Finding monitor the desktop belongs to
           if (m.x == x && m.y == y)
             {
               width = m.width;

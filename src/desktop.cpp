@@ -44,22 +44,7 @@ dxp_desktop::dxp_desktop (
     }
 
   // Create a small pixmap with the size of downscaled screenshot from config
-  create_pixmap ();
-}
-
-dxp_desktop::~dxp_desktop ()
-{
-  // xcb_free_pixmap (drawable::c_, this->pixmap_);
-  // TODO Add separate class to manage graphic context's destructor
-}
-
-dxp_desktop::dxp_desktop (const dxp_desktop &src)
-    : drawable (src.x, src.y, src.width, src.height)
-{
-  this->image_ptr = src.image_ptr;
-  this->pixmap = src.pixmap;
-  this->pixmap_width = src.pixmap_width;
-  this->pixmap_height = src.pixmap_height;
+  this->pixmap.resize (this->pixmap_width * this->pixmap_height * 4);
 }
 
 /**
@@ -161,6 +146,11 @@ dxp_desktop::resize (const uint8_t *input, uint8_t *output,
     }
 }
 
+/**
+ * Initialize a graphic context.
+ *
+ * Required by xcb functions
+ */
 void
 dxp_desktop::create_gc ()
 {
@@ -175,10 +165,4 @@ dxp_desktop::create_gc ()
   dxp_desktop::gc_ = xcb_generate_id (c_);
   xcb_create_gc (drawable::c_, dxp_desktop::gc_, drawable::screen_->root, mask,
                  &values);
-}
-
-void
-dxp_desktop::create_pixmap ()
-{
-  this->pixmap.resize (this->pixmap_width * this->pixmap_height * 4);
 }

@@ -5,45 +5,69 @@
 #include "window.hpp"
 #include <unistd.h>
 #include <vector>
+#include <xcb/xcb.h>
+#include <xcb/xcb_keysyms.h>
+#include <xcb/xinput.h>
 
-// TODO Holy fuck we need to fix this burning shit
-dxp_desktop d0 (0, 0, 1080, 1920);
+constexpr bool k_horizontal_stacking = (dexpo_width == 0);
+constexpr bool k_vertical_stacking = (dexpo_height == 0);
 
+/**
+ * Calculate dimensions of the window based on
+ * stacking mode and desktops from daemon
+ */
+void
+set_window_dimensions (int window_width, int window_height,
+                       std::vector<dxp_socket_desktop> &v)
+{
+  if (k_horizontal_stacking)
+    {
+      // Add the padding before first screenshot
+      window_width += dexpo_padding;
+
+      // Add the paddng at both sizes of interface
+      window_height += 2 * dexpo_padding;
+
+      for (const auto &dexpo_pixmap : v)
+        {
+          window_width += dexpo_pixmap.width;
+          window_width += dexpo_padding;
+        }
+    }
+  else if (k_vertical_stacking)
+    {
+      // Add the padding before first screenshot
+      window_height += dexpo_padding;
+
+      // Add the paddng at both sizes of interface
+      window_width += 2 * dexpo_padding;
+
+      for (const auto &dexpo_pixmap : v)
+        {
+          window_height += dexpo_pixmap.height;
+          window_height += dexpo_padding;
+        }
+    };
+};
+
+/**
+ *
+ */
 int
 main ()
 {
-  // Gets width, height and screenshot of every desktop
+  // Get screenshots from socket
   dxp_socket client;
   auto v = client.get_pixmaps ();
 
-  // Calculates size of GUI's window
-  auto conf_width = dexpo_width;   // Width from config
-  auto conf_height = dexpo_height; // Height from config
-  if (conf_width == 0)
-    {
-      conf_width += dexpo_padding; // Add the padding before first screenshot
-      conf_height
-          += 2 * dexpo_padding; // Add the paddng at both sizes of interface
-      for (const auto &dexpo_pixmap : v)
-        {
-          conf_width += dexpo_pixmap.width;
-          conf_width += dexpo_padding;
-        }
-    }
-  else if (conf_height == 0)
-    {
-      conf_height += dexpo_padding; // Add the padding before first screenshot
-      conf_width
-          += 2 * dexpo_padding; // Add the paddng at both sizes of interface
-      for (const auto &dexpo_pixmap : v)
-        {
-          conf_height += dexpo_pixmap.height;
-          conf_height += dexpo_padding;
-        }
-    };
+  auto window_width = dexpo_width;   // Width from config
+  auto window_height = dexpo_height; // Height from config
 
-  window w (dexpo_x, dexpo_y, conf_width, conf_height);
+  set_window_dimensions (window_width, window_height, v);
+
+  window w (dexpo_x, dexpo_y, window_width, window_height);
   w.desktops = v;
+
   // Mapping pixmap onto window
   xcb_generic_event_t *event = nullptr;
   while ((event = xcb_wait_for_event (window::c_)))
@@ -58,30 +82,32 @@ main ()
           }
         case XCB_KEY_PRESS:
           {
-            xcb_key_press_event_t *kp
-                = reinterpret_cast<xcb_key_press_event_t *> (event);
-            if (kp->detail == 114
-                or kp->detail == 116) // right arrow or up arrow
+            auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
+            // right arrow or up arrow
+            if (kp->detail == 114 or kp->detail == 116)
               {
                 w.highlight_window (w.desktop_sel, dexpo_bgcolor);
                 w.desktop_sel += 1;
                 w.desktop_sel = w.desktop_sel % int (v.size ());
                 w.highlight_window (w.desktop_sel, dexpo_hlcolor);
               }
-            if (kp->detail == 113
-                or kp->detail == 111) // left arrow or down arrow
+            // left arrow or down arrow
+            if (kp->detail == 113 or kp->detail == 111)
               {
                 w.highlight_window (w.desktop_sel, dexpo_bgcolor);
                 w.desktop_sel = (w.desktop_sel == 0) ? int (v.size () - 1)
                                                      : w.desktop_sel - 1;
               }
             w.highlight_window (w.desktop_sel, dexpo_hlcolor);
-            if (kp->detail == 9) // escape
-              {
 
+            // escape
+            if (kp->detail == 9)
+              {
                 exit (0);
               }
-            if (kp->detail == 36) // enter
+
+            // enter
+            if (kp->detail == 36)
 
               {
                 w.highlight_window (w.desktop_sel, dexpo_bgcolor);
@@ -94,6 +120,7 @@ main ()
           {
             xcb_motion_notify_event_t *mn
                 = reinterpret_cast<xcb_motion_notify_event_t *> (event);
+
             xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
                                  w.xcb_id, XCB_TIME_CURRENT_TIME);
             int det = -1;
@@ -106,10 +133,10 @@ main ()
                     if ((mn->event_x - dexpo_padding > 0)
                         and (mn->event_x - dexpo_padding < dexpo_pixmap.width)
                         and (mn->event_y
-                                 - w.get_screen_position (dexpo_pixmap.id)
+                                 - w.get_desktop_coordinates (dexpo_pixmap.id)
                              > 0)
                         and (mn->event_y
-                                 - w.get_screen_position (dexpo_pixmap.id)
+                                 - w.get_desktop_coordinates (dexpo_pixmap.id)
                              < dexpo_pixmap.height))
                       {
                         det = dexpo_pixmap.id;
@@ -118,10 +145,11 @@ main ()
                   }
                 else if (dexpo_width == 0)
                   {
-                    if ((mn->event_x - w.get_screen_position (dexpo_pixmap.id)
+                    if ((mn->event_x
+                             - w.get_desktop_coordinates (dexpo_pixmap.id)
                          > 0)
                         and (mn->event_x
-                                 - w.get_screen_position (dexpo_pixmap.id)
+                                 - w.get_desktop_coordinates (dexpo_pixmap.id)
                              < dexpo_pixmap.width)
                         and (mn->event_y - dexpo_padding > 0)
                         and (mn->event_y - dexpo_padding < dexpo_pixmap.height))

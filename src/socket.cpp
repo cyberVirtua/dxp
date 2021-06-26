@@ -116,7 +116,7 @@ dxp_socket::dxp_socket ()
     {
       // This should be run only for the first connection, as socket may not
       // exist then.
-      // And should not be run when there are active connections to the socket
+      // And should not be run when there are active connections to the socket.
 
       unlink (k_socket_path); // Remove existing socket
 

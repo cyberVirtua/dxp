@@ -25,7 +25,7 @@ struct dxp_socket_desktop
 };
 
 /**
- * All possible commands that can be sent from client to daemon
+ * All commands that can be sent by client to daemon
  */
 enum dxp_event
 {
@@ -36,12 +36,12 @@ class dxp_socket
 {
 public:
   int fd;                           ///< Socket File Descriptor
-  std::atomic<bool> running = true; ///< Thread status
+  std::atomic<bool> running = true; ///< Thread status. Used to kill while loop
 
   dxp_socket ();
   ~dxp_socket ();
 
-  // Explicitly delete unused constructors to comply with rule of five
+  // Explicitly delete unused constructors to comply with the rule of five
   dxp_socket (const dxp_socket &other) = delete;
   dxp_socket (dxp_socket &&other) noexcept = delete;
   dxp_socket &operator= (const dxp_socket &other) = delete;
