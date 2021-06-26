@@ -75,13 +75,13 @@ window::draw_gui ()
           xcb_put_image (desktop_pixmap::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
                          this->id,            /* Pixmap to put image on */
                          desktop_pixmap::gc_, /* Graphic context */
-                         pixmap->width, pixmap->height, /* Dimensions */
+                         pixmap.width, pixmap.height, /* Dimensions */
                          act_width,     /* Destination X coordinate */
                          dexpo_padding, /* Destination Y coordinate */
                          0, drawable::screen_->root_depth,
-                         pixmap->pixmap_len, /* Image size in bytes */
-                         pixmap->pixmap);
-          act_width += pixmap->width;
+                         pixmap.pixmap_len, /* Image size in bytes */
+                         pixmap.pixmap.data ());
+          act_width += pixmap.width;
           act_width += dexpo_padding;
         };
     }
@@ -93,13 +93,13 @@ window::draw_gui ()
           xcb_put_image (desktop_pixmap::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
                          this->id,            /* Pixmap to put image on */
                          desktop_pixmap::gc_, /* Graphic context */
-                         pixmap->width, pixmap->height, /* Dimensions */
+                         pixmap.width, pixmap.height, /* Dimensions */
                          dexpo_padding, /* Destination X coordinate */
                          act_height,    /* Destination Y coordinate */
                          0, drawable::screen_->root_depth,
-                         pixmap->pixmap_len, /* Image size in bytes */
-                         pixmap->pixmap);
-          act_height += pixmap->height;
+                         pixmap.pixmap_len, /* Image size in bytes */
+                         pixmap.pixmap.data ());
+          act_height += pixmap.height;
           act_height += dexpo_padding;
         };
     }
@@ -114,16 +114,16 @@ window::get_screen_position (int desktop_number)
   for (const auto &dexpo_pixmap : this->pixmaps)
     {
       // Estimating all space before the screenshot we search
-      if (dexpo_pixmap->desktop_number < desktop_number)
+      if (dexpo_pixmap.desktop_number < desktop_number)
         {
           coord += dexpo_padding;
           if (dexpo_height == 0)
             {
-              coord += dexpo_pixmap->height;
+              coord += dexpo_pixmap.height;
             }
           else if (dexpo_width == 0)
             {
-              coord += dexpo_pixmap->width;
+              coord += dexpo_pixmap.width;
             }
         }
       else
@@ -141,8 +141,8 @@ window::highlight_window (int desktop_number, uint32_t color)
   int16_t y = dexpo_padding;
   uint32_t values[1]; // mask for changing border's color
 
-  uint16_t width = this->pixmaps[size_t (desktop_number)]->width;
-  uint16_t height = this->pixmaps[size_t (desktop_number)]->height;
+  uint16_t width = this->pixmaps[size_t (desktop_number)].width;
+  uint16_t height = this->pixmaps[size_t (desktop_number)].height;
 
   if (dexpo_height == 0)
     {

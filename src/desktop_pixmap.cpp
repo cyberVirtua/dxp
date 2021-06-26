@@ -21,7 +21,6 @@ desktop_pixmap::desktop_pixmap (
 
   // Initializing non built-in types to zeros
   this->image_ptr = nullptr;
-  this->pixmap_ptr = nullptr;
   this->length = 0;
 
   // Initialize graphic context if it doesn't exist
@@ -64,7 +63,7 @@ desktop_pixmap::desktop_pixmap (const desktop_pixmap &src)
   this->image_ptr = src.image_ptr;
   this->length = src.length;
   this->name = src.name;
-  this->pixmap_ptr = src.pixmap_ptr;
+  this->pixmap = src.pixmap;
   this->pixmap_width = src.pixmap_width;
   this->pixmap_height = src.pixmap_height;
 }
@@ -131,15 +130,14 @@ desktop_pixmap::save_screen ()
       uint32_t pixmap_offset
           = uint32_t (target_height_offset * target_width * 4);
 
-      resize (this->image_ptr, this->pixmap_ptr + pixmap_offset, image_width,
-              image_height, target_width, target_height);
+      resize (this->image_ptr, this->pixmap.data () + pixmap_offset,
+              image_width, image_height, target_width, target_height);
       i++;
     }
 }
 
 /**
  * Definitely copied. Looks like I'm too retarded to code this myself.
- * I have done custom resize! You killed it.
  * https://stackoverflow.com/questions/28566290
  *
  * TODO Optimize and fix warnings, comment on names, add anti aliasing
@@ -191,6 +189,5 @@ desktop_pixmap::create_gc ()
 void
 desktop_pixmap::create_pixmap ()
 {
-  this->pixmap_ptr
-      = (uint8_t *)malloc (this->pixmap_width * this->pixmap_height * 4);
+  this->pixmap.resize (this->pixmap_width * this->pixmap_height * 4);
 }

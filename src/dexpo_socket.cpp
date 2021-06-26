@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 #include <mutex>
+#include <signal.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -11,17 +12,65 @@
  * Thrower for custom errors.
  * Exists to make error throwing fit into one line.
  */
-template <typename er, typename s>
+template <typename E, typename S>
 void
-is (s status) // This name looks readable: is<socket_error> (this->fd)
+is (S status) // This name looks readable: is<socket_error> (this->fd)
 {
   // Check if this is one of the custom errors, because this
   // won't work for functions that return something other than -1 on error
-  static_assert (std::is_base_of<std::runtime_error, er>::value);
+  static_assert (std::is_base_of<std::runtime_error, E>::value);
 
   if (status == -1) // Most of the C libs return -1 on error
     {
-      throw er ();
+      throw E ();
+    }
+}
+
+/**
+ * read(2) is not guaranteed to read all sent data in one read,
+ * so we may need to read from the socket multiple times to get everything.
+ *
+ * @param dest destination address
+ */
+template <typename D>
+void
+read_unix (int fd, D *dest, size_t length)
+{
+  size_t received = 0; // Number of bytes that we have already read
+  ssize_t rcv = 0;     // Response of the read(2)
+
+  while (received != length)
+    {
+      // Read what is left to read with an offset
+      rcv = read (fd, dest + received, length - received);
+      is<read_error> (rcv);
+
+      // Increment the received amount with the number of bytes just received
+      received += size_t (rcv);
+    }
+}
+
+/**
+ * read(2) is not guaranteed to read all sent data in one read,
+ * so we may need to read from the socket multiple times to get everything.
+ *
+ * @param dest destination address
+ */
+template <typename D>
+void
+write_unix (int fd, D *src, size_t length)
+{
+  size_t sent = 0; // Number of bytes that we have already sent
+  ssize_t wr = 0;  // Response of the write(2). Number of bytes written
+
+  while (sent != length)
+    {
+      // Send what is left to send with an offset
+      wr = write (fd, src + sent, length - sent);
+      is<read_error> (wr);
+
+      // Increment the sent amount with the number of bytes just transferred
+      sent += size_t (wr);
     }
 }
 
@@ -92,32 +141,31 @@ dexpo_socket::~dexpo_socket () { close (this->fd); };
 /**
  * Request and receive dexpo_pixmaps from daemon
  */
-std::vector<dexpo_pixmap *>
+std::vector<dexpo_pixmap>
 dexpo_socket::get_pixmaps () const
 {
   // Send pixmap request to daemon
   char cmd = kRequestPixmaps;
-  auto s = write (this->fd, &cmd, 1);
-  is<write_error> (s);
+  write_unix (this->fd, &cmd, 1);
 
-  std::vector<dexpo_pixmap *>
-      pixmap_array; // Pixmap array that will be returned
+  std::vector<dexpo_pixmap> pixmap_array; // Pixmap array that will be returned
 
   size_t num = 0; // Amount of pixmaps that will be received
-  auto rcv_bytes = read (this->fd, &num, sizeof (num));
-  is<read_error> (rcv_bytes);
+  read_unix (this->fd, &num, sizeof (num));
 
   for (; num > 0; num--) // Read `num` pixmaps from socket
     {
-      dexpo_pixmap *p = (dexpo_pixmap *)malloc (sizeof (dexpo_pixmap));
+      // TODO Check for errors here
+      dexpo_pixmap p;
 
-      rcv_bytes = read (this->fd, p, sizeof (dexpo_pixmap));
-      is<read_error> (rcv_bytes);
+      // Reading everything except raw pixmap
+      read_unix (this->fd, &p, offsetof (dexpo_pixmap, pixmap));
 
-      uint8_t *pixmap_ptr = (uint8_t *)malloc (p->pixmap_len);
-      rcv_bytes = read (this->fd, pixmap_ptr, p->pixmap_len);
-      is<read_error> (rcv_bytes);
-      p->pixmap = pixmap_ptr;
+      // Allocating space for an incoming pixmap
+      p.pixmap.resize (p.pixmap_len);
+
+      // Reading raw pixmap
+      read_unix (this->fd, p.pixmap.data (), size_t (p.pixmap_len));
 
       pixmap_array.push_back (p);
     }
@@ -129,15 +177,18 @@ dexpo_socket::get_pixmaps () const
  * and sends pixmaps one by one in return
  */
 void
-dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap *> &pixmaps,
+dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap> pixmaps,
                                      std::mutex &pixmaps_lock) const
 {
   int data_fd = 0; // Socket file descriptor
 
   while ((data_fd = accept (this->fd, nullptr, nullptr)) && this->running)
     {
+      // Check the incoming command
       char cmd = -1;
-      if (read (data_fd, &cmd, 1) == kRequestPixmaps) // Listen for the command
+      read_unix (data_fd, &cmd, 1);
+
+      if (cmd == kRequestPixmaps)
         {
           // Lock pixmaps to prevent race condition when reading and writing
           // pixmaps to socket
@@ -145,19 +196,16 @@ dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap *> &pixmaps,
 
           // First write -- number of subsequent packets
           size_t num = pixmaps.size ();
-          auto s = write (data_fd, &num, sizeof (num));
-          is<write_error> (s);
+          write_unix (data_fd, &num, sizeof (num));
 
           // Writes from second to `num+1` -- subsequent packets
-          for (const auto *p : pixmaps)
+          for (const auto &p : pixmaps)
             {
-              std::cout << p->pixmap_len << std::endl;
+              // Sending everything except raw pixmap
+              write_unix (data_fd, &p, offsetof (dexpo_pixmap, pixmap));
 
-              s = write (data_fd, p, sizeof (dexpo_pixmap));
-              is<write_error> (s);
-
-              s = write (data_fd, p->pixmap, p->pixmap_len);
-              is<write_error> (s);
+              // Sending pixmap
+              write_unix (data_fd, p.pixmap.data (), p.pixmap_len);
             }
         }
     }

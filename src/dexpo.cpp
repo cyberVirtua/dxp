@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <vector>
 
+// TODO Holy fuck we need to fix this burning shit
 desktop_pixmap d0 (0, 0, 1080, 1920, "");
 
 int
@@ -25,7 +26,7 @@ main ()
           += 2 * dexpo_padding; // Add the paddng at both sizes of interface
       for (const auto &dexpo_pixmap : v)
         {
-          conf_width += dexpo_pixmap->width;
+          conf_width += dexpo_pixmap.width;
           conf_width += dexpo_padding;
         }
     }
@@ -36,7 +37,7 @@ main ()
           += 2 * dexpo_padding; // Add the paddng at both sizes of interface
       for (const auto &dexpo_pixmap : v)
         {
-          conf_height += dexpo_pixmap->height;
+          conf_height += dexpo_pixmap.height;
           conf_height += dexpo_padding;
         }
     };
@@ -44,7 +45,7 @@ main ()
   window w (dexpo_x, dexpo_y, conf_width, conf_height);
   w.pixmaps = v;
   // Mapping pixmap onto window
-  xcb_generic_event_t *event;
+  xcb_generic_event_t *event = nullptr;
   while ((event = xcb_wait_for_event (window::c_)))
     {
       switch (event->response_type & ~0x80)
@@ -103,17 +104,17 @@ main ()
                 if (dexpo_height == 0)
                   {
                     if ((mn->event_x - dexpo_padding > 0)
-                        and (mn->event_x - dexpo_padding < dexpo_pixmap->width)
+                        and (mn->event_x - dexpo_padding < dexpo_pixmap.width)
                         and (mn->event_y
                                  - w.get_screen_position (
-                                     dexpo_pixmap->desktop_number)
+                                     dexpo_pixmap.desktop_number)
                              > 0)
                         and (mn->event_y
                                  - w.get_screen_position (
-                                     dexpo_pixmap->desktop_number)
-                             < dexpo_pixmap->height))
+                                     dexpo_pixmap.desktop_number)
+                             < dexpo_pixmap.height))
                       {
-                        det = dexpo_pixmap->desktop_number;
+                        det = dexpo_pixmap.desktop_number;
                         break;
                       }
                   }
@@ -121,17 +122,16 @@ main ()
                   {
                     if ((mn->event_x
                              - w.get_screen_position (
-                                 dexpo_pixmap->desktop_number)
+                                 dexpo_pixmap.desktop_number)
                          > 0)
                         and (mn->event_x
                                  - w.get_screen_position (
-                                     dexpo_pixmap->desktop_number)
-                             < dexpo_pixmap->width)
+                                     dexpo_pixmap.desktop_number)
+                             < dexpo_pixmap.width)
                         and (mn->event_y - dexpo_padding > 0)
-                        and (mn->event_y - dexpo_padding
-                             < dexpo_pixmap->height))
+                        and (mn->event_y - dexpo_padding < dexpo_pixmap.height))
                       {
-                        det = dexpo_pixmap->desktop_number;
+                        det = dexpo_pixmap.desktop_number;
                         break;
                       }
                   }

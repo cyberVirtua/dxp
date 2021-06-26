@@ -22,7 +22,7 @@ struct dexpo_pixmap
   uint16_t height;
   uint32_t pixmap_len;
   char name[DESKTOP_NAME_MAX_LEN];
-  uint8_t *pixmap; ///< Pixmap in RBGA format
+  std::vector<uint8_t> pixmap; ///< Pixmap in RBGA format
 };
 
 /**
@@ -48,8 +48,8 @@ public:
   dexpo_socket &operator= (const dexpo_socket &other) = delete;
   dexpo_socket &operator= (dexpo_socket &&other) = delete;
 
-  std::vector<dexpo_pixmap *> get_pixmaps () const;
-  void send_pixmaps_on_event (const std::vector<dexpo_pixmap *> &,
+  std::vector<dexpo_pixmap> get_pixmaps () const;
+  void send_pixmaps_on_event (const std::vector<dexpo_pixmap>,
                               std::mutex &pixmaps_lock) const;
   void server () const;
 };

@@ -16,7 +16,7 @@ public:
   inline static xcb_gcontext_t gc_; ///< Graphic context
   uint32_t id;                      // Identificator for Window
   uint16_t b_width; // Border width NOTE: Maybe it could be changed to constant
-  std::vector<dexpo_pixmap *> pixmaps;
+  std::vector<dexpo_pixmap> pixmaps;
   int highlighted;
   // TODO: Add masks for events
 
