@@ -91,7 +91,7 @@ dxp_socket::dxp_socket ()
   sock_name.sun_family = AF_UNIX;
 
   // Safely putting socket name into a buffer
-  std::strncpy (&sock_name.sun_path[0], k_socket_path,
+  std::strncpy (sock_name.sun_path, k_socket_path,
                 std::strlen (k_socket_path) + 1);
 
   // Trick compiler into thinking that we pass pointer to sockaddr struct
