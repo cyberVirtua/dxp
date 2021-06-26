@@ -4,7 +4,6 @@
 #include <vector>
 #include <xcb/xproto.h>
 
-/* NOTE: First part is mostly close to DesktopPixmap */
 window::window (const int16_t x,       ///< x coordinate of the top left corner
                 const int16_t y,       ///< y coordinate of the top left corner
                 const uint16_t width,  ///< width of display

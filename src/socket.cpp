@@ -138,7 +138,7 @@ dxp_socket::dxp_socket ()
 dxp_socket::~dxp_socket () { close (this->fd); };
 
 /**
- * Request and receive dexpo_pixmaps from daemon
+ * Request and receive socket_pixmaps from daemon
  */
 std::vector<dxp_socket_desktop>
 dxp_socket::get_pixmaps () const

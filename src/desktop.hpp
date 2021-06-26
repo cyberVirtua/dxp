@@ -1,5 +1,5 @@
-#ifndef DESKTOP_PIXMAP_HPP
-#define DESKTOP_PIXMAP_HPP
+#ifndef DESKTOP_HPP
+#define DESKTOP_HPP
 
 #include "drawable.hpp"
 #include <string>

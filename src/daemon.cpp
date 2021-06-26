@@ -193,7 +193,7 @@ get_current_desktop ()
 };
 
 /**
- * Parse monitor dimensions and initialize appropriate desktop_pixmaps.
+ * Parse monitor dimensions and initialize appropriate pixmap objects.
  *
  * At a timeout check current display and screenshot it.
  * Start a socket listener.
@@ -206,7 +206,7 @@ main ()
 {
   auto desktops_info = get_desktops ();
 
-  /* Initializing desktop_pixmap objects. They are each binded to a separate
+  /* Initializing desktop objects. They are each binded to a separate
    * virtual desktop */
 
   std::vector<dxp_desktop> desktops{};
@@ -216,9 +216,9 @@ main ()
     }
 
   /* Initializing pixmaps that will be shared over socket They are a different
-   * datatype from the desktop pixmaps as they don't store useless data.
+   * datatype from the desktops as they don't store useless data.
    *
-   * Only copying useful data from the desktop_pixmap objects. */
+   * Copying only useful data from the desktop objects. */
 
   std::vector<dxp_socket_desktop> socket_desktops{};
   for (size_t i = 0; i < desktops.size (); i++)
@@ -264,8 +264,6 @@ main ()
       // Copying pixmap from desktops into socket pixmaps
       socket_desktops[c].pixmap = desktops[c].pixmap;
 
-      // memcpy (socket_pixmaps[c].pixmap.data (), pixmaps[c].pixmap.data (),
-      //        socket_pixmaps[c].pixmap_len);
       socket_desktops_lock.unlock ();
 
       usleep (dexpo_screenshot_timeout * 1000000); // usec to sec

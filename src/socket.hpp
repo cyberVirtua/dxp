@@ -1,5 +1,5 @@
-#ifndef DEXPO_SOCKET
-#define DEXPO_SOCKET
+#ifndef DEXPO_SOCKET_HPP
+#define DEXPO_SOCKET_HPP
 
 #include "desktop.hpp"
 #include <atomic>
@@ -90,4 +90,4 @@ public:
   bind_error () : std::runtime_error ("Could not bind name to the socket"){};
 };
 
-#endif /* ifndef DEXPO_SOCKET */
+#endif /* ifndef DEXPO_SOCKET_HPP */
