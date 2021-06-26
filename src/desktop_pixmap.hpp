@@ -21,18 +21,14 @@ public:
   inline static xcb_gcontext_t gc_ = 0; ///< Graphic context
   uint8_t *image_ptr;                   ///< Pointer to the image structure.
   uint32_t length;                      ///< Length of the XImage data structure
-  std::string name;                     ///< _NET_WM_NAME of display
   std::vector<uint8_t> pixmap; ///< Constant id for the screenshot's pixmap
   uint16_t pixmap_width;       ///< Width of the pixmap that stores screenshot
   uint16_t pixmap_height;      ///< Height of the pixmap that stores screenshot
 
-  desktop_pixmap (
-      int16_t x,              ///< x coordinate of the top left corner
-      int16_t y,              ///< y coordinate of the top left corner
-      uint16_t width,         ///< Width of the display
-      uint16_t height,        ///< Height of the display
-      const std::string &name ///< Name of the display (_NET_WM_NAME)
-  );
+  desktop_pixmap (int16_t x,        ///< x coordinate of the top left corner
+                  int16_t y,        ///< y coordinate of the top left corner
+                  uint16_t width,   ///< Width of the display
+                  uint16_t height); ///< Height of the display
   ~desktop_pixmap ();
 
   // Declaring copy operator to use it in vector

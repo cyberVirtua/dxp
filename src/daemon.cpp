@@ -124,7 +124,6 @@ struct desktop_info
   int y;
   int width;
   int height;
-  std::string name;
 };
 
 /**
@@ -178,7 +177,7 @@ get_desktops ()
           throw; // TODO Log errors
         }
 
-      info.push_back (desktop_info{ int (i), x, y, width, height, "" });
+      info.push_back (desktop_info{ int (i), x, y, width, height });
     }
 
   return info;
@@ -213,7 +212,7 @@ main ()
   std::vector<desktop_pixmap> pixmaps{};
   for (const auto &d : desktops)
     {
-      pixmaps.push_back (desktop_pixmap (d.x, d.y, d.width, d.height, d.name));
+      pixmaps.push_back (desktop_pixmap (d.x, d.y, d.width, d.height));
     }
 
   /* Initializing pixmaps that will be shared over socket They are a different

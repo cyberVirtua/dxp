@@ -20,7 +20,6 @@ struct dexpo_pixmap
   uint16_t width;
   uint16_t height;
   uint32_t pixmap_len;
-  char name[DESKTOP_NAME_MAX_LEN];
   std::vector<uint8_t> pixmap; ///< Pixmap in RBGA format
 };
 

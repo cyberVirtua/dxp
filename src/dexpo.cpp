@@ -7,7 +7,7 @@
 #include <vector>
 
 // TODO Holy fuck we need to fix this burning shit
-desktop_pixmap d0 (0, 0, 1080, 1920, "");
+desktop_pixmap d0 (0, 0, 1080, 1920);
 
 int
 main ()

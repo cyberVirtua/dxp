@@ -1,6 +1,5 @@
 #include "desktop_pixmap.hpp"
 #include "config.hpp"
-#include <algorithm>
 #include <memory>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
@@ -10,16 +9,13 @@
 constexpr int k_max_malloc = 16711568;
 
 desktop_pixmap::desktop_pixmap (
-    const int16_t x,        ///< x coordinate of the top left corner
-    const int16_t y,        ///< y coordinate of the top left corner
-    const uint16_t width,   ///< width of display
-    const uint16_t height,  ///< height of display
-    const std::string &name ///< _NET_WM_NAME of display
+    const int16_t x,      ///< x coordinate of the top left corner
+    const int16_t y,      ///< y coordinate of the top left corner
+    const uint16_t width, ///< width of display
+    const uint16_t height ///< height of display
     )
     : drawable (x, y, width, height)
 {
-  this->name = name;
-
   // Initializing non built-in types to zeros
   this->image_ptr = nullptr;
   this->length = 0;
@@ -63,7 +59,6 @@ desktop_pixmap::desktop_pixmap (const desktop_pixmap &src)
 {
   this->image_ptr = src.image_ptr;
   this->length = src.length;
-  this->name = src.name;
   this->pixmap = src.pixmap;
   this->pixmap_width = src.pixmap_width;
   this->pixmap_height = src.pixmap_height;
