@@ -1,5 +1,6 @@
 #include "desktop_pixmap.hpp"
 #include "config.hpp"
+#include <algorithm>
 #include <memory>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
@@ -20,7 +21,6 @@ desktop_pixmap::desktop_pixmap (
 
   // Initializing non built-in types to zeros
   this->image_ptr = nullptr;
-  this->pixmap_id = 0;
   this->length = 0;
 
   // Initialize graphic context if it doesn't exist
@@ -53,7 +53,7 @@ desktop_pixmap::desktop_pixmap (
 
 desktop_pixmap::~desktop_pixmap ()
 {
-  xcb_free_pixmap (drawable::c_, this->pixmap_id);
+  // xcb_free_pixmap (drawable::c_, this->pixmap_);
   // TODO Add separate class to manage graphic context's destructor
 }
 
@@ -63,7 +63,7 @@ desktop_pixmap::desktop_pixmap (const desktop_pixmap &src)
   this->image_ptr = src.image_ptr;
   this->length = src.length;
   this->name = src.name;
-  this->pixmap_id = src.pixmap_id;
+  this->pixmap = src.pixmap;
   this->pixmap_width = src.pixmap_width;
   this->pixmap_height = src.pixmap_height;
 }
@@ -123,29 +123,21 @@ desktop_pixmap::save_screen ()
       int target_height
           = int (float (image_height) / image_width * this->pixmap_width);
 
-      auto pixmap = std::make_unique<uint8_t[]> (this->length + 1);
-
-      resize (this->image_ptr, pixmap.get (), image_width, image_height,
-              target_width, target_height);
       this->length = uint (target_width * target_height * 4);
+      int target_height_offset
+          = int (float (image_height_offset) * pixmap_width / image_width);
 
-      xcb_put_image (drawable::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
-                     this->pixmap_id,             /* Pixmap to put image on */
-                     desktop_pixmap::gc_,         /* Graphic context */
-                     target_width, target_height, /* Dimensions */
-                     0,                           /* Destination X coordinate */
-                     image_height_offset,         /* Destination Y coordinate */
-                     0, drawable::screen_->root_depth,
-                     this->length, /* Image size in bytes */
-                     pixmap.get ());
+      uint32_t pixmap_offset
+          = uint32_t (target_height_offset * target_width * 4);
 
+      resize (this->image_ptr, this->pixmap.data () + pixmap_offset,
+              image_width, image_height, target_width, target_height);
       i++;
     }
 }
 
 /**
  * Definitely copied. Looks like I'm too retarded to code this myself.
- * I have done custom resize! You killed it.
  * https://stackoverflow.com/questions/28566290
  *
  * TODO Optimize and fix warnings, comment on names, add anti aliasing
@@ -197,8 +189,5 @@ desktop_pixmap::create_gc ()
 void
 desktop_pixmap::create_pixmap ()
 {
-  this->pixmap_id = xcb_generate_id (drawable::c_);
-  xcb_create_pixmap (drawable::c_, drawable::screen_->root_depth,
-                     this->pixmap_id, drawable::screen_->root,
-                     this->pixmap_width, this->pixmap_height);
+  this->pixmap.resize (this->pixmap_width * this->pixmap_height * 4);
 }

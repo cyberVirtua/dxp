@@ -5,32 +5,16 @@
 #include "wmctrl.hpp"
 #include <unistd.h>
 #include <vector>
-desktop_pixmap d1 (0, 0, 1920, 1080, "DP-1");
-desktop_pixmap d2 (0, 0, 1920, 1080, "DP-2");
-desktop_pixmap d3 (0, 0, 1920, 1080, "DP-3");
 
-// Used for testing purposes
-std::vector<dexpo_pixmap>
-test_get_vector ()
-{
-  d1.save_screen ();
-  d2.save_screen ();
-  d3.save_screen ();
-
-  dexpo_pixmap d1_1{ 0, d1.pixmap_width, d1.pixmap_height, d1.pixmap_id,
-                     "DP-1" };
-  dexpo_pixmap d2_1{ 1, d2.pixmap_width, d2.pixmap_height, d2.pixmap_id,
-                     "DP-2" };
-  dexpo_pixmap d3_1{ 2, d3.pixmap_width, d3.pixmap_height, d3.pixmap_id,
-                     "DP-3" };
-  return std::vector<dexpo_pixmap>{ d1_1, d2_1, d3_1 };
-}
+// TODO Holy fuck we need to fix this burning shit
+desktop_pixmap d0 (0, 0, 1080, 1920, "");
 
 int
 main ()
 {
   // Gets width, height and screenshot of every desktop
-  auto v = test_get_vector ();
+  dexpo_socket client;
+  auto v = client.get_pixmaps ();
 
   // Calculates size of GUI's window
   auto conf_width = dexpo_width;   // Width from config
@@ -61,7 +45,7 @@ main ()
   window w (dexpo_x, dexpo_y, conf_width, conf_height);
   w.pixmaps = v;
   // Mapping pixmap onto window
-  xcb_generic_event_t *event;
+  xcb_generic_event_t *event = nullptr;
   while ((event = xcb_wait_for_event (window::c_)))
     {
       switch (event->response_type & ~0x80)
@@ -181,9 +165,9 @@ main ()
           }
         case XCB_FOCUS_OUT:
           {
-          xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
+            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
                                  XCB_TIME_CURRENT_TIME);
-          break;
+            break;
           }
         }
       xcb_flush (window::c_);

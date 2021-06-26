@@ -13,7 +13,7 @@ window::window (const int16_t x,       ///< x coordinate of the top left corner
 {
   this->b_width = dexpo_outer_border;
   this->id = xcb_generate_id (drawable::c_);
-  this->highlighted = 0;
+  this->highlighted = 0; // Id of the preselected desktop
   create_window ();
 }
 
@@ -35,7 +35,7 @@ window::create_window ()
               | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_KEY_RELEASE
               | XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_POINTER_MOTION
               | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_ENTER_WINDOW;
-  ;
+
   values[2] = XCB_STACK_MODE_ABOVE; // Places created window on top
   xcb_create_window (window::c_, /* Connection, separate from one of daemon */
                      XCB_COPY_FROM_PARENT,          /* depth (same as root)*/
@@ -70,24 +70,36 @@ window::draw_gui ()
     {
       // Drawing screenshots starting from the left top corner
       auto act_width = dexpo_padding;
-      for (const auto &dexpo_pixmap : this->pixmaps)
+      for (const auto &pixmap : this->pixmaps)
         {
-          xcb_copy_area (window::c_, dexpo_pixmap.id, this->id,
-                         desktop_pixmap::gc_, 0, 0, act_width, dexpo_padding,
-                         dexpo_pixmap.width, dexpo_pixmap.height);
-          act_width += dexpo_pixmap.width;
+          xcb_put_image (desktop_pixmap::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
+                         this->id,            /* Pixmap to put image on */
+                         desktop_pixmap::gc_, /* Graphic context */
+                         pixmap.width, pixmap.height, /* Dimensions */
+                         act_width,     /* Destination X coordinate */
+                         dexpo_padding, /* Destination Y coordinate */
+                         0, drawable::screen_->root_depth,
+                         pixmap.pixmap_len, /* Image size in bytes */
+                         pixmap.pixmap.data ());
+          act_width += pixmap.width;
           act_width += dexpo_padding;
         };
     }
   else if (dexpo_height == 0)
     {
       auto act_height = dexpo_padding;
-      for (const auto &dexpo_pixmap : this->pixmaps)
+      for (const auto &pixmap : this->pixmaps)
         {
-          xcb_copy_area (window::c_, dexpo_pixmap.id, this->id,
-                         desktop_pixmap::gc_, 0, 0, dexpo_padding, act_height,
-                         dexpo_pixmap.width, dexpo_pixmap.height);
-          act_height += dexpo_pixmap.height;
+          xcb_put_image (desktop_pixmap::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
+                         this->id,            /* Pixmap to put image on */
+                         desktop_pixmap::gc_, /* Graphic context */
+                         pixmap.width, pixmap.height, /* Dimensions */
+                         dexpo_padding, /* Destination X coordinate */
+                         act_height,    /* Destination Y coordinate */
+                         0, drawable::screen_->root_depth,
+                         pixmap.pixmap_len, /* Image size in bytes */
+                         pixmap.pixmap.data ());
+          act_height += pixmap.height;
           act_height += dexpo_padding;
         };
     }
@@ -99,7 +111,7 @@ window::get_screen_position (int desktop_number)
   // As all screenshots have at least one common coordinate of corner, we need
   // to find only the second one
   int coord = dexpo_padding;
-  for (const auto &dexpo_pixmap : pixmaps)
+  for (const auto &dexpo_pixmap : this->pixmaps)
     {
       // Estimating all space before the screenshot we search
       if (dexpo_pixmap.desktop_number < desktop_number)

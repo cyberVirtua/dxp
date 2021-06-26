@@ -1,9 +1,11 @@
+#include "config.hpp"
 #include "desktop_pixmap.hpp"
 #include "dexpo_socket.hpp"
 #include <iostream>
 #include <memory>
 #include <string.h>
 #include <sys/un.h>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 #include <xcb/randr.h>
@@ -135,9 +137,18 @@ get_desktops ()
 {
   auto monitors = get_monitors ();
 
-  auto number_of_desktops = get_property_value ("_NET_NUMBER_OF_DESKTOPS")[0];
+  auto number_of_desktops
+      = !dexpo_viewport.empty () /* If config is not empty: */
+            // Set desktop amount to specified in the config
+            ? dexpo_viewport.size () / 2
+            // Otherwise parse amount of desktops
+            : get_property_value ("_NET_NUMBER_OF_DESKTOPS")[0];
 
-  auto viewport = get_property_value ("_NET_DESKTOP_VIEWPORT");
+  auto viewport = !dexpo_viewport.empty () /* If config is not empty: */
+                      // Set viewport to the one specified in the config
+                      ? dexpo_viewport
+                      // Otherwise parse viewport
+                      : get_property_value ("_NET_DESKTOP_VIEWPORT");
 
   // TODO Parse names
 
@@ -196,40 +207,69 @@ main ()
 {
   auto desktops = get_desktops ();
 
-  /* Initializing desktop_pixmap objects */
-  std::vector<desktop_pixmap> pixmaps;
+  /* Initializing desktop_pixmap objects. They are each binded to a separate
+   * virtual desktop */
+
+  std::vector<desktop_pixmap> pixmaps{};
   for (const auto &d : desktops)
     {
       pixmaps.push_back (desktop_pixmap (d.x, d.y, d.width, d.height, d.name));
     }
 
-  /* Initializing pixmaps that will be shared over socket */
-  std::vector<dexpo_pixmap> socket_pixmaps;
+  /* Initializing pixmaps that will be shared over socket They are a different
+   * datatype from the desktop pixmaps as they don't store useless data.
+   *
+   * Only copying useful data from the desktop_pixmap objects. */
+
+  std::vector<dexpo_pixmap> socket_pixmaps{};
   for (size_t i = 0; i < pixmaps.size (); i++)
     {
-      socket_pixmaps.push_back (dexpo_pixmap{ static_cast<int> (i),
-                                              pixmaps[i].width,
-                                              pixmaps[i].height,
-                                              pixmaps[i].pixmap_id,
-                                              { *pixmaps[i].name.c_str () } });
+      uint32_t pixmap_len
+          = pixmaps[i].pixmap_width * pixmaps[i].pixmap_height * 4;
+
+      dexpo_pixmap p;
+
+      p.desktop_number = int (i);
+      p.pixmap_len = pixmap_len;
+      p.width = pixmaps[i].pixmap_width;
+      p.height = pixmaps[i].pixmap_height;
+
+      // Copying pixmap from desktops into socket pixmaps
+      p.pixmap = pixmaps[i].pixmap; // Should be as fast as memcpy
+
+      socket_pixmaps.push_back (p);
     }
 
   dexpo_socket server;
 
   std::mutex socket_pixmaps_lock;
   // Start a server that will share pixmaps over socket in a separate thread
-  server.send_pixmaps_on_event (socket_pixmaps, socket_pixmaps_lock);
+  std::thread daemon_thread (&dexpo_socket::send_pixmaps_on_event, &server,
+                             std::ref (socket_pixmaps),
+                             std::ref (socket_pixmaps_lock));
 
   bool running = true;
   while (running)
     {
       size_t c = size_t (get_current_desktop ());
+      if (!dexpo_viewport.empty () && c >= dexpo_viewport.size () / 2)
+        {
+          throw std::runtime_error (
+              "The amount of virtual desktops specified in the config does not "
+              "match the amount of your virtual deskops in your system.");
+        }
 
       socket_pixmaps_lock.lock ();
       pixmaps[c].save_screen ();
+
+      // Copying pixmap from desktops into socket pixmaps
+      socket_pixmaps[c].pixmap = pixmaps[c].pixmap;
+
+      // memcpy (socket_pixmaps[c].pixmap.data (), pixmaps[c].pixmap.data (),
+      //        socket_pixmaps[c].pixmap_len);
       socket_pixmaps_lock.unlock ();
 
-      sleep (1);
+      usleep (dexpo_screenshot_timeout * 1000000); // usec to sec
     };
 
   return 0;

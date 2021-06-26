@@ -1,6 +1,7 @@
-# Define name of the binary
-add_executable(dexpo dexpo.cpp desktop_pixmap.cpp dexpo_socket drawable.cpp window.cpp
-                     wmctrl.cpp)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -pthread")
+
+add_executable(dexpo dexpo.cpp desktop_pixmap.cpp dexpo_socket.cpp drawable.cpp
+                     wmctrl.cpp window.cpp)
 
 target_link_libraries(
   dexpo

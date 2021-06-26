@@ -3,6 +3,7 @@
 
 #include "drawable.hpp"
 #include <string>
+#include <vector>
 #include <xcb/xproto.h>
 
 enum pixmap_format
@@ -21,9 +22,9 @@ public:
   uint8_t *image_ptr;                   ///< Pointer to the image structure.
   uint32_t length;                      ///< Length of the XImage data structure
   std::string name;                     ///< _NET_WM_NAME of display
-  xcb_pixmap_t pixmap_id; ///< Constant id for the screenshot's pixmap
-  uint16_t pixmap_width;  ///< Width of the pixmap that stores screenshot
-  uint16_t pixmap_height; ///< Height of the pixmap that stores screenshot
+  std::vector<uint8_t> pixmap; ///< Constant id for the screenshot's pixmap
+  uint16_t pixmap_width;       ///< Width of the pixmap that stores screenshot
+  uint16_t pixmap_height;      ///< Height of the pixmap that stores screenshot
 
   desktop_pixmap (
       int16_t x,              ///< x coordinate of the top left corner

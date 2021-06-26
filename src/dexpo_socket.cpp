@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 #include <mutex>
+#include <signal.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -11,17 +12,65 @@
  * Thrower for custom errors.
  * Exists to make error throwing fit into one line.
  */
-template <typename er, typename s>
+template <typename E, typename S>
 void
-is (s status) // This name looks readable: is<socket_error> (this->fd)
+is (S status) // This name looks readable: is<socket_error> (this->fd)
 {
   // Check if this is one of the custom errors, because this
   // won't work for functions that return something other than -1 on error
-  static_assert (std::is_base_of<std::runtime_error, er>::value);
+  static_assert (std::is_base_of<std::runtime_error, E>::value);
 
   if (status == -1) // Most of the C libs return -1 on error
     {
-      throw er ();
+      throw E ();
+    }
+}
+
+/**
+ * read(2) is not guaranteed to read all sent data in one read,
+ * so we may need to read from the socket multiple times to get everything.
+ *
+ * @param dest destination address
+ */
+template <typename D>
+void
+read_unix (int fd, D *dest, size_t length)
+{
+  size_t received = 0; // Number of bytes that we have already read
+  ssize_t rcv = 0;     // Response of the read(2)
+
+  while (received != length)
+    {
+      // Read what is left to read with an offset
+      rcv = read (fd, dest + received, length - received);
+      is<read_error> (rcv);
+
+      // Increment the received amount with the number of bytes just received
+      received += size_t (rcv);
+    }
+}
+
+/**
+ * read(2) is not guaranteed to read all sent data in one read,
+ * so we may need to read from the socket multiple times to get everything.
+ *
+ * @param dest destination address
+ */
+template <typename D>
+void
+write_unix (int fd, D *src, size_t length)
+{
+  size_t sent = 0; // Number of bytes that we have already sent
+  ssize_t wr = 0;  // Response of the write(2). Number of bytes written
+
+  while (sent != length)
+    {
+      // Send what is left to send with an offset
+      wr = write (fd, src + sent, length - sent);
+      is<read_error> (wr);
+
+      // Increment the sent amount with the number of bytes just transferred
+      sent += size_t (wr);
     }
 }
 
@@ -51,7 +100,7 @@ dexpo_socket::dexpo_socket ()
   auto *sock_addr = reinterpret_cast<struct sockaddr *> (&sock_name);
 
   // XXX Make socket abstract
-  // sock_name.sun_path[0] = '\0';
+  sock_name.sun_path[0] = '\0';
 
   int s = 0; // Return status of functions to check for errors
   try
@@ -69,7 +118,6 @@ dexpo_socket::dexpo_socket ()
       // This should be run only for the first connection, as socket may not
       // exist then.
       // And should not be run when there are active connections to the socket
-      std::cerr << e.what () << std::endl;
 
       unlink (SOCKET_PATH); // Remove existing socket
 
@@ -88,11 +136,7 @@ dexpo_socket::dexpo_socket ()
     }
 };
 
-dexpo_socket::~dexpo_socket ()
-{
-  close (this->fd);
-  unlink (SOCKET_PATH);
-};
+dexpo_socket::~dexpo_socket () { close (this->fd); };
 
 /**
  * Request and receive dexpo_pixmaps from daemon
@@ -102,21 +146,28 @@ dexpo_socket::get_pixmaps () const
 {
   // Send pixmap request to daemon
   char cmd = kRequestPixmaps;
-  auto s = write (this->fd, &cmd, 1);
-  is<write_error> (s);
+  write_unix (this->fd, &cmd, 1);
 
   std::vector<dexpo_pixmap> pixmap_array; // Pixmap array that will be returned
-  dexpo_pixmap pixmap{};                  // Pixmap to copy data in
 
-  size_t num = 0;
-  auto rcv_bytes = read (this->fd, &num, sizeof (num));
-  is<read_error> (rcv_bytes);
+  size_t num = 0; // Amount of pixmaps that will be received
+  read_unix (this->fd, &num, sizeof (num));
 
   for (; num > 0; num--) // Read `num` pixmaps from socket
     {
-      rcv_bytes = read (this->fd, &pixmap, sizeof (pixmap));
-      is<read_error> (rcv_bytes);
-      pixmap_array.push_back (pixmap);
+      // TODO Check for errors here
+      dexpo_pixmap p;
+
+      // Reading everything except raw pixmap
+      read_unix (this->fd, &p, offsetof (dexpo_pixmap, pixmap));
+
+      // Allocating space for an incoming pixmap
+      p.pixmap.resize (p.pixmap_len);
+
+      // Reading raw pixmap
+      read_unix (this->fd, p.pixmap.data (), size_t (p.pixmap_len));
+
+      pixmap_array.push_back (p);
     }
   return pixmap_array; // Compiler is smart so vector won't be copied here
 };
@@ -127,30 +178,34 @@ dexpo_socket::get_pixmaps () const
  */
 void
 dexpo_socket::send_pixmaps_on_event (const std::vector<dexpo_pixmap> &pixmaps,
-                                     std::mutex &pixmaps_lock)
+                                     std::mutex &pixmaps_lock) const
 {
-  auto data_fd = accept (this->fd, NULL, NULL); // Anonymous socket
-  char cmd = -1;
+  int data_fd = 0; // Socket file descriptor
 
-  this->running = true; // Can later turn off the loop
-  while (this->running) // FIXME This loop exit is ugly
+  while ((data_fd = accept (this->fd, nullptr, nullptr)) && this->running)
     {
-      if (read (data_fd, &cmd, 1) == kRequestPixmaps) // Listen for the command
+      // Check the incoming command
+      char cmd = -1;
+      read_unix (data_fd, &cmd, 1);
+
+      if (cmd == kRequestPixmaps)
         {
           // Lock pixmaps to prevent race condition when reading and writing
           // pixmaps to socket
           std::scoped_lock<std::mutex> guard (pixmaps_lock);
 
           // First write -- number of subsequent packets
-          auto num = pixmaps.size ();
-          auto s = write (data_fd, &num, sizeof (num));
-          is<write_error> (s);
+          size_t num = pixmaps.size ();
+          write_unix (data_fd, &num, sizeof (num));
 
           // Writes from second to `num+1` -- subsequent packets
-          for (const auto &pixmap : pixmaps)
+          for (const auto &p : pixmaps)
             {
-              s = write (data_fd, &pixmap, sizeof (pixmap));
-              is<write_error> (s);
+              // Sending everything except raw pixmap
+              write_unix (data_fd, &p, offsetof (dexpo_pixmap, pixmap));
+
+              // Sending pixmap
+              write_unix (data_fd, p.pixmap.data (), p.pixmap_len);
             }
         }
     }
