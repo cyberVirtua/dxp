@@ -73,7 +73,8 @@ get_property_value (const char *atom_name)
 
   std::vector<uint32_t> atom_data;
 
-  for (int i = 0; i < prop_length; i++)
+  atom_data.reserve (prop_length);
+  for (size_t i = 0; i < prop_length; i++)
     {
       atom_data.push_back (prop[i]);
     }
@@ -213,9 +214,11 @@ main ()
    * virtual desktop */
 
   std::vector<dxp_desktop> desktops{};
+
+  desktops.reserve (desktops_info.size ());
   for (const auto &d : desktops_info)
     {
-      desktops.push_back (dxp_desktop (d.x, d.y, d.width, d.height));
+      desktops.emplace_back (d.x, d.y, d.width, d.height);
     }
 
   /* Initializing pixmaps that will be shared over socket They are a different
