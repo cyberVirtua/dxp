@@ -1,7 +1,7 @@
 #include "config.hpp"
 #include "desktop.hpp"
 #include "socket.hpp"
-#include <cstring>
+#include "xcb_util.hpp"
 #include <iostream>
 #include <memory>
 #include <sys/un.h>
@@ -42,47 +42,6 @@ auto *screen = xcb_setup_roots_iterator (xcb_get_setup (c)).data;
 auto root = screen -> root;
 
 /**
- * Get a vector with EWMH property values
- *
- * @note vector size is inconsistent so vector may contain other data
- */
-std::vector<uint32_t>
-get_property_value (const char *atom_name)
-{
-  auto atom_cookie = xcb_intern_atom (c, 0, strlen (atom_name), atom_name);
-  auto atom_reply = std::unique_ptr<xcb_intern_atom_reply_t> (
-      xcb_intern_atom_reply (c, atom_cookie, nullptr));
-
-  // TODO(mmskv): add proper exception
-  auto atom = atom_reply ? atom_reply->atom : throw;
-
-  /* Getting property from atom */
-
-  auto prop_cookie = xcb_get_property (
-      c, 0, root, atom, XCB_GET_PROPERTY_TYPE_ANY, 0, UINT32_MAX);
-  auto prop_reply = std::unique_ptr<xcb_get_property_reply_t> (
-      xcb_get_property_reply (c, prop_cookie, nullptr));
-
-  auto prop_length = size_t (xcb_get_property_value_length (prop_reply.get ()));
-
-  // This shouldn't be unique_ptr as it belongs to prop_reply and
-  // will be freed by prop_reply
-  auto *prop = prop_length ? (reinterpret_cast<uint32_t *> (
-                   xcb_get_property_value (prop_reply.get ())))
-                           : throw;
-
-  std::vector<uint32_t> atom_data;
-
-  atom_data.reserve (prop_length);
-  for (size_t i = 0; i < prop_length; i++)
-    {
-      atom_data.push_back (prop[i]);
-    }
-
-  return atom_data;
-};
-
-/**
  * Get monitor_info for each connected monitor
  */
 std::vector<monitor_info>
@@ -91,7 +50,7 @@ get_monitors ()
   std::vector<monitor_info> monitors;
 
   auto screen_resources_reply
-      = std::unique_ptr<xcb_randr_get_screen_resources_current_reply_t> (
+      = xcb_unique_ptr<xcb_randr_get_screen_resources_current_reply_t> (
           xcb_randr_get_screen_resources_current_reply (
               c, xcb_randr_get_screen_resources_current (c, root), nullptr));
 
@@ -110,7 +69,8 @@ get_monitors ()
       auto output_cookie = xcb_randr_get_output_info (c, randr_outputs[i],
                                                       XCB_TIME_CURRENT_TIME);
 
-      auto output = std::unique_ptr<xcb_randr_get_output_info_reply_t> (
+      // Using free instead of delete to deallocate memory as required by xcb
+      auto output = xcb_unique_ptr<xcb_randr_get_output_info_reply_t> (
           xcb_randr_get_output_info_reply (c, output_cookie, nullptr));
 
       if (output == nullptr || output->crtc == XCB_NONE
@@ -119,7 +79,7 @@ get_monitors ()
           continue;
         }
 
-      auto crtc = std::unique_ptr<xcb_randr_get_crtc_info_reply_t> (
+      auto crtc = xcb_unique_ptr<xcb_randr_get_crtc_info_reply_t> (
           xcb_randr_get_crtc_info_reply (
               c, xcb_randr_get_crtc_info (c, output->crtc, XCB_CURRENT_TIME),
               nullptr));
@@ -145,13 +105,13 @@ get_desktops ()
             // Set amount of desktops to the one specified in the config
             ? dexpo_viewport.size () / 2
             // Otherwise parse amount of desktops from EWMH
-            : get_property_value ("_NET_NUMBER_OF_DESKTOPS")[0];
+            : get_property_value (c, root, "_NET_NUMBER_OF_DESKTOPS")[0];
 
   auto viewport = !dexpo_viewport.empty () /* If config is not empty: */
                       // Set viewport to the one specified in the config
                       ? dexpo_viewport
                       // Otherwise parse viewport from EWMH
-                      : get_property_value ("_NET_DESKTOP_VIEWPORT");
+                      : get_property_value (c, root, "_NET_DESKTOP_VIEWPORT");
 
   std::vector<desktop_info> info;
 
@@ -193,7 +153,7 @@ get_desktops ()
 int
 get_current_desktop ()
 {
-  return int (get_property_value ("_NET_CURRENT_DESKTOP")[0]);
+  return int (get_property_value (c, root, "_NET_CURRENT_DESKTOP")[0]);
 };
 
 /**

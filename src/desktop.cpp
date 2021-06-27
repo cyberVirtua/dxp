@@ -1,5 +1,6 @@
 #include "desktop.hpp"
 #include "config.hpp"
+#include "xcb_util.hpp"
 #include <memory>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
@@ -85,7 +86,7 @@ dxp_desktop::save_screen ()
       // TODO(mmskv): Handle errors
       // Not freeing gi_reply causes memory leak, as xcb_get_image always
       // allocates new space for the image
-      auto gi_reply = std::unique_ptr<xcb_get_image_reply_t> (
+      auto gi_reply = xcb_unique_ptr<xcb_get_image_reply_t> (
           xcb_get_image_reply (drawable::c_, gi_cookie, nullptr));
 
       this->image_ptr = xcb_get_image_data (gi_reply.get ());

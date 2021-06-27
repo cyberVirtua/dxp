@@ -1,8 +1,8 @@
 #include "config.hpp"
 #include "desktop.hpp"
-#include "ewmh.hpp"
 #include "socket.hpp"
 #include "window.hpp"
+#include "xcb_util.hpp"
 #include <unistd.h>
 #include <vector>
 #include <xcb/xcb.h>
