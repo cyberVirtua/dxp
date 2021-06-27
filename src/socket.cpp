@@ -183,7 +183,9 @@ dxp_socket::send_pixmaps_on_event (
 {
   int data_fd = 0; // Socket file descriptor
 
-  while ((data_fd = accept (this->fd, nullptr, nullptr)) && this->running)
+  // SOCK_CLOEXEC is because of https://stackoverflow.com/questions/22304631
+  while ((data_fd = accept4 (this->fd, nullptr, nullptr, SOCK_CLOEXEC))
+         && this->running)
     {
       // Check the incoming command
       char cmd = -1;

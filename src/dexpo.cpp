@@ -102,7 +102,8 @@ main ()
             // escape
             if (kp->detail == 9)
               {
-                exit (0);
+                // Thread safe exit
+                _exit (0);
               }
 
             // enter

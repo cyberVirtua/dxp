@@ -272,7 +272,7 @@ main ()
 
       socket_desktops_lock.unlock ();
 
-      usleep (dexpo_screenshot_timeout * 1000000); // usec to sec
+      std::this_thread::sleep_for (dexpo_screenshot_timeout);
     };
 
   return 0;
