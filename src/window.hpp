@@ -16,7 +16,7 @@ public:
   inline static xcb_gcontext_t gc_ = 0; ///< Graphic context
   uint32_t xcb_id;                      // Identificator for Window
   std::vector<dxp_socket_desktop> desktops;
-  int desktop_sel;
+  size_t desktop_sel;
 
   window (int16_t x,      ///< x coordinate of the top left corner
           int16_t y,      ///< y coordinate of the top left corner

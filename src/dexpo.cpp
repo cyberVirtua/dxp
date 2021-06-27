@@ -88,15 +88,15 @@ main ()
               {
                 w.highlight_window (w.desktop_sel, dexpo_bgcolor);
                 w.desktop_sel += 1;
-                w.desktop_sel = w.desktop_sel % int (v.size ());
+                w.desktop_sel = w.desktop_sel % v.size ();
                 w.highlight_window (w.desktop_sel, dexpo_hlcolor);
               }
             // left arrow or down arrow
             if (kp->detail == 113 or kp->detail == 111)
               {
                 w.highlight_window (w.desktop_sel, dexpo_bgcolor);
-                w.desktop_sel = (w.desktop_sel == 0) ? int (v.size () - 1)
-                                                     : w.desktop_sel - 1;
+                w.desktop_sel
+                    = w.desktop_sel == 0 ? v.size () - 1 : w.desktop_sel - 1;
               }
             w.highlight_window (w.desktop_sel, dexpo_hlcolor);
 
@@ -162,7 +162,7 @@ main ()
             w.highlight_window (w.desktop_sel, dexpo_bgcolor);
             if (det > -1)
               {
-                w.desktop_sel = det;
+                w.desktop_sel = size_t (det);
                 w.highlight_window (w.desktop_sel, dexpo_hlcolor);
               }
             break;

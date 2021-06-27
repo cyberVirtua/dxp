@@ -38,7 +38,7 @@ dxp_desktop::dxp_desktop (
     }
 
   // Create a small pixmap with the size of downscaled screenshot from config
-  this->pixmap.resize (this->pixmap_width * this->pixmap_height * 4);
+  this->pixmap.resize (this->pixmap_width * this->pixmap_height * 4U);
 }
 
 /**

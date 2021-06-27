@@ -229,13 +229,10 @@ main ()
   std::vector<dxp_socket_desktop> socket_desktops{};
   for (size_t i = 0; i < desktops.size (); i++)
     {
-      uint32_t pixmap_len
-          = desktops[i].pixmap_width * desktops[i].pixmap_height * 4;
-
       dxp_socket_desktop p;
 
       p.id = int (i);
-      p.pixmap_len = pixmap_len;
+      p.pixmap_len = desktops[i].pixmap_width * desktops[i].pixmap_height * 4U;
       p.width = desktops[i].pixmap_width;
       p.height = desktops[i].pixmap_height;
 

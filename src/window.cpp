@@ -199,7 +199,7 @@ void
 window::create_gc ()
 {
   // TODO(mangalinor): Figure out correct mask and values
-  uint32_t mask = mask = XCB_GC_FOREGROUND | XCB_GC_GRAPHICS_EXPOSURES;
+  uint32_t mask = XCB_GC_FOREGROUND | XCB_GC_GRAPHICS_EXPOSURES;
   std::array<uint32_t, 2> mask_values{ drawable::screen_->black_pixel, 0 };
 
   window::gc_ = xcb_generate_id (c_);
