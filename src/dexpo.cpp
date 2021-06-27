@@ -54,6 +54,8 @@ set_window_dimensions (std::vector<dxp_socket_desktop> &v)
 };
 
 /**
+ * TODO(mangalinor): Document code
+ * (explain what happens in the main step by step)
  */
 int
 main ()
@@ -71,6 +73,7 @@ main ()
   xcb_generic_event_t *event = nullptr;
   while ((event = xcb_wait_for_event (window::c_)))
     {
+      // TODO(mangalinor): Document code (why ~0x80)
       switch (event->response_type & ~0x80)
         {
         case XCB_EXPOSE:
@@ -91,12 +94,12 @@ main ()
             bool esc = kp->detail == 9;   /// Escape
 
             w.clear_preselection ();
-            if (next)
+            if (next) // TODO(mangalinor) Document code
               {
                 w.desktop_sel++;
                 w.desktop_sel %= v.size ();
               }
-            if (prev)
+            if (prev) // TODO(mangalinor) Document code
               {
                 w.desktop_sel
                     = w.desktop_sel == 0 ? v.size () - 1 : w.desktop_sel - 1;
@@ -126,6 +129,7 @@ main ()
               {
                 if (k_vertical_stacking)
                   {
+                    // TODO(mangalinor) Document code
                     if ((mn->event_x - dexpo_padding > 0)
                         and (mn->event_x - dexpo_padding < dexpo_pixmap.width)
                         and (mn->event_y - w.get_desktop_coord (dexpo_pixmap.id)
@@ -139,6 +143,7 @@ main ()
                   }
                 else if (k_horizontal_stacking)
                   {
+                    // TODO(mangalinor) Document code
                     if ((mn->event_x - w.get_desktop_coord (dexpo_pixmap.id)
                          > 0)
                         and (mn->event_x - w.get_desktop_coord (dexpo_pixmap.id)
@@ -152,7 +157,7 @@ main ()
                   }
               }
             w.clear_preselection ();
-            if (det > -1)
+            if (det > -1) // TODO(mangalinor) Document code
               {
                 w.desktop_sel = size_t (det);
                 w.draw_preselection ();
@@ -161,12 +166,17 @@ main ()
           }
         case XCB_ENTER_NOTIFY: // pointer enters window
           {
+            // TODO(mangalinor) Document code
+            // (why doesn't it happen automatically?)
             xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
                                  w.xcb_id, XCB_TIME_CURRENT_TIME);
             break;
           }
         case XCB_LEAVE_NOTIFY: // pointer leaves window
+          // TODO(mangalinor) Document code
+          // (what is the difference between XCB_LEAVE_NOTIFY and XCB_FOCUS_OUT)
           {
+            // TODO(mangalinor) Document code (why set focus on leave)
             w.clear_preselection ();
             xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
                                  window::screen_->root, XCB_TIME_CURRENT_TIME);
@@ -179,7 +189,10 @@ main ()
             break;
           }
         case XCB_FOCUS_OUT:
+          // TODO(mangalinor) Document code
+          // (what is the difference between XCB_LEAVE_NOTIFY and XCB_FOCUS_OUT)
           {
+            // TODO(mangalinor) Document code (why set focus on focus out)
             xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
                                  w.xcb_id, XCB_TIME_CURRENT_TIME);
             break;
