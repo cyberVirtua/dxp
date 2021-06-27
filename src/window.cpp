@@ -29,17 +29,18 @@ void
 window::create_window ()
 {
   uint32_t mask = 0;
-  uint32_t values[3];
-  const bool override_redirect[] = { true };
   mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-  values[0] = dexpo_bgcolor;
-  // Used to subscribe to relevant events and handle them
-  values[1] = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS
-              | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_KEY_RELEASE
-              | XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_POINTER_MOTION
-              | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_ENTER_WINDOW;
 
-  values[2] = XCB_STACK_MODE_ABOVE; // Places created window on top
+  std::array<uint32_t, 3> mask_values{
+    dexpo_bgcolor,
+    // These values are used to subscribe to relevant events
+    XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS
+        | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_KEY_RELEASE
+        | XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_POINTER_MOTION
+        | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_ENTER_WINDOW
+  };
+  const std::array<bool, 1> override_redirect{ true };
+
   xcb_create_window (window::c_, /* Connection, separate from one of daemon */
                      XCB_COPY_FROM_PARENT,          /* depth (same as root)*/
                      this->xcb_id,                  /* window Id */
@@ -49,7 +50,7 @@ window::create_window ()
                      dexpo_outer_border,            /* border_width */
                      XCB_WINDOW_CLASS_INPUT_OUTPUT, /* class */
                      window::screen_->root_visual,  /* visual */
-                     mask, values);                 /* masks, not used yet */
+                     mask, &mask_values);           /* masks, not used yet */
 
   /* Fixes window's place */
   xcb_change_window_attributes (c_, xcb_id, XCB_CW_OVERRIDE_REDIRECT,
@@ -133,7 +134,6 @@ window::highlight_window (int desktop_id, uint32_t color)
 {
   int16_t x = dexpo_padding;
   int16_t y = dexpo_padding;
-  uint32_t values[1]; // Mask for changing border's color
 
   uint16_t width = this->desktops[size_t (desktop_id)].width;
   uint16_t height = this->desktops[size_t (desktop_id)].height;
@@ -149,43 +149,45 @@ window::highlight_window (int desktop_id, uint32_t color)
 
   // The best way to create rectangular border with xcb
   // is to draw 4 filled rectangles.
-  xcb_rectangle_t borders[]
-      = { // Left border
-          {
-              int16_t (x - dexpo_hlwidth),          /* x */
-              int16_t (y - dexpo_hlwidth),          /* y */
-              uint16_t (dexpo_hlwidth),             /* width */
-              uint16_t (height + 2 * dexpo_hlwidth) /* height */
-          },
-          // Right border
-          {
-              int16_t (x + width),                  /* x */
-              int16_t (y - dexpo_hlwidth),          /* y */
-              uint16_t (dexpo_hlwidth),             /* width */
-              uint16_t (height + 2 * dexpo_hlwidth) /* height */
-          },
-          // Top border
-          {
-              int16_t (x - 1),             /* x */
-              int16_t (y - dexpo_hlwidth), /* y */
-              uint16_t (width + 1),        /* width */
-              uint16_t (dexpo_hlwidth)     /* height */
-          },
-          // Bottom border
-          {
-              int16_t (x - 1),         /* x */
-              int16_t (y + height),    /* y */
-              uint16_t (width + 1),    /* width */
-              uint16_t (dexpo_hlwidth) /* height */
-          }
-        };
-  // Changing color
+  std::array<xcb_rectangle_t, 4> borders{
+    // Left border
+    xcb_rectangle_t{
+        int16_t (x - dexpo_hlwidth),          /* x */
+        int16_t (y - dexpo_hlwidth),          /* y */
+        uint16_t (dexpo_hlwidth),             /* width */
+        uint16_t (height + 2 * dexpo_hlwidth) /* height */
+    },
+    // Right border
+    xcb_rectangle_t{
+        int16_t (x + width),                  /* x */
+        int16_t (y - dexpo_hlwidth),          /* y */
+        uint16_t (dexpo_hlwidth),             /* width */
+        uint16_t (height + 2 * dexpo_hlwidth) /* height */
+    },
+    // Top border
+    xcb_rectangle_t{
+        int16_t (x - 1),             /* x */
+        int16_t (y - dexpo_hlwidth), /* y */
+        uint16_t (width + 1),        /* width */
+        uint16_t (dexpo_hlwidth)     /* height */
+    },
+    // Bottom border
+    xcb_rectangle_t{
+        int16_t (x - 1),         /* x */
+        int16_t (y + height),    /* y */
+        uint16_t (width + 1),    /* width */
+        uint16_t (dexpo_hlwidth) /* height */
+    }
+  };
+
+  // Setting border color
   uint32_t mask = XCB_GC_FOREGROUND;
-  values[0] = color;
-  xcb_change_gc (c_, window::gc_, mask, &values);
+  std::array<uint32_t, 1> mask_values{ color }; // Mask value
+  xcb_change_gc (c_, window::gc_, mask, &mask_values);
 
   // Drawing the preselection border
-  xcb_poly_fill_rectangle (window::c_, this->xcb_id, window::gc_, 4, borders);
+  xcb_poly_fill_rectangle (window::c_, this->xcb_id, window::gc_,
+                           borders.size (), &borders[0]);
 }
 
 /**
@@ -196,15 +198,11 @@ window::highlight_window (int desktop_id, uint32_t color)
 void
 window::create_gc ()
 {
-  uint32_t mask = 0;
-  uint32_t values[2];
-
-  // TODO Figure out correct mask and values
-  mask = XCB_GC_FOREGROUND | XCB_GC_GRAPHICS_EXPOSURES;
-  values[0] = drawable::screen_->black_pixel;
-  values[1] = 0;
+  // TODO(mangalinor): Figure out correct mask and values
+  uint32_t mask = mask = XCB_GC_FOREGROUND | XCB_GC_GRAPHICS_EXPOSURES;
+  std::array<uint32_t, 2> mask_values{ drawable::screen_->black_pixel, 0 };
 
   window::gc_ = xcb_generate_id (c_);
   xcb_create_gc (drawable::c_, window::gc_, drawable::screen_->root, mask,
-                 &values);
+                 &mask_values);
 }
