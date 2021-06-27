@@ -82,7 +82,7 @@ dxp_desktop::save_screen ()
           uint32_t (~0) /* Plane mask (all bits to get all planes) */
       );
 
-      // TODO Handle errors
+      // TODO(mmskv): Handle errors
       // Not freeing gi_reply causes memory leak, as xcb_get_image always
       // allocates new space for the image
       auto gi_reply = std::unique_ptr<xcb_get_image_reply_t> (

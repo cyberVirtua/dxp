@@ -53,7 +53,7 @@ get_property_value (const char *atom_name)
   auto atom_reply = std::unique_ptr<xcb_intern_atom_reply_t> (
       xcb_intern_atom_reply (c, atom_cookie, nullptr));
 
-  // TODO add proper exception
+  // TODO(mmskv): add proper exception
   auto atom = atom_reply ? atom_reply->atom : throw;
 
   /* Getting property from atom */
@@ -63,7 +63,7 @@ get_property_value (const char *atom_name)
   auto prop_reply = std::unique_ptr<xcb_get_property_reply_t> (
       xcb_get_property_reply (c, prop_cookie, nullptr));
 
-  int prop_length = xcb_get_property_value_length (prop_reply.get ());
+  auto prop_length = size_t (xcb_get_property_value_length (prop_reply.get ()));
 
   // This shouldn't be unique_ptr as it belongs to prop_reply and
   // will be freed by prop_reply
@@ -152,8 +152,6 @@ get_desktops ()
                       // Otherwise parse viewport from EWMH
                       : get_property_value ("_NET_DESKTOP_VIEWPORT");
 
-  // TODO Parse names
-
   std::vector<desktop_info> info;
 
   // Figuring out width and height of a desktop based on existing
@@ -179,7 +177,7 @@ get_desktops ()
       // May happen if monitors have some weird configuration
       if (width == 0 || height == 0)
         {
-          throw; // TODO Log errors
+          throw; // TODO(mmskv): Log errors
         }
 
       info.push_back (desktop_info{ int (i), x, y, width, height });

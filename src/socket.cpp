@@ -155,7 +155,7 @@ dxp_socket::get_pixmaps () const
 
   for (; num > 0; num--) // Read `num` pixmaps from socket
     {
-      // TODO Check for errors here
+      // TODO(mmskv): Check for errors here
       dxp_socket_desktop p;
 
       // Reading everything except raw pixmap
