@@ -1,9 +1,9 @@
 #include "config.hpp"
 #include "desktop.hpp"
 #include "socket.hpp"
+#include <cstring>
 #include <iostream>
 #include <memory>
-#include <string.h>
 #include <sys/un.h>
 #include <thread>
 #include <unistd.h>

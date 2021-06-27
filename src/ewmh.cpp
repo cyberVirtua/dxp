@@ -1,6 +1,6 @@
 #include "ewmh.hpp"
 #include "window.hpp"
-#include <string.h>
+#include <cstring>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
 
