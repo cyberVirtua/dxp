@@ -108,7 +108,7 @@ window::get_desktop_coordinates (int desktop_id)
 {
   // As all screenshots have at least one common coordinate of corner, we need
   // to find only the second one
-  int pos = dexpo_padding;
+  auto pos = dexpo_padding;
   for (const auto &desktop : this->desktops)
     {
       // Counting space for all desktops up to desktop_id
@@ -140,11 +140,11 @@ window::highlight_window (int desktop_id, uint32_t color)
 
   if (k_vertical_stacking)
     {
-      y = get_desktop_coordinates (desktop_id);
+      y = int16_t (get_desktop_coordinates (desktop_id));
     }
   else if (k_horizontal_stacking)
     {
-      x = get_desktop_coordinates (desktop_id);
+      x = int16_t (get_desktop_coordinates (desktop_id));
     }
 
   // The best way to create rectangular border with xcb
