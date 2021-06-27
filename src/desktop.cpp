@@ -55,7 +55,7 @@ void
 dxp_desktop::save_screen ()
 {
   // Set height so that screenshots won't exceed k_max_malloc size
-  uint16_t image_height = uint16_t (k_max_malloc / this->width / 4);
+  auto image_height = uint16_t (k_max_malloc / this->width / 4);
   uint16_t image_width = this->width;
 
   const uint screen_size = uint (this->width * this->height * 4);
@@ -65,7 +65,7 @@ dxp_desktop::save_screen ()
     {
       // Set screen height that we have already captured
       // New screenshots will be captured with Y offset = image_height_offset
-      int16_t image_height_offset = int16_t (i * image_height);
+      auto image_height_offset = int16_t (i * image_height);
 
       // Last screenshot will be smaller, so we set its height to what's left
       image_height = std::min (image_height,
@@ -97,8 +97,7 @@ dxp_desktop::save_screen ()
       int target_height_offset
           = int (float (image_height_offset) * pixmap_width / image_width);
 
-      uint32_t pixmap_offset
-          = uint32_t (target_height_offset * target_width * 4);
+      auto pixmap_offset = uint32_t (target_height_offset * target_width * 4);
 
       resize (this->image_ptr, this->pixmap.data () + pixmap_offset,
               image_width, image_height, target_width, target_height);

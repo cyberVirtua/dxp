@@ -117,8 +117,7 @@ main ()
           break;
         case XCB_MOTION_NOTIFY: // pointer motion within window
           {
-            xcb_motion_notify_event_t *mn
-                = reinterpret_cast<xcb_motion_notify_event_t *> (event);
+            auto *mn = reinterpret_cast<xcb_motion_notify_event_t *> (event);
 
             xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
                                  w.xcb_id, XCB_TIME_CURRENT_TIME);

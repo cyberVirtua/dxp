@@ -255,7 +255,7 @@ main ()
   bool running = true;
   while (running)
     {
-      size_t c = size_t (get_current_desktop ());
+      auto c = size_t (get_current_desktop ());
       if (!dexpo_viewport.empty () && c >= dexpo_viewport.size () / 2)
         {
           throw std::runtime_error (
