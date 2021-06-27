@@ -16,21 +16,22 @@ window::window (const int16_t x,       ///< x coordinate of the top left corner
   this->xcb_id = xcb_generate_id (drawable::c_);
   this->desktop_sel = 0; // Id of the preselected desktop
 
-  if (!window::gc_)
-    {
-      create_gc ();
-    }
   create_window ();
 }
 
 window::~window () { xcb_destroy_window (drawable::c_, this->xcb_id); }
 
+/**
+ * Initialize window, subscribe to relevant events and map it onto the desktop
+ */
 void
 window::create_window ()
 {
+  // Mask used
   uint32_t mask = 0;
   mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
 
+  // Each mask value entry corresponds to mask enum first to last
   std::array<uint32_t, 3> mask_values{
     dexpo_bgcolor,
     // These values are used to subscribe to relevant events
@@ -39,7 +40,6 @@ window::create_window ()
         | XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_POINTER_MOTION
         | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_ENTER_WINDOW
   };
-  const std::array<bool, 1> override_redirect{ true };
 
   xcb_create_window (window::c_, /* Connection, separate from one of daemon */
                      XCB_COPY_FROM_PARENT,          /* depth (same as root)*/
@@ -52,14 +52,15 @@ window::create_window ()
                      window::screen_->root_visual,  /* visual */
                      mask, &mask_values);           /* masks, not used yet */
 
-  /* Fixes window's place */
+  /* Fixes window in place */
+  const std::array<bool, 1> override_redirect{ true };
   xcb_change_window_attributes (c_, xcb_id, XCB_CW_OVERRIDE_REDIRECT,
                                 &override_redirect);
 
-  /* Map the window on the screen */
+  /* Map the window onto the screen */
   xcb_map_window (window::c_, this->xcb_id);
 
-  /* Set the focus. Doing it *after* mapping the window is crucial. */
+  /* Focus on the window. Doing it *after* mapping the window is crucial. */
   xcb_set_input_focus (c_, XCB_INPUT_FOCUS_POINTER_ROOT, this->xcb_id,
                        XCB_TIME_CURRENT_TIME);
 
@@ -73,6 +74,7 @@ window::create_window ()
 void
 window::draw_gui ()
 {
+  // Coordinates for the desktop relative to the window
   int16_t x = dexpo_padding;
   int16_t y = dexpo_padding;
 
