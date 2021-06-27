@@ -32,28 +32,42 @@ public:
   window &operator= (window &&other) = delete;
 
   /**
-   * Gets position of top left corner of screenshot with given number
-   */
-  int get_desktop_coordinates (int desktop_id);
-
-  /**
-   * Creates empty window to later place gui in it
+   * Create an empty window to later place gui in it.
    */
   void create_window ();
 
   /**
-   * Draws a rectangle around chosen window
-   */
-  void highlight_window (int desktop_id, uint32_t color);
-
-  /**
-   * Draws GUI inside of the pre-created window
+   * Draw GUI inside of the pre-created window.
    */
   void draw_gui ();
 
+  /**
+   * Get position of the desktop's top left corner by desktop's id.
+   */
+  int get_desktop_coord (size_t desktop_id);
+
+  /**
+   * Draw a border of specified color around specified desktop.
+   */
+  void draw_border (size_t desktop_id, uint32_t color);
+
+  /**
+   * Draw a preselection border of color=dexpo_hlcolor
+   * around desktop=desktop[this->desktop_sel].
+   */
+  void draw_preselection ();
+
+  /**
+   * Remove a preselection border around desktop[this->desktop_sel].
+   *
+   * @note This implementation just draws border of color dexpo_bgcolor above
+   * existing border.
+   */
+  void clear_preselection ();
+
 private:
   /**
-   * Initializes class-level graphic context
+   * Initialize class-level graphic context.
    */
   static void create_gc ();
 };

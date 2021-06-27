@@ -104,7 +104,7 @@ window::draw_gui ()
  * Get coordinate of the displayed desktop relative to the window
  */
 int
-window::get_desktop_coordinates (int desktop_id)
+window::get_desktop_coord (size_t desktop_id)
 {
   // As all screenshots have at least one common coordinate of corner, we need
   // to find only the second one
@@ -130,21 +130,21 @@ window::get_desktop_coordinates (int desktop_id)
  * @note color can be set to bgcolor to remove highlight
  */
 void
-window::highlight_window (int desktop_id, uint32_t color)
+window::draw_border (size_t desktop_id, uint32_t color)
 {
   int16_t x = dexpo_padding;
   int16_t y = dexpo_padding;
 
-  uint16_t width = this->desktops[size_t (desktop_id)].width;
-  uint16_t height = this->desktops[size_t (desktop_id)].height;
+  uint16_t width = this->desktops[desktop_id].width;
+  uint16_t height = this->desktops[desktop_id].height;
 
   if (k_vertical_stacking)
     {
-      y = int16_t (get_desktop_coordinates (desktop_id));
+      y = int16_t (get_desktop_coord (desktop_id));
     }
   else if (k_horizontal_stacking)
     {
-      x = int16_t (get_desktop_coordinates (desktop_id));
+      x = int16_t (get_desktop_coord (desktop_id));
     }
 
   // The best way to create rectangular border with xcb
@@ -189,6 +189,28 @@ window::highlight_window (int desktop_id, uint32_t color)
   xcb_poly_fill_rectangle (window::c_, this->xcb_id, window::gc_,
                            borders.size (), &borders[0]);
 }
+
+/**
+ * Draw a preselection border of color=dexpo_hlcolor
+ * around desktop=desktop[this->desktop_sel].
+ */
+void
+window::draw_preselection ()
+{
+  draw_border (this->desktop_sel, dexpo_hlcolor);
+};
+
+/**
+ * Remove a preselection border around desktop[this->desktop_sel].
+ *
+ * @note This implementation just draws border of color dexpo_bgcolor above
+ * existing border.
+ */
+void
+window::clear_preselection ()
+{
+  draw_border (this->desktop_sel, dexpo_bgcolor);
+};
 
 /**
  * Initialize a graphic context.

@@ -231,7 +231,7 @@ main ()
     {
       dxp_socket_desktop p;
 
-      p.id = int (i);
+      p.id = i;
       p.pixmap_len = desktops[i].pixmap_width * desktops[i].pixmap_height * 4U;
       p.width = desktops[i].pixmap_width;
       p.height = desktops[i].pixmap_height;

@@ -54,7 +54,6 @@ set_window_dimensions (std::vector<dxp_socket_desktop> &v)
 };
 
 /**
- *
  */
 int
 main ()
@@ -77,47 +76,44 @@ main ()
         case XCB_EXPOSE:
           {
             w.draw_gui ();
-            w.highlight_window (0, dexpo_hlcolor);
+            // w.draw_border (0, dexpo_hlcolor);
             break;
           }
         case XCB_KEY_PRESS:
           {
             auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
-            // right arrow or up arrow
-            if (kp->detail == 114 or kp->detail == 116)
+
+            /// Right arrow or Up arrow
+            bool next = kp->detail == 114 || kp->detail == 116;
+            /// Left arrow or down arrow
+            bool prev = kp->detail == 113 || kp->detail == 111;
+            bool entr = kp->detail == 36; /// Enter
+            bool esc = kp->detail == 9;   /// Escape
+
+            w.clear_preselection ();
+            if (next)
               {
-                w.highlight_window (w.desktop_sel, dexpo_bgcolor);
-                w.desktop_sel += 1;
-                w.desktop_sel = w.desktop_sel % v.size ();
-                w.highlight_window (w.desktop_sel, dexpo_hlcolor);
+                w.desktop_sel++;
+                w.desktop_sel %= v.size ();
               }
-            // left arrow or down arrow
-            if (kp->detail == 113 or kp->detail == 111)
+            if (prev)
               {
-                w.highlight_window (w.desktop_sel, dexpo_bgcolor);
                 w.desktop_sel
                     = w.desktop_sel == 0 ? v.size () - 1 : w.desktop_sel - 1;
               }
-            w.highlight_window (w.desktop_sel, dexpo_hlcolor);
-
-            // escape
-            if (kp->detail == 9)
+            if (entr)
               {
-                // Thread safe exit
-                _exit (0);
-              }
-
-            // enter
-            if (kp->detail == 36)
-
-              {
-                w.highlight_window (w.desktop_sel, dexpo_bgcolor);
                 ewmh_change_desktop (window::c_, window::screen_,
                                      w.desktop_sel);
               }
+            if (esc)
+              {
+                _exit (0); // Thread safe exit
+              }
+            w.draw_preselection ();
           }
           break;
-        case XCB_MOTION_NOTIFY: // pointer motion within window
+        case XCB_MOTION_NOTIFY: // Pointer motion within window
           {
             auto *mn = reinterpret_cast<xcb_motion_notify_event_t *> (event);
 
@@ -128,28 +124,24 @@ main ()
             // of this hardcoding
             for (const auto &dexpo_pixmap : w.desktops)
               {
-                if (dexpo_height == 0)
+                if (k_vertical_stacking)
                   {
                     if ((mn->event_x - dexpo_padding > 0)
                         and (mn->event_x - dexpo_padding < dexpo_pixmap.width)
-                        and (mn->event_y
-                                 - w.get_desktop_coordinates (dexpo_pixmap.id)
+                        and (mn->event_y - w.get_desktop_coord (dexpo_pixmap.id)
                              > 0)
-                        and (mn->event_y
-                                 - w.get_desktop_coordinates (dexpo_pixmap.id)
+                        and (mn->event_y - w.get_desktop_coord (dexpo_pixmap.id)
                              < dexpo_pixmap.height))
                       {
                         det = dexpo_pixmap.id;
                         break;
                       }
                   }
-                else if (dexpo_width == 0)
+                else if (k_horizontal_stacking)
                   {
-                    if ((mn->event_x
-                             - w.get_desktop_coordinates (dexpo_pixmap.id)
+                    if ((mn->event_x - w.get_desktop_coord (dexpo_pixmap.id)
                          > 0)
-                        and (mn->event_x
-                                 - w.get_desktop_coordinates (dexpo_pixmap.id)
+                        and (mn->event_x - w.get_desktop_coord (dexpo_pixmap.id)
                              < dexpo_pixmap.width)
                         and (mn->event_y - dexpo_padding > 0)
                         and (mn->event_y - dexpo_padding < dexpo_pixmap.height))
@@ -159,11 +151,11 @@ main ()
                       }
                   }
               }
-            w.highlight_window (w.desktop_sel, dexpo_bgcolor);
+            w.clear_preselection ();
             if (det > -1)
               {
                 w.desktop_sel = size_t (det);
-                w.highlight_window (w.desktop_sel, dexpo_hlcolor);
+                w.draw_preselection ();
               }
             break;
           }
@@ -175,14 +167,14 @@ main ()
           }
         case XCB_LEAVE_NOTIFY: // pointer leaves window
           {
-            w.highlight_window (w.desktop_sel, dexpo_bgcolor);
+            w.clear_preselection ();
             xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
                                  window::screen_->root, XCB_TIME_CURRENT_TIME);
             break;
           }
         case XCB_BUTTON_PRESS: // mouse click
           {
-            w.highlight_window (w.desktop_sel, dexpo_bgcolor);
+            w.clear_preselection ();
             ewmh_change_desktop (window::c_, window::screen_, w.desktop_sel);
             break;
           }
