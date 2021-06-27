@@ -59,7 +59,7 @@ window::create_window ()
   /* Map the window on the screen */
   xcb_map_window (window::c_, this->xcb_id);
 
-  // Set the focus. Doing it after mapping window is crucial.
+  /* Set the focus. Doing it *after* mapping the window is crucial. */
   xcb_set_input_focus (c_, XCB_INPUT_FOCUS_POINTER_ROOT, this->xcb_id,
                        XCB_TIME_CURRENT_TIME);
 

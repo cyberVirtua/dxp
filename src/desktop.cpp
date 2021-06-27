@@ -94,8 +94,8 @@ dxp_desktop::save_screen ()
       int target_height
           = int (float (image_height) / image_width * this->pixmap_width);
 
-      int target_height_offset
-          = int (float (image_height_offset) * pixmap_width / image_width);
+      int target_height_offset = int (float (image_height_offset)
+                                      * this->pixmap_width / image_width);
 
       auto pixmap_offset = uint32_t (target_height_offset * target_width * 4);
 
@@ -116,18 +116,21 @@ dxp_desktop::resize (const uint8_t *input, uint8_t *output,
                      int source_width, /* Source dimensions */
                      int source_height, int target_width, int target_height)
 {
-  const int x_ratio = (source_width << 16) / target_width;
-  const int y_ratio = (source_height << 16) / target_height;
+  // TODO(mmskv): not sure what this variable is meant to represent
+  constexpr ssize_t k_half_int = 16;
+
+  const int x_ratio = (source_width << k_half_int) / target_width;
+  const int y_ratio = (source_height << k_half_int) / target_height;
   const int colors = 4;
 
   for (int y = 0; y < target_height; y++)
     {
-      int y2_xsource = ((y * y_ratio) >> 16) * source_width;
+      int y2_xsource = ((y * y_ratio) >> k_half_int) * source_width;
       int i_xdest = y * target_width;
 
       for (int x = 0; x < target_width; x++)
         {
-          int x2 = ((x * x_ratio) >> 16);
+          int x2 = ((x * x_ratio) >> k_half_int);
           int y2_x2_colors = (y2_xsource + x2) * colors;
           int i_x_colors = (i_xdest + x) * colors;
 

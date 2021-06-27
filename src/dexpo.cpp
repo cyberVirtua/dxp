@@ -12,8 +12,9 @@
 constexpr bool k_horizontal_stacking = (dexpo_width == 0);
 constexpr bool k_vertical_stacking = (dexpo_height == 0);
 
-auto window_width = dexpo_width;   // Will be redefined
-auto window_height = dexpo_height; // Will be redefined
+// Creating duplicates of window dimensions that will represent real size
+auto window_width = dexpo_width;
+auto window_height = dexpo_height;
 
 /**
  * Calculate dimensions of the window based on

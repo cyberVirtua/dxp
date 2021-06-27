@@ -33,13 +33,14 @@ send_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
   xcb_send_event (c, 0, screen->root,
                   XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY
                       | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
-                  (const char *)&event);
+                  reinterpret_cast<const char *> (&event));
   xcb_flush (c);
   free (atom_reply);
 }
 
 void
-ewmh_change_desktop (xcb_connection_t *c, xcb_screen_t *screen, int destkop_id)
+ewmh_change_desktop (xcb_connection_t *c, xcb_screen_t *screen,
+                     size_t destkop_id)
 {
   send_message (c, screen, "_NET_CURRENT_DESKTOP", destkop_id);
 }

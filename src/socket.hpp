@@ -47,7 +47,7 @@ public:
   dxp_socket &operator= (const dxp_socket &other) = delete;
   dxp_socket &operator= (dxp_socket &&other) = delete;
 
-  std::vector<dxp_socket_desktop> get_pixmaps () const;
+  [[nodiscard]] std::vector<dxp_socket_desktop> get_pixmaps () const;
   void send_pixmaps_on_event (const std::vector<dxp_socket_desktop> &,
                               std::mutex &pixmaps_lock) const;
   void server () const;
