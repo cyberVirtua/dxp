@@ -18,8 +18,7 @@ enum pixmap_format
 class dxp_desktop : public drawable
 {
 public:
-  inline static xcb_gcontext_t gc_ = 0; ///< Graphic context
-  uint8_t *image_ptr;                   ///< Pointer to the image structure.
+  uint8_t *image_ptr;          ///< Pointer to the image structure.
   std::vector<uint8_t> pixmap; ///< Constant id for the screenshot's pixmap
   uint16_t pixmap_width;       ///< Width of the pixmap that stores screenshot
   uint16_t pixmap_height;      ///< Height of the pixmap that stores screenshot
@@ -45,16 +44,6 @@ public:
           int target_height);
 
   void render_geometries ();
-
-private:
-  /**
-   * Initializes class-level graphic context
-   */
-  static void create_gc ();
-  /**
-   * Initializes instance-level pixmap
-   */
-  void create_pixmap ();
 };
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */

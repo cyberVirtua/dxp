@@ -19,12 +19,6 @@ dxp_desktop::dxp_desktop (
   // Initializing non built-in types to zeros
   this->image_ptr = nullptr;
 
-  // Initialize graphic context if it doesn't exist
-  if (!dxp_desktop::gc_)
-    {
-      create_gc ();
-    }
-
   // Check if both are set or unset simultaneously
   static_assert ((dexpo_height == 0) != (dexpo_width == 0),
                  "Height and width can't be set or unset simultaneously");
@@ -144,25 +138,4 @@ dxp_desktop::resize (const uint8_t *input, uint8_t *output,
           output[i_x_colors + 3] = input[y2_x2_colors + 3];
         }
     }
-}
-
-/**
- * Initialize a graphic context.
- *
- * Required by xcb functions
- */
-void
-dxp_desktop::create_gc ()
-{
-  uint32_t mask = 0;
-  uint32_t values[2];
-
-  // TODO Figure out correct mask and values
-  mask = XCB_GC_FOREGROUND | XCB_GC_GRAPHICS_EXPOSURES;
-  values[0] = drawable::screen_->black_pixel;
-  values[1] = 0;
-
-  dxp_desktop::gc_ = xcb_generate_id (c_);
-  xcb_create_gc (drawable::c_, dxp_desktop::gc_, drawable::screen_->root, mask,
-                 &values);
 }
