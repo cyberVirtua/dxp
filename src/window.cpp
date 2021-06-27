@@ -16,6 +16,7 @@ window::window (const int16_t x,       ///< x coordinate of the top left corner
   this->xcb_id = xcb_generate_id (drawable::c_);
   this->desktop_sel = 0; // Id of the preselected desktop
 
+  create_gc ();
   create_window ();
 }
 
