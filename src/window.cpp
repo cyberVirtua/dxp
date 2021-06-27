@@ -15,6 +15,11 @@ window::window (const int16_t x,       ///< x coordinate of the top left corner
 {
   this->xcb_id = xcb_generate_id (drawable::c_);
   this->desktop_sel = 0; // Id of the preselected desktop
+
+  if (!window::gc_)
+    {
+      create_gc ();
+    }
   create_window ();
 }
 
@@ -72,9 +77,9 @@ window::draw_gui ()
 
   for (const auto &desktop : this->desktops)
     {
-      xcb_put_image (dxp_desktop::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
+      xcb_put_image (window::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
                      this->xcb_id,                  /* Pixmap to put image on */
-                     dxp_desktop::gc_,              /* Graphic context */
+                     window::gc_,                   /* Graphic context */
                      desktop.width, desktop.height, /* Dimensions */
                      x, /* Destination X coordinate */
                      y, /* Destination Y coordinate */
@@ -177,9 +182,29 @@ window::highlight_window (int desktop_id, uint32_t color)
   // Changing color
   uint32_t mask = XCB_GC_FOREGROUND;
   values[0] = color;
-  xcb_change_gc (c_, dxp_desktop::gc_, mask, &values);
+  xcb_change_gc (c_, window::gc_, mask, &values);
 
   // Drawing the preselection border
-  xcb_poly_fill_rectangle (window::c_, this->xcb_id, dxp_desktop::gc_, 4,
-                           borders);
+  xcb_poly_fill_rectangle (window::c_, this->xcb_id, window::gc_, 4, borders);
+}
+
+/**
+ * Initialize a graphic context.
+ *
+ * Required by xcb functions
+ */
+void
+window::create_gc ()
+{
+  uint32_t mask = 0;
+  uint32_t values[2];
+
+  // TODO Figure out correct mask and values
+  mask = XCB_GC_FOREGROUND | XCB_GC_GRAPHICS_EXPOSURES;
+  values[0] = drawable::screen_->black_pixel;
+  values[1] = 0;
+
+  window::gc_ = xcb_generate_id (c_);
+  xcb_create_gc (drawable::c_, window::gc_, drawable::screen_->root, mask,
+                 &values);
 }

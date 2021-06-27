@@ -13,8 +13,8 @@
 class window : public drawable
 {
 public:
-  inline static xcb_gcontext_t gc_; ///< Graphic context
-  uint32_t xcb_id;                  // Identificator for Window
+  inline static xcb_gcontext_t gc_ = 0; ///< Graphic context
+  uint32_t xcb_id;                      // Identificator for Window
   std::vector<dxp_socket_desktop> desktops;
   int desktop_sel;
   // TODO: Add masks for events

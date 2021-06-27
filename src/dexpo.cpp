@@ -12,13 +12,15 @@
 constexpr bool k_horizontal_stacking = (dexpo_width == 0);
 constexpr bool k_vertical_stacking = (dexpo_height == 0);
 
+auto window_width = dexpo_width;   // Will be redefined
+auto window_height = dexpo_height; // Will be redefined
+
 /**
  * Calculate dimensions of the window based on
  * stacking mode and desktops from daemon
  */
 void
-set_window_dimensions (int window_width, int window_height,
-                       std::vector<dxp_socket_desktop> &v)
+set_window_dimensions (std::vector<dxp_socket_desktop> &v)
 {
   if (k_horizontal_stacking)
     {
@@ -60,10 +62,7 @@ main ()
   dxp_socket client;
   auto v = client.get_pixmaps ();
 
-  auto window_width = dexpo_width;   // Width from config
-  auto window_height = dexpo_height; // Height from config
-
-  set_window_dimensions (window_width, window_height, v);
+  set_window_dimensions (v);
 
   window w (dexpo_x, dexpo_y, window_width, window_height);
   w.desktops = v;
