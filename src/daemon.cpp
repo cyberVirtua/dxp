@@ -12,149 +12,9 @@
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
 
-/**
- * Monitor information
- *
- * Used to calculate sizes of virtual desktops
- */
-struct monitor_info
-{
-  int x;
-  int y;
-  int width;
-  int height;
-};
-
-/**
- * Virtual desktop information
- */
-struct desktop_info
-{
-  int id; // XXX Is it necessary?
-  int x;
-  int y;
-  int width;
-  int height;
-};
-
 auto *c = xcb_connect (nullptr, nullptr);
 auto *screen = xcb_setup_roots_iterator (xcb_get_setup (c)).data;
 auto root = screen -> root;
-
-/**
- * Get monitor_info for each connected monitor
- */
-std::vector<monitor_info>
-get_monitors ()
-{
-  std::vector<monitor_info> monitors;
-
-  auto screen_resources_reply
-      = xcb_unique_ptr<xcb_randr_get_screen_resources_current_reply_t> (
-          xcb_randr_get_screen_resources_current_reply (
-              c, xcb_randr_get_screen_resources_current (c, root), nullptr));
-
-  // This shouldn't be unique_ptr as it belongs to screen_resources_reply and
-  // will be freed by screen_resources_reply
-  auto *randr_outputs = xcb_randr_get_screen_resources_current_outputs (
-      screen_resources_reply.get ());
-
-  int len = xcb_randr_get_screen_resources_current_outputs_length (
-      screen_resources_reply.get ());
-
-  // Iterating over all randr outputs. They correspond to GPU ports and other
-  // things so a lot are disconnected. Such monitors will be caught with if
-  for (int i = 0; i < len; i++)
-    {
-      auto output_cookie = xcb_randr_get_output_info (c, randr_outputs[i],
-                                                      XCB_TIME_CURRENT_TIME);
-
-      // Using free instead of delete to deallocate memory as required by xcb
-      auto output = xcb_unique_ptr<xcb_randr_get_output_info_reply_t> (
-          xcb_randr_get_output_info_reply (c, output_cookie, nullptr));
-
-      if (output == nullptr || output->crtc == XCB_NONE
-          || output->connection == XCB_RANDR_CONNECTION_DISCONNECTED)
-        {
-          continue;
-        }
-
-      auto crtc = xcb_unique_ptr<xcb_randr_get_crtc_info_reply_t> (
-          xcb_randr_get_crtc_info_reply (
-              c, xcb_randr_get_crtc_info (c, output->crtc, XCB_CURRENT_TIME),
-              nullptr));
-
-      monitor_info m{ crtc->x, crtc->y, crtc->width, crtc->height };
-      monitors.push_back (m);
-    }
-  return monitors;
-}
-
-/**
- * Get an array of desktop_info.
- *
- * FIXME Uses EWMH and won't work if WM doesn't support large desktops
- */
-std::vector<desktop_info>
-get_desktops ()
-{
-  auto monitors = get_monitors ();
-
-  auto number_of_desktops
-      = !dexpo_viewport.empty () /* If config is not empty: */
-            // Set amount of desktops to the one specified in the config
-            ? dexpo_viewport.size () / 2
-            // Otherwise parse amount of desktops from EWMH
-            : get_property_value (c, root, "_NET_NUMBER_OF_DESKTOPS")[0];
-
-  auto viewport = !dexpo_viewport.empty () /* If config is not empty: */
-                      // Set viewport to the one specified in the config
-                      ? dexpo_viewport
-                      // Otherwise parse viewport from EWMH
-                      : get_property_value (c, root, "_NET_DESKTOP_VIEWPORT");
-
-  std::vector<desktop_info> info;
-
-  // Figuring out width and height of a desktop based on existing
-  // monitors and desktop x, y coordinates
-  for (size_t i = 0; i < number_of_desktops; i++)
-    {
-      int x = int (viewport[i * 2]);
-      int y = int (viewport[i * 2 + 1]);
-      int width = 0;
-      int height = 0;
-
-      for (const auto &m : monitors)
-        {
-          // Finding monitor the desktop belongs to
-          if (m.x == x && m.y == y)
-            {
-              width = m.width;
-              height = m.height;
-            }
-        }
-
-      // This should not happen
-      // May happen if monitors have some weird configuration
-      if (width == 0 || height == 0)
-        {
-          throw; // TODO(mmskv): Log errors
-        }
-
-      info.push_back (desktop_info{ int (i), x, y, width, height });
-    }
-
-  return info;
-}
-
-/**
- * Get value of _NET_CURRENT_DESKTOP
- */
-int
-get_current_desktop ()
-{
-  return int (get_property_value (c, root, "_NET_CURRENT_DESKTOP")[0]);
-};
 
 /**
  * Parse monitor dimensions and initialize appropriate pixmap objects.
@@ -168,7 +28,7 @@ get_current_desktop ()
 int
 main ()
 {
-  auto desktops_info = get_desktops ();
+  auto desktops_info = get_desktops (c, root);
 
   /* Initializing desktop objects. They are each binded to a separate
    * virtual desktop */
@@ -213,8 +73,8 @@ main ()
   bool running = true;
   while (running)
     {
-      auto c = size_t (get_current_desktop ());
-      if (!dexpo_viewport.empty () && c >= dexpo_viewport.size () / 2)
+      auto current = size_t (get_current_desktop (c, root));
+      if (!dexpo_viewport.empty () && current >= dexpo_viewport.size () / 2)
         {
           throw std::runtime_error (
               "The amount of virtual desktops specified in the config does not "
@@ -222,10 +82,10 @@ main ()
         }
 
       socket_desktops_lock.lock ();
-      desktops[c].save_screen ();
+      desktops[current].save_screen ();
 
       // Copying pixmap from desktops into socket pixmaps
-      socket_desktops[c].pixmap = desktops[c].pixmap;
+      socket_desktops[current].pixmap = desktops[current].pixmap;
 
       socket_desktops_lock.unlock ();
 
