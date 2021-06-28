@@ -54,7 +54,7 @@ window::create_window ()
                      mask, &mask_values);           /* masks, not used yet */
 
   /* Fixes window in place */
-  const std::array<bool, 1> override_redirect{ true };
+  const std::array<uint32_t, 2> override_redirect{ 1U };
   xcb_change_window_attributes (c_, xcb_id, XCB_CW_OVERRIDE_REDIRECT,
                                 &override_redirect);
 
