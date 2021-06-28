@@ -7,16 +7,15 @@
 #include <xcb/xproto.h>
 
 /**
- * Visualizes workspaces previews for user interface is sized based on config
- * settings
+ * Draws desktop previews
  */
 class window : public drawable
 {
 public:
   inline static xcb_gcontext_t gc_ = 0; ///< Graphic context
-  uint32_t xcb_id;                      // Identificator for Window
-  std::vector<dxp_socket_desktop> desktops;
-  size_t desktop_sel;
+  uint32_t xcb_id;
+  std::vector<dxp_socket_desktop> desktops; ///< Desktops received from daemon
+  uint desktop_sel;
 
   window (int16_t x,      ///< x coordinate of the top left corner
           int16_t y,      ///< y coordinate of the top left corner
@@ -37,7 +36,7 @@ public:
   void create_window ();
 
   /**
-   * Draw GUI inside of the pre-created window.
+   * Draw desktops on the window
    */
   void draw_gui ();
 
@@ -45,6 +44,12 @@ public:
    * Get position of the desktop's top left corner by desktop's id.
    */
   int get_desktop_coord (size_t desktop_id);
+
+  /**
+   * Get id of the desktop above which the mouse is hovering
+   * If mouse is not above any desktop return -1
+   */
+  int get_hover_desktop (int16_t x, int16_t y);
 
   /**
    * Draw a border of specified color around specified desktop.

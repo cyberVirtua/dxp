@@ -17,7 +17,7 @@ constexpr const char *k_socket_path = "/tmp/dexpo.socket";
  */
 struct dxp_socket_desktop
 {
-  size_t id; // _NET_CURRENT_DESKTOP
+  uint id; // _NET_CURRENT_DESKTOP
   uint16_t width;
   uint16_t height;
   uint32_t pixmap_len;

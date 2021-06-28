@@ -128,6 +128,43 @@ window::get_desktop_coord (size_t desktop_id)
 }
 
 /**
+ * Get id of the desktop above which the cursor is hovering.
+ * If cursor is not above any desktop return -1.
+ */
+int
+window::get_hover_desktop (int16_t x, int16_t y)
+{
+  for (const auto &d : this->desktops)
+    {
+      if (k_vertical_stacking)
+        {
+          auto desktop_y = get_desktop_coord (d.id);
+          // Check if cursor is inside of the desktop
+          if (x >= dexpo_padding &&           // Not to the left
+              x <= d.width + dexpo_padding && // Not to the right
+              y >= desktop_y &&               // Not above
+              y <= d.height + desktop_y)      // Not below
+            {
+              return int (d.id);
+            }
+        }
+      else if (k_horizontal_stacking)
+        {
+          auto desktop_x = get_desktop_coord (d.id);
+          // Check if cursor is inside of the desktop
+          if (x >= desktop_x &&              // To the right of left border
+              x <= d.width + desktop_x &&    // To the left of right border
+              y >= dexpo_padding &&          // Not above
+              y <= d.height + dexpo_padding) // Not below
+            {
+              return int (d.id);
+            }
+        }
+    }
+  return -1;
+};
+
+/**
  * Draw a border of color around desktop with desktop_id
  *
  * @note color can be set to bgcolor to remove highlight

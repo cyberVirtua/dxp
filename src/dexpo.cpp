@@ -12,7 +12,7 @@
 constexpr bool k_horizontal_stacking = (dexpo_width == 0);
 constexpr bool k_vertical_stacking = (dexpo_height == 0);
 
-// Creating duplicates of window dimensions that will represent real size
+// Creating duplicates of window dimensions that will represent its real size
 auto window_width = dexpo_width;
 auto window_height = dexpo_height;
 
@@ -25,10 +25,7 @@ set_window_dimensions (std::vector<dxp_socket_desktop> &v)
 {
   if (k_horizontal_stacking)
     {
-      // Add the padding before first screenshot
       window_width += dexpo_padding;
-
-      // Add the paddng at both sizes of interface
       window_height += 2 * dexpo_padding;
 
       for (const auto &dexpo_pixmap : v)
@@ -39,10 +36,7 @@ set_window_dimensions (std::vector<dxp_socket_desktop> &v)
     }
   else if (k_vertical_stacking)
     {
-      // Add the padding before first screenshot
       window_height += dexpo_padding;
-
-      // Add the paddng at both sizes of interface
       window_width += 2 * dexpo_padding;
 
       for (const auto &dexpo_pixmap : v)
@@ -54,8 +48,10 @@ set_window_dimensions (std::vector<dxp_socket_desktop> &v)
 };
 
 /**
- * TODO(mangalinor): Document code
- * (explain what happens in the main step by step)
+ * 1. Get desktops from daemon
+ * 2. Calculate actual window dimensions
+ * 3. Create window and map it onto screen
+ * 4. Wait for events and handle them
  */
 int
 main ()
@@ -71,6 +67,8 @@ main ()
 
   // Mapping pixmap onto window
   xcb_generic_event_t *event = nullptr;
+
+  // Handling incoming events
   while ((event = xcb_wait_for_event (window::c_)))
     {
       // TODO(mangalinor): Document code (why ~0x80)
@@ -114,52 +112,17 @@ main ()
                 _exit (0); // Thread safe exit
               }
             w.draw_preselection ();
+            break;
           }
-          break;
-        case XCB_MOTION_NOTIFY: // Pointer motion within window
+        case XCB_MOTION_NOTIFY: // Cursor motion within window
           {
-            auto *mn = reinterpret_cast<xcb_motion_notify_event_t *> (event);
+            auto *cur = reinterpret_cast<xcb_motion_notify_event_t *> (event);
+            int d = w.get_hover_desktop (cur->event_x, cur->event_y);
 
-            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
-                                 w.xcb_id, XCB_TIME_CURRENT_TIME);
-            int det = -1;
-            // TODO: Keep coordinates of pixmap in window class instead
-            // of this hardcoding
-            for (const auto &dexpo_pixmap : w.desktops)
+            if (d != -1)
               {
-                if (k_vertical_stacking)
-                  {
-                    // TODO(mangalinor) Document code
-                    if ((mn->event_x - dexpo_padding > 0)
-                        and (mn->event_x - dexpo_padding < dexpo_pixmap.width)
-                        and (mn->event_y - w.get_desktop_coord (dexpo_pixmap.id)
-                             > 0)
-                        and (mn->event_y - w.get_desktop_coord (dexpo_pixmap.id)
-                             < dexpo_pixmap.height))
-                      {
-                        det = dexpo_pixmap.id;
-                        break;
-                      }
-                  }
-                else if (k_horizontal_stacking)
-                  {
-                    // TODO(mangalinor) Document code
-                    if ((mn->event_x - w.get_desktop_coord (dexpo_pixmap.id)
-                         > 0)
-                        and (mn->event_x - w.get_desktop_coord (dexpo_pixmap.id)
-                             < dexpo_pixmap.width)
-                        and (mn->event_y - dexpo_padding > 0)
-                        and (mn->event_y - dexpo_padding < dexpo_pixmap.height))
-                      {
-                        det = dexpo_pixmap.id;
-                        break;
-                      }
-                  }
-              }
-            w.clear_preselection ();
-            if (det > -1) // TODO(mangalinor) Document code
-              {
-                w.desktop_sel = size_t (det);
+                w.clear_preselection ();
+                w.desktop_sel = uint (d);
                 w.draw_preselection ();
               }
             break;
