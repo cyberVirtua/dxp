@@ -18,8 +18,8 @@ get_property_value (xcb_connection_t *c, xcb_window_t root,
   auto atom_reply = xcb_unique_ptr<xcb_intern_atom_reply_t> (
       xcb_intern_atom_reply (c, atom_cookie, nullptr));
 
-  // TODO(mmskv): add proper exception
-  auto atom = atom_reply ? atom_reply->atom : throw;
+  std::string e_what ("Could not get atom for ", atom_name);
+  auto atom = atom_reply ? atom_reply->atom : throw std::runtime_error (e_what);
 
   /* Getting property from atom */
 
