@@ -143,10 +143,16 @@ get_desktops (xcb_connection_t *c, xcb_window_t root)
         }
 
       // This should not happen
-      // May happen if monitors have some weird configuration
+      // May happen if monitors have some weird configuration or not all
+      // desktops are specified in dexpo_viewport
       if (width == 0 || height == 0)
         {
-          throw; // TODO(mmskv): Log errors
+          throw std::runtime_error (
+              "Couldn't parse your desktops. Perhaps your window manager does "
+              "not support large desktops and _NET_DESKTOP_VIEWPORT property "
+              "is set to (0,0).\nYou might want to manually specify your "
+              "desktop coordinates in the src/config.hpp. See "
+              "`dexpo_viewport`.");
         }
 
       info.push_back (desktop_info{ int (i), x, y, width, height });
