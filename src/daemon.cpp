@@ -66,7 +66,7 @@ main ()
 
   std::mutex socket_desktops_lock;
   // Start a server that will share pixmaps over socket in a separate thread
-  std::thread daemon_thread (&dxp_socket::send_pixmaps_on_event, &server,
+  std::thread daemon_thread (&dxp_socket::send_desktops_on_event, &server,
                              std::ref (socket_desktops),
                              std::ref (socket_desktops_lock));
 

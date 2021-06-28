@@ -58,7 +58,7 @@ main ()
 {
   // Get screenshots from socket
   dxp_socket client;
-  auto v = client.get_pixmaps ();
+  auto v = client.get_desktops ();
 
   set_window_dimensions (v);
 
@@ -109,7 +109,7 @@ main ()
               }
             if (esc)
               {
-                _exit (0); // Thread safe exit
+                return 0;
               }
             w.draw_preselection ();
             break;
