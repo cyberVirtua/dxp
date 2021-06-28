@@ -1,65 +1,47 @@
+#include <chrono>
 #include <cstdint>
 #include <vector>
 
-/*
-  Width of the screenshots that will be displayed
-  Will be calculated based on height and screen ratio if set to zero
+///
+/// Dimensions of the screenshots that will be displayed.
+///
+/// Specifying width will stack desktops vertically.
+/// Specifying height will stack desktops horizontally.
+///
+/// One dimension *must* be set to zero and will be calculated at runtime.
+///
+/// Actual window width will be equal to dexpo_width + (dexpo_padding * 2)
+///
+const int dexpo_width = 200;
+const int dexpo_height = 0;
 
-  Actual window width will be equal to dexpo_width + (dexpo_padding * 2)
-*/
-const int dexpo_width = 0;
+const uint16_t dexpo_padding = 5; ///< Padding around the screenshots
 
-/*
-  Height of the screenshots that will be displayed
-  Will be calculated based on width and screen ratio if set to zero
+const uint16_t dexpo_hlwidth = 3; ///< Width of the preselected desktop border
+const uint32_t dexpo_hlcolor = 0XFF662C28; ///< Color of the preselection border
+const uint32_t dexpo_bgcolor = 0xAA525252; ///< Background color. TODO Alpha
 
-  Actual window height will be equal to dexpo_height + (dexpo_padding * 2)
-*/
-const int dexpo_height = 150;
+const int16_t dexpo_x = 0; ///< X coordinate of window's top left corner
+const int16_t dexpo_y = 0; ///< Y coordinate of window's top left corner
 
-/*
-  Padding between the screenshots and window border
-*/
-const int dexpo_padding = 5;
+const unsigned int dexpo_outer_border = 0; ///< TODO Window border
 
-/*
-  Color of the border around preselected desktop
-*/
-const unsigned int dexpo_hlcolor = 0XFF662C28;
+///
+/// How often to take screenshots.
+///
+/// Setting timeout to values below 0.1 second may severely increase cpu load.
+///
+const auto dexpo_screenshot_timeout = std::chrono::seconds (10);
 
-/*
-  Width of the border around preselected desktop
-*/
-const int dexpo_hlwidth = 3;
-
-/*
-  Background color. TODO Alpha doesn't work
-*/
-const unsigned int dexpo_bgcolor = 0xAA525252;
-
-/*
-  Coordinates of dexpo's top left corner
-*/
-const int dexpo_x = 0;
-const int dexpo_y = 0;
-
-/*
-  Border outside of GUI window
-*/
-const unsigned int dexpo_outer_border = 0;
-
-/*
-  Desktop viewport
-
-  Top left coordinates of each of your desktops in the format
-  { x1, y1, x2, y2, x3, y3 } and so on
-
-  Should be set only if you have a DE or
-   _NET_DESKOP_VIEWPORT doesn't output coordinates of all desktops
-*/
+///
+/// Desktop viewport:
+/// Top left coordinates of each of your desktops in the format
+/// { x1, y1, x2, y2, x3, y3 } and so on.
+///
+/// Should be set only if you have a DE and
+/// `xprop -root _NET_DESKOP_VIEWPORT`
+/// returns `0, 0`
+///
+/// Otherwise leave empty.
+///
 const std::vector<uint32_t> dexpo_viewport = {};
-
-/*
-  Timeout at which screenshots will be made
-*/
-const float dexpo_screenshot_timeout = 10;

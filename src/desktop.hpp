@@ -1,5 +1,5 @@
-#ifndef DESKTOP_PIXMAP_HPP
-#define DESKTOP_PIXMAP_HPP
+#ifndef DESKTOP_HPP
+#define DESKTOP_HPP
 
 #include "drawable.hpp"
 #include <string>
@@ -15,28 +15,18 @@ enum pixmap_format
 /**
  * Captures and stores desktop screenshot in the specified pixmap format
  */
-class desktop_pixmap : public drawable
+class dxp_desktop : public drawable
 {
 public:
-  inline static xcb_gcontext_t gc_ = 0; ///< Graphic context
-  uint8_t *image_ptr;                   ///< Pointer to the image structure.
-  uint32_t length;                      ///< Length of the XImage data structure
-  std::string name;                     ///< _NET_WM_NAME of display
+  uint8_t *image_ptr;          ///< Pointer to the image structure.
   std::vector<uint8_t> pixmap; ///< Constant id for the screenshot's pixmap
   uint16_t pixmap_width;       ///< Width of the pixmap that stores screenshot
   uint16_t pixmap_height;      ///< Height of the pixmap that stores screenshot
 
-  desktop_pixmap (
-      int16_t x,              ///< x coordinate of the top left corner
-      int16_t y,              ///< y coordinate of the top left corner
-      uint16_t width,         ///< Width of the display
-      uint16_t height,        ///< Height of the display
-      const std::string &name ///< Name of the display (_NET_WM_NAME)
-  );
-  ~desktop_pixmap ();
-
-  // Declaring copy operator to use it in vector
-  desktop_pixmap (const desktop_pixmap &);
+  dxp_desktop (int16_t x,        ///< x coordinate of the top left corner
+               int16_t y,        ///< y coordinate of the top left corner
+               uint16_t width,   ///< Width of the display
+               uint16_t height); ///< Height of the display
 
   /**
    * Screenshots current desktop, downsizes it and stores inside instance
@@ -54,16 +44,6 @@ public:
           int target_height);
 
   void render_geometries ();
-
-private:
-  /**
-   * Initializes class-level graphic context
-   */
-  static void create_gc ();
-  /**
-   * Initializes instance-level pixmap
-   */
-  void create_pixmap ();
 };
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */

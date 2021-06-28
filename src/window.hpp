@@ -1,26 +1,22 @@
 #ifndef WINDOW_HPP
 #define WINDOW_HPP
 
-#include "dexpo_socket.hpp"
+#include "socket.hpp"
 #include <string>
 #include <vector>
 #include <xcb/xproto.h>
 
 /**
- * Visualizes workspaces previews for user interface is sized based on config
- * settings
+ * Draws desktop previews
  */
 class window : public drawable
 {
 public:
-  inline static xcb_gcontext_t gc_; ///< Graphic context
-  uint32_t id;                      // Identificator for Window
-  uint16_t b_width; // Border width NOTE: Maybe it could be changed to constant
-  std::vector<dexpo_pixmap> pixmaps;
-  int highlighted;
-  // TODO: Add masks for events
+  inline static xcb_gcontext_t gc_ = 0; ///< Graphic context
+  uint32_t xcb_id;
+  std::vector<dxp_socket_desktop> desktops; ///< Desktops received from daemon
+  uint desktop_sel;
 
-  // The same as for DesktopPixmap
   window (int16_t x,      ///< x coordinate of the top left corner
           int16_t y,      ///< y coordinate of the top left corner
           uint16_t width, ///< Width of the display
@@ -35,28 +31,48 @@ public:
   window &operator= (window &&other) = delete;
 
   /**
-   * Gets position of top left corner of screenshot with given number
-   */
-  int get_screen_position (int desktop_number);
-
-  /**
-   * Creates empty window to later place gui in it
+   * Create an empty window to later place gui in it.
    */
   void create_window ();
 
   /**
-   * Draws a rectangle around chosen window
-   */
-  void highlight_window (int desktop_number, uint32_t color);
-
-  /**
-   * Draws GUI inside of the pre-created window
+   * Draw desktops on the window
    */
   void draw_gui ();
 
+  /**
+   * Get position of the desktop's top left corner by desktop's id.
+   */
+  int get_desktop_coord (size_t desktop_id);
+
+  /**
+   * Get id of the desktop above which the mouse is hovering
+   * If mouse is not above any desktop return -1
+   */
+  int get_hover_desktop (int16_t x, int16_t y);
+
+  /**
+   * Draw a border of specified color around specified desktop.
+   */
+  void draw_border (size_t desktop_id, uint32_t color);
+
+  /**
+   * Draw a preselection border of color=dexpo_hlcolor
+   * around desktop=desktop[this->desktop_sel].
+   */
+  void draw_preselection ();
+
+  /**
+   * Remove a preselection border around desktop[this->desktop_sel].
+   *
+   * @note This implementation just draws border of color dexpo_bgcolor above
+   * existing border.
+   */
+  void clear_preselection ();
+
 private:
   /**
-   * Initializes class-level graphic context
+   * Initialize class-level graphic context.
    */
   static void create_gc ();
 };

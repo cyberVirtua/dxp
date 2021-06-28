@@ -4,192 +4,267 @@
 #include <vector>
 #include <xcb/xproto.h>
 
-/* NOTE: First part is mostly close to DesktopPixmap */
+constexpr bool k_horizontal_stacking = (dexpo_width == 0);
+constexpr bool k_vertical_stacking = (dexpo_height == 0);
+
 window::window (const int16_t x,       ///< x coordinate of the top left corner
                 const int16_t y,       ///< y coordinate of the top left corner
-                const uint16_t width,  ///< width of display
-                const uint16_t height) ///< height of display
+                const uint16_t width,  ///< width of the window
+                const uint16_t height) ///< height of the window
     : drawable (x, y, width, height)
 {
-  this->b_width = dexpo_outer_border;
-  this->id = xcb_generate_id (drawable::c_);
-  this->highlighted = 0; // Id of the preselected desktop
+  this->xcb_id = xcb_generate_id (drawable::c_);
+  this->desktop_sel = 0; // Id of the preselected desktop
+
+  create_gc ();
   create_window ();
 }
 
-window::~window () { xcb_destroy_window (drawable::c_, this->id); }
+window::~window () { xcb_destroy_window (drawable::c_, this->xcb_id); }
 
+/**
+ * Initialize window, subscribe to relevant events and map it onto the desktop
+ */
 void
 window::create_window ()
 {
-  // mask as for now aren't fully implemened. This one was partially copied from
-  // example_DesktopPixmap to make possible distinguishing of several windows'
-  // borders
+  // Mask used
   uint32_t mask = 0;
-  uint32_t values[3];
-  const bool override_redirect[] = { true };
   mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-  values[0] = dexpo_bgcolor; // Background color
-  // Will be used in future to handle events
-  values[1] = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS
-              | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_KEY_RELEASE
-              | XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_POINTER_MOTION
-              | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_ENTER_WINDOW;
 
-  values[2] = XCB_STACK_MODE_ABOVE; // Places created window on top
+  // Each mask value entry corresponds to mask enum first to last
+  std::array<uint32_t, 3> mask_values{
+    dexpo_bgcolor,
+    // These values are used to subscribe to relevant events
+    XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS
+        | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_KEY_RELEASE
+        | XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_POINTER_MOTION
+        | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_ENTER_WINDOW
+  };
+
   xcb_create_window (window::c_, /* Connection, separate from one of daemon */
                      XCB_COPY_FROM_PARENT,          /* depth (same as root)*/
-                     this->id,                      /* window Id */
+                     this->xcb_id,                  /* window Id */
                      drawable::screen_->root,       /* parent window */
                      this->x, this->y,              /* x, y */
                      this->width, this->height,     /* width, height */
-                     this->b_width,                 /* border_width */
+                     dexpo_outer_border,            /* border_width */
                      XCB_WINDOW_CLASS_INPUT_OUTPUT, /* class */
                      window::screen_->root_visual,  /* visual */
-                     mask, values);                 /* masks, not used yet */
+                     mask, &mask_values);           /* masks, not used yet */
 
-  /* Fixes window's place */
-  xcb_change_window_attributes (c_, id, XCB_CW_OVERRIDE_REDIRECT,
+  /* Fixes window in place */
+  const std::array<uint32_t, 2> override_redirect{ 1U };
+  xcb_change_window_attributes (c_, xcb_id, XCB_CW_OVERRIDE_REDIRECT,
                                 &override_redirect);
 
-  /* Map the window on the screen */
-  xcb_map_window (window::c_, this->id);
+  /* Map the window onto the screen */
+  xcb_map_window (window::c_, this->xcb_id);
 
-  // Set the focus. Doing it after mapping window is crucial.
-  xcb_set_input_focus (c_, XCB_INPUT_FOCUS_POINTER_ROOT, id,
+  /* Focus on the window. Doing it *after* mapping the window is crucial. */
+  xcb_set_input_focus (c_, XCB_INPUT_FOCUS_POINTER_ROOT, this->xcb_id,
                        XCB_TIME_CURRENT_TIME);
 
   /* Sends commands to the server */
   xcb_flush (window::c_);
 }
 
+/**
+ * Draw pixmaps on the window
+ */
 void
 window::draw_gui ()
 {
-  if (dexpo_width == 0)
+  // Coordinates for the desktop relative to the window
+  int16_t x = dexpo_padding;
+  int16_t y = dexpo_padding;
+
+  for (const auto &desktop : this->desktops)
     {
-      // Drawing screenshots starting from the left top corner
-      auto act_width = dexpo_padding;
-      for (const auto &pixmap : this->pixmaps)
+      xcb_put_image (window::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
+                     this->xcb_id,                  /* Pixmap to put image on */
+                     window::gc_,                   /* Graphic context */
+                     desktop.width, desktop.height, /* Dimensions */
+                     x, /* Destination X coordinate */
+                     y, /* Destination Y coordinate */
+                     0, drawable::screen_->root_depth,
+                     desktop.pixmap_len, /* Image size in bytes */
+                     desktop.pixmap.data ());
+      if (k_horizontal_stacking)
         {
-          xcb_put_image (desktop_pixmap::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
-                         this->id,            /* Pixmap to put image on */
-                         desktop_pixmap::gc_, /* Graphic context */
-                         pixmap.width, pixmap.height, /* Dimensions */
-                         act_width,     /* Destination X coordinate */
-                         dexpo_padding, /* Destination Y coordinate */
-                         0, drawable::screen_->root_depth,
-                         pixmap.pixmap_len, /* Image size in bytes */
-                         pixmap.pixmap.data ());
-          act_width += pixmap.width;
-          act_width += dexpo_padding;
-        };
-    }
-  else if (dexpo_height == 0)
-    {
-      auto act_height = dexpo_padding;
-      for (const auto &pixmap : this->pixmaps)
+          x += desktop.width;
+          x += dexpo_padding;
+        }
+      else if (k_vertical_stacking)
         {
-          xcb_put_image (desktop_pixmap::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
-                         this->id,            /* Pixmap to put image on */
-                         desktop_pixmap::gc_, /* Graphic context */
-                         pixmap.width, pixmap.height, /* Dimensions */
-                         dexpo_padding, /* Destination X coordinate */
-                         act_height,    /* Destination Y coordinate */
-                         0, drawable::screen_->root_depth,
-                         pixmap.pixmap_len, /* Image size in bytes */
-                         pixmap.pixmap.data ());
-          act_height += pixmap.height;
-          act_height += dexpo_padding;
+          y += desktop.height;
+          y += dexpo_padding;
         };
     }
 }
 
+/**
+ * Get coordinate of the displayed desktop relative to the window
+ */
 int
-window::get_screen_position (int desktop_number)
+window::get_desktop_coord (size_t desktop_id)
 {
   // As all screenshots have at least one common coordinate of corner, we need
   // to find only the second one
-  int coord = dexpo_padding;
-  for (const auto &dexpo_pixmap : this->pixmaps)
+  auto pos = dexpo_padding;
+  for (const auto &desktop : this->desktops)
     {
-      // Estimating all space before the screenshot we search
-      if (dexpo_pixmap.desktop_number < desktop_number)
+      // Counting space for all desktops up to desktop_id
+      if (desktop.id == desktop_id)
         {
-          coord += dexpo_padding;
-          if (dexpo_height == 0)
-            {
-              coord += dexpo_pixmap.height;
-            }
-          else if (dexpo_width == 0)
-            {
-              coord += dexpo_pixmap.width;
-            }
+          return pos;
         }
-      else
-        {
-          return coord;
-        }
+
+      // Append width for horizontal stacking and height for vertical
+      pos += k_horizontal_stacking ? desktop.width : desktop.height;
+      pos += dexpo_padding;
     }
   return 0;
 }
 
+/**
+ * Get id of the desktop above which the cursor is hovering.
+ * If cursor is not above any desktop return -1.
+ */
+int
+window::get_hover_desktop (int16_t x, int16_t y)
+{
+  for (const auto &d : this->desktops)
+    {
+      if (k_vertical_stacking)
+        {
+          auto desktop_y = get_desktop_coord (d.id);
+          // Check if cursor is inside of the desktop
+          if (x >= dexpo_padding &&           // Not to the left
+              x <= d.width + dexpo_padding && // Not to the right
+              y >= desktop_y &&               // Not above
+              y <= d.height + desktop_y)      // Not below
+            {
+              return int (d.id);
+            }
+        }
+      else if (k_horizontal_stacking)
+        {
+          auto desktop_x = get_desktop_coord (d.id);
+          // Check if cursor is inside of the desktop
+          if (x >= desktop_x &&              // To the right of left border
+              x <= d.width + desktop_x &&    // To the left of right border
+              y >= dexpo_padding &&          // Not above
+              y <= d.height + dexpo_padding) // Not below
+            {
+              return int (d.id);
+            }
+        }
+    }
+  return -1;
+};
+
+/**
+ * Draw a border of color around desktop with desktop_id
+ *
+ * @note color can be set to bgcolor to remove highlight
+ */
 void
-window::highlight_window (int desktop_number, uint32_t color)
+window::draw_border (size_t desktop_id, uint32_t color)
 {
   int16_t x = dexpo_padding;
   int16_t y = dexpo_padding;
-  uint32_t values[1]; // mask for changing border's color
 
-  uint16_t width = this->pixmaps[size_t (desktop_number)].width;
-  uint16_t height = this->pixmaps[size_t (desktop_number)].height;
+  uint16_t width = this->desktops[desktop_id].width;
+  uint16_t height = this->desktops[desktop_id].height;
 
-  if (dexpo_height == 0)
+  if (k_vertical_stacking)
     {
-      y = get_screen_position (desktop_number);
+      y = int16_t (get_desktop_coord (desktop_id));
     }
-  else
+  else if (k_horizontal_stacking)
     {
-      x = get_screen_position (desktop_number);
+      x = int16_t (get_desktop_coord (desktop_id));
     }
 
-  // We can't control rectangle's thickness, so instead we spawn several close
-  // to each other
-  xcb_rectangle_t rectangles[]
-      = { // left border
-          {
-              int16_t (x - dexpo_hlwidth),          /* x */
-              int16_t (y - dexpo_hlwidth),          /* y */
-              uint16_t (dexpo_hlwidth),             /* width */
-              uint16_t (height + 2 * dexpo_hlwidth) /* height */
-          },
-          // right border
-          {
-              int16_t (x + width),                  /* x */
-              int16_t (y - dexpo_hlwidth),          /* y */
-              uint16_t (dexpo_hlwidth),             /* width */
-              uint16_t (height + 2 * dexpo_hlwidth) /* height */
-          },
-          // top border
-          {
-              int16_t (x - 1),             /* x */
-              int16_t (y - dexpo_hlwidth), /* y */
-              uint16_t (width + 1),        /* width */
-              uint16_t (dexpo_hlwidth)     /* height */
-          },
-          // bottom border
-          {
-              int16_t (x - 1),         /* x */
-              int16_t (y + height),    /* y */
-              uint16_t (width + 1),    /* width */
-              uint16_t (dexpo_hlwidth) /* height */
-          }
-        };
-  // Changing color
+  // The best way to create rectangular border with xcb
+  // is to draw 4 filled rectangles.
+  std::array<xcb_rectangle_t, 4> borders{
+    // Left border
+    xcb_rectangle_t{
+        int16_t (x - dexpo_hlwidth),          /* x */
+        int16_t (y - dexpo_hlwidth),          /* y */
+        uint16_t (dexpo_hlwidth),             /* width */
+        uint16_t (height + 2 * dexpo_hlwidth) /* height */
+    },
+    // Right border
+    xcb_rectangle_t{
+        int16_t (x + width),                  /* x */
+        int16_t (y - dexpo_hlwidth),          /* y */
+        uint16_t (dexpo_hlwidth),             /* width */
+        uint16_t (height + 2 * dexpo_hlwidth) /* height */
+    },
+    // Top border
+    xcb_rectangle_t{
+        int16_t (x - 1),             /* x */
+        int16_t (y - dexpo_hlwidth), /* y */
+        uint16_t (width + 1),        /* width */
+        uint16_t (dexpo_hlwidth)     /* height */
+    },
+    // Bottom border
+    xcb_rectangle_t{
+        int16_t (x - 1),         /* x */
+        int16_t (y + height),    /* y */
+        uint16_t (width + 1),    /* width */
+        uint16_t (dexpo_hlwidth) /* height */
+    }
+  };
+
+  // Setting border color
   uint32_t mask = XCB_GC_FOREGROUND;
-  values[0] = color;
-  xcb_change_gc (c_, desktop_pixmap::gc_, mask, &values);
-  // Drawing the highlighting itself
-  xcb_poly_fill_rectangle (window::c_, this->id, desktop_pixmap::gc_, 4,
-                           rectangles);
+  std::array<uint32_t, 1> mask_values{ color }; // Mask value
+  xcb_change_gc (c_, window::gc_, mask, &mask_values);
+
+  // Drawing the preselection border
+  xcb_poly_fill_rectangle (window::c_, this->xcb_id, window::gc_,
+                           borders.size (), &borders[0]);
+}
+
+/**
+ * Draw a preselection border of color=dexpo_hlcolor
+ * around desktop=desktop[this->desktop_sel].
+ */
+void
+window::draw_preselection ()
+{
+  draw_border (this->desktop_sel, dexpo_hlcolor);
+};
+
+/**
+ * Remove a preselection border around desktop[this->desktop_sel].
+ *
+ * @note This implementation just draws border of color dexpo_bgcolor above
+ * existing border.
+ */
+void
+window::clear_preselection ()
+{
+  draw_border (this->desktop_sel, dexpo_bgcolor);
+};
+
+/**
+ * Initialize a graphic context.
+ *
+ * Required by xcb functions
+ */
+void
+window::create_gc ()
+{
+  // TODO(mangalinor): Figure out correct mask and values
+  uint32_t mask = XCB_GC_FOREGROUND | XCB_GC_GRAPHICS_EXPOSURES;
+  std::array<uint32_t, 2> mask_values{ drawable::screen_->black_pixel, 0 };
+
+  window::gc_ = xcb_generate_id (c_);
+  xcb_create_gc (drawable::c_, window::gc_, drawable::screen_->root, mask,
+                 &mask_values);
 }

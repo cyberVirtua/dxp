@@ -1,20 +1,28 @@
 ---
 Checks: 'bugprone-*,
-        clang-analyzer-cplusplus.InnerPointer,
-        cppcoreguidelines-*,
+        *,
         readability-*,
         clang-analyzer-core-*,
         clang-analyzer-cplusplus-*,
         clang-analyzer-deadcode-*,
         clang-analyzer-nullability-*,
-        -implicit-int-float-conversion,
-        -float-conversion,
-        -bugprone-narrowing-conversions,
+        clang-analyzer-cplusplus.InnerPointer,
+        cppcoreguidelines-*,
         -cppcoreguidelines-pro-type-reinterpret-cast,
         -cppcoreguidelines-avoid-non-const-global-variables,
         -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+        -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
         -cppcoreguidelines-narrowing-conversions,
-        -cppcoreguidelines-avoid-c-arrays'
+        -cppcoreguidelines-avoid-c-arrays,
+        -altera-*,
+        -fuchsia-*,
+        -llvmlibc*,
+        -cert-err58-cpp,
+        -hicpp-no-array-decay,
+        -hicpp-signed-bitwise,
+        -bugprone-narrowing-conversions,
+        -modernize-use-trailing-return-type,
+        -misc-non-private-member-variables-in-classes'
 HeaderFilterRegex: ''
 FormatStyle:     file
 

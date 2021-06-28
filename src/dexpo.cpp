@@ -1,172 +1,163 @@
 #include "config.hpp"
-#include "desktop_pixmap.hpp"
-#include "dexpo_socket.hpp"
+#include "desktop.hpp"
+#include "socket.hpp"
 #include "window.hpp"
-#include "wmctrl.hpp"
+#include "xcb_util.hpp"
 #include <unistd.h>
 #include <vector>
+#include <xcb/xcb.h>
+#include <xcb/xcb_keysyms.h>
+#include <xcb/xinput.h>
 
-// TODO Holy fuck we need to fix this burning shit
-desktop_pixmap d0 (0, 0, 1080, 1920, "");
+constexpr bool k_horizontal_stacking = (dexpo_width == 0);
+constexpr bool k_vertical_stacking = (dexpo_height == 0);
 
+// Creating duplicates of window dimensions that will represent its real size
+auto window_width = dexpo_width;
+auto window_height = dexpo_height;
+
+/**
+ * Calculate dimensions of the window based on
+ * stacking mode and desktops from daemon
+ */
+void
+set_window_dimensions (std::vector<dxp_socket_desktop> &v)
+{
+  if (k_horizontal_stacking)
+    {
+      window_width += dexpo_padding;
+      window_height += 2 * dexpo_padding;
+
+      for (const auto &dexpo_pixmap : v)
+        {
+          window_width += dexpo_pixmap.width;
+          window_width += dexpo_padding;
+        }
+    }
+  else if (k_vertical_stacking)
+    {
+      window_height += dexpo_padding;
+      window_width += 2 * dexpo_padding;
+
+      for (const auto &dexpo_pixmap : v)
+        {
+          window_height += dexpo_pixmap.height;
+          window_height += dexpo_padding;
+        }
+    };
+};
+
+/**
+ * 1. Get desktops from daemon
+ * 2. Calculate actual window dimensions
+ * 3. Create window and map it onto screen
+ * 4. Wait for events and handle them
+ */
 int
 main ()
 {
-  // Gets width, height and screenshot of every desktop
-  dexpo_socket client;
+  // Get screenshots from socket
+  dxp_socket client;
   auto v = client.get_pixmaps ();
 
-  // Calculates size of GUI's window
-  auto conf_width = dexpo_width;   // Width from config
-  auto conf_height = dexpo_height; // Height from config
-  if (conf_width == 0)
-    {
-      conf_width += dexpo_padding; // Add the padding before first screenshot
-      conf_height
-          += 2 * dexpo_padding; // Add the paddng at both sizes of interface
-      for (const auto &dexpo_pixmap : v)
-        {
-          conf_width += dexpo_pixmap.width;
-          conf_width += dexpo_padding;
-        }
-    }
-  else if (conf_height == 0)
-    {
-      conf_height += dexpo_padding; // Add the padding before first screenshot
-      conf_width
-          += 2 * dexpo_padding; // Add the paddng at both sizes of interface
-      for (const auto &dexpo_pixmap : v)
-        {
-          conf_height += dexpo_pixmap.height;
-          conf_height += dexpo_padding;
-        }
-    };
+  set_window_dimensions (v);
 
-  window w (dexpo_x, dexpo_y, conf_width, conf_height);
-  w.pixmaps = v;
+  window w (dexpo_x, dexpo_y, window_width, window_height);
+  w.desktops = v;
+
   // Mapping pixmap onto window
   xcb_generic_event_t *event = nullptr;
+
+  // Handling incoming events
   while ((event = xcb_wait_for_event (window::c_)))
     {
+      // TODO(mangalinor): Document code (why ~0x80)
       switch (event->response_type & ~0x80)
         {
         case XCB_EXPOSE:
           {
             w.draw_gui ();
-            w.highlight_window (0, dexpo_hlcolor);
+            // w.draw_border (0, dexpo_hlcolor);
             break;
           }
         case XCB_KEY_PRESS:
           {
-            xcb_key_press_event_t *kp
-                = reinterpret_cast<xcb_key_press_event_t *> (event);
-            if (kp->detail == 114
-                or kp->detail == 116) // right arrow or up arrow
-              {
-                w.highlight_window (w.highlighted, dexpo_bgcolor);
-                w.highlighted += 1;
-                w.highlighted = w.highlighted % int (v.size ());
-                w.highlight_window (w.highlighted, dexpo_hlcolor);
-              }
-            if (kp->detail == 113
-                or kp->detail == 111) // left arrow or down arrow
-              {
-                w.highlight_window (w.highlighted, dexpo_bgcolor);
-                w.highlighted = (w.highlighted == 0) ? int (v.size () - 1)
-                                                     : w.highlighted - 1;
-              }
-            w.highlight_window (w.highlighted, dexpo_hlcolor);
-            if (kp->detail == 9) // escape
-              {
+            auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
 
-                exit (0);
-              }
-            if (kp->detail == 36) // enter
+            /// Right arrow or Up arrow
+            bool next = kp->detail == 114 || kp->detail == 116;
+            /// Left arrow or down arrow
+            bool prev = kp->detail == 113 || kp->detail == 111;
+            bool entr = kp->detail == 36; /// Enter
+            bool esc = kp->detail == 9;   /// Escape
 
+            w.clear_preselection ();
+            if (next) // TODO(mangalinor) Document code
               {
-                w.highlight_window (w.highlighted, dexpo_bgcolor);
+                w.desktop_sel++;
+                w.desktop_sel %= v.size ();
+              }
+            if (prev) // TODO(mangalinor) Document code
+              {
+                w.desktop_sel
+                    = w.desktop_sel == 0 ? v.size () - 1 : w.desktop_sel - 1;
+              }
+            if (entr)
+              {
                 ewmh_change_desktop (window::c_, window::screen_,
-                                     w.highlighted);
+                                     w.desktop_sel);
               }
+            if (esc)
+              {
+                _exit (0); // Thread safe exit
+              }
+            w.draw_preselection ();
+            break;
           }
-          break;
-        case XCB_MOTION_NOTIFY: // pointer motion within window
+        case XCB_MOTION_NOTIFY: // Cursor motion within window
           {
-            xcb_motion_notify_event_t *mn
-                = reinterpret_cast<xcb_motion_notify_event_t *> (event);
-            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
-                                 XCB_TIME_CURRENT_TIME);
-            int det = -1;
-            // TODO: Keep coordinates of pixmap in window class instead
-            // of this hardcoding
-            for (const auto &dexpo_pixmap : w.pixmaps)
+            auto *cur = reinterpret_cast<xcb_motion_notify_event_t *> (event);
+            int d = w.get_hover_desktop (cur->event_x, cur->event_y);
+
+            if (d != -1)
               {
-                if (dexpo_height == 0)
-                  {
-                    if ((mn->event_x - dexpo_padding > 0)
-                        and (mn->event_x - dexpo_padding < dexpo_pixmap.width)
-                        and (mn->event_y
-                                 - w.get_screen_position (
-                                     dexpo_pixmap.desktop_number)
-                             > 0)
-                        and (mn->event_y
-                                 - w.get_screen_position (
-                                     dexpo_pixmap.desktop_number)
-                             < dexpo_pixmap.height))
-                      {
-                        det = dexpo_pixmap.desktop_number;
-                        break;
-                      }
-                  }
-                else if (dexpo_width == 0)
-                  {
-                    if ((mn->event_x
-                             - w.get_screen_position (
-                                 dexpo_pixmap.desktop_number)
-                         > 0)
-                        and (mn->event_x
-                                 - w.get_screen_position (
-                                     dexpo_pixmap.desktop_number)
-                             < dexpo_pixmap.width)
-                        and (mn->event_y - dexpo_padding > 0)
-                        and (mn->event_y - dexpo_padding < dexpo_pixmap.height))
-                      {
-                        det = dexpo_pixmap.desktop_number;
-                        break;
-                      }
-                  }
-              }
-            w.highlight_window (w.highlighted, dexpo_bgcolor);
-            if (det > -1)
-              {
-                w.highlighted = det;
-                w.highlight_window (w.highlighted, dexpo_hlcolor);
+                w.clear_preselection ();
+                w.desktop_sel = uint (d);
+                w.draw_preselection ();
               }
             break;
           }
         case XCB_ENTER_NOTIFY: // pointer enters window
           {
-            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
-                                 XCB_TIME_CURRENT_TIME);
+            // TODO(mangalinor) Document code
+            // (why doesn't it happen automatically?)
+            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
+                                 w.xcb_id, XCB_TIME_CURRENT_TIME);
             break;
           }
         case XCB_LEAVE_NOTIFY: // pointer leaves window
+          // TODO(mangalinor) Document code
+          // (what is the difference between XCB_LEAVE_NOTIFY and XCB_FOCUS_OUT)
           {
-            w.highlight_window (w.highlighted, dexpo_bgcolor);
+            // TODO(mangalinor) Document code (why set focus on leave)
+            w.clear_preselection ();
             xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
                                  window::screen_->root, XCB_TIME_CURRENT_TIME);
             break;
           }
         case XCB_BUTTON_PRESS: // mouse click
           {
-            w.highlight_window (w.highlighted, dexpo_bgcolor);
-            ewmh_change_desktop (window::c_, window::screen_, w.highlighted);
+            w.clear_preselection ();
+            ewmh_change_desktop (window::c_, window::screen_, w.desktop_sel);
             break;
           }
         case XCB_FOCUS_OUT:
+          // TODO(mangalinor) Document code
+          // (what is the difference between XCB_LEAVE_NOTIFY and XCB_FOCUS_OUT)
           {
-            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT, w.id,
-                                 XCB_TIME_CURRENT_TIME);
+            // TODO(mangalinor) Document code (why set focus on focus out)
+            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
+                                 w.xcb_id, XCB_TIME_CURRENT_TIME);
             break;
           }
         }

@@ -1,7 +1,7 @@
-#ifndef DEXPO_SOCKET
-#define DEXPO_SOCKET
+#ifndef DEXPO_SOCKET_HPP
+#define DEXPO_SOCKET_HPP
 
-#include "desktop_pixmap.hpp"
+#include "desktop.hpp"
 #include <atomic>
 #include <cstdint>
 #include <mutex>
@@ -9,47 +9,46 @@
 #include <sys/socket.h>
 #include <vector>
 
-#define SOCKET_PATH "@/tmp/dexpo.socket"
-#define DESKTOP_NAME_MAX_LEN 255
+constexpr const char *k_socket_path = "/tmp/dexpo.socket";
 
 /**
- * Screenshot pixmap struct
+ * Dekstop struct that will be transferred over socket
+ * Contains only necessary data
  */
-struct dexpo_pixmap
+struct dxp_socket_desktop
 {
-  int desktop_number; // _NET_CURRENT_DESKTOP
+  uint id; // _NET_CURRENT_DESKTOP
   uint16_t width;
   uint16_t height;
   uint32_t pixmap_len;
-  char name[DESKTOP_NAME_MAX_LEN];
   std::vector<uint8_t> pixmap; ///< Pixmap in RBGA format
 };
 
 /**
- * All possible commands that can be sent from client to daemon
+ * All commands that can be sent by client to daemon
  */
-enum daemon_event
+enum dxp_event
 {
   kRequestPixmaps = 1 // Request all pixmaps
 };
 
-class dexpo_socket
+class dxp_socket
 {
 public:
   int fd;                           ///< Socket File Descriptor
-  std::atomic<bool> running = true; ///< Thread status
+  std::atomic<bool> running = true; ///< Thread status. Used to kill while loop
 
-  dexpo_socket ();
-  ~dexpo_socket ();
+  dxp_socket ();
+  ~dxp_socket ();
 
-  // Explicitly delete unused constructors to comply with rule of five
-  dexpo_socket (const dexpo_socket &other) = delete;
-  dexpo_socket (dexpo_socket &&other) noexcept = delete;
-  dexpo_socket &operator= (const dexpo_socket &other) = delete;
-  dexpo_socket &operator= (dexpo_socket &&other) = delete;
+  // Explicitly delete unused constructors to comply with the rule of five
+  dxp_socket (const dxp_socket &other) = delete;
+  dxp_socket (dxp_socket &&other) noexcept = delete;
+  dxp_socket &operator= (const dxp_socket &other) = delete;
+  dxp_socket &operator= (dxp_socket &&other) = delete;
 
-  std::vector<dexpo_pixmap> get_pixmaps () const;
-  void send_pixmaps_on_event (const std::vector<dexpo_pixmap> &,
+  [[nodiscard]] std::vector<dxp_socket_desktop> get_pixmaps () const;
+  void send_pixmaps_on_event (const std::vector<dxp_socket_desktop> &,
                               std::mutex &pixmaps_lock) const;
   void server () const;
 };
@@ -91,4 +90,4 @@ public:
   bind_error () : std::runtime_error ("Could not bind name to the socket"){};
 };
 
-#endif /* ifndef DEXPO_SOCKET */
+#endif /* ifndef DEXPO_SOCKET_HPP */
