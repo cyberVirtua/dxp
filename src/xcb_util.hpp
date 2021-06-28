@@ -1,6 +1,7 @@
 #ifndef DEXPO_XCB_HPP
 #define DEXPO_XCB_HPP
 
+#include <cstdlib>
 #include <memory>
 #include <vector>
 #include <xcb/randr.h>

@@ -35,8 +35,8 @@ enum dxp_event
 class dxp_socket
 {
 public:
-  int fd;                           ///< Socket File Descriptor
-  std::atomic<bool> running = true; ///< Thread status. Used to kill while loop
+  int fd;                            ///< Socket File Descriptor
+  std::atomic<bool> running{ true }; ///< Thread status. Used to kill while loop
 
   dxp_socket ();
   ~dxp_socket ();
