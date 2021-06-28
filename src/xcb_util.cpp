@@ -49,7 +49,7 @@ get_property_value (xcb_connection_t *c, xcb_window_t root,
 };
 
 /**
- * TODO(kud-aa) Document function
+ * Generating and sending client message 
  */
 void
 send_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
@@ -57,10 +57,10 @@ send_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
               unsigned long data2 = 0, unsigned long data3 = 0,
               unsigned long data4 = 0)
 {
-  xcb_client_message_event_t event;
-  xcb_intern_atom_cookie_t atom_cookie;
-  xcb_intern_atom_reply_t *atom_reply;
-  xcb_atom_t atom_id;
+  xcb_client_message_event_t event;     /// name of event
+  xcb_intern_atom_cookie_t atom_cookie; /// cookie with requests
+  xcb_intern_atom_reply_t *atom_reply;  /// reply from server
+  xcb_atom_t atom_id;                   /// id of request
 
   xcb_map_window (c, screen->root);
   atom_cookie = xcb_intern_atom (c, 0, strlen (msg), msg);
@@ -72,9 +72,9 @@ send_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
   event.sequence = 0;
   event.window = screen->root;
   event.type = atom_id;
-  event.data.data32[0] = data0; // source: 1=application 2=pager
-  event.data.data32[1] = data1; // timestamp
-  event.data.data32[2] = data2; // currently active window (none)
+  event.data.data32[0] = data0; /// source: 1=application 2=pager
+  event.data.data32[1] = data1; /// timestamp
+  event.data.data32[2] = data2; /// currently active window (none)
   event.data.data32[3] = data3;
   event.data.data32[4] = data4;
   xcb_send_event (c, 0, screen->root,
@@ -85,6 +85,9 @@ send_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
   free (atom_reply);
 }
 
+/**
+ * Changing the number of desktop
+ */
 void
 ewmh_change_desktop (xcb_connection_t *c, xcb_screen_t *screen,
                      size_t destkop_id)
