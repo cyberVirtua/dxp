@@ -1,6 +1,6 @@
 #define BOOST_TEST_MODULE Sockets Test
 
-#include "../src/socket.hpp"
+#include "../src/dexpo_socket.hpp"
 #include <boost/test/unit_test.hpp>
 #include <boost/test/unit_test_log.hpp>
 #include <boost/test/unit_test_suite.hpp>
@@ -16,7 +16,7 @@
 
 // Overloads for boost::test to compare pixmaps
 bool
-operator== (const  d1, const dxp_socket::get_pixmaps d2)
+operator== (const dexpo_pixmap d1, const dexpo_pixmap d2)
 {
   return d1.desktop_number == d2.desktop_number && d1.width == d2.width
          && d1.height == d2.height && d1.id == d2.id
