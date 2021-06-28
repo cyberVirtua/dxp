@@ -46,3 +46,6 @@ if(ENABLE_TESTING)
 endif()
 
 add_subdirectory(src)
+
+add_library(dexpo_lib OBJECT src/desktop.cpp src/drawable.cpp src/socket.cpp
+                             src/window.cpp src/xcb_util.cpp)
