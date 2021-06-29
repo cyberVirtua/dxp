@@ -17,9 +17,10 @@ const int dexpo_height = 0;
 
 const uint16_t dexpo_padding = 5; ///< Padding around the screenshots
 
-const uint16_t dexpo_hlwidth = 3; ///< Width of the preselected desktop border
-const uint32_t dexpo_hlcolor = 0XFF662C28; ///< Color of the preselection border
-const uint32_t dexpo_bgcolor = 0xAA525252; ///< Background color. TODO Alpha
+const uint16_t dexpo_hlwidth = 4; ///< Width of the preselected desktop border
+const uint32_t dexpo_bgcolor = 0xAA525252; ///< Background color. TODO Alpha and document properly
+const uint32_t dexpo_preselected_desktop_color = 0Xc20a66;///< Color of the preselection border
+const uint32_t dexpo_desktop_color =   0X0066cc;///<Color of the unselected desktops borders
 
 const int16_t dexpo_x = 0; ///< X coordinate of window's top left corner
 const int16_t dexpo_y = 0; ///< Y coordinate of window's top left corner
@@ -31,7 +32,7 @@ const unsigned int dexpo_outer_border = 0; ///< TODO Window border
 ///
 /// Setting timeout to values below 0.1 second may severely increase cpu load.
 ///
-const auto dexpo_screenshot_timeout = std::chrono::seconds (10);
+const auto dexpo_screenshot_timeout = std::chrono::seconds (1);
 
 ///
 /// Desktop viewport:
@@ -44,4 +45,4 @@ const auto dexpo_screenshot_timeout = std::chrono::seconds (10);
 ///
 /// Otherwise leave empty.
 ///
-const std::vector<uint32_t> dexpo_viewport = {};
+const std::vector<uint32_t> dexpo_viewport = {0,0,0,0,0,0,0,0};

@@ -78,7 +78,6 @@ window::draw_gui ()
   // Coordinates for the desktop relative to the window
   int16_t x = dexpo_padding;
   int16_t y = dexpo_padding;
-
   for (const auto &desktop : this->desktops)
     {
       xcb_put_image (window::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
@@ -237,7 +236,7 @@ window::draw_border (size_t desktop_id, uint32_t color)
 void
 window::draw_preselection ()
 {
-  draw_border (this->desktop_sel, dexpo_hlcolor);
+  draw_border (this->desktop_sel, dexpo_preselected_desktop_color);
 };
 
 /**
@@ -249,7 +248,7 @@ window::draw_preselection ()
 void
 window::clear_preselection ()
 {
-  draw_border (this->desktop_sel, dexpo_bgcolor);
+  draw_border (this->desktop_sel, dexpo_desktop_color);
 };
 
 /**

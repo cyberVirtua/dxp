@@ -7,7 +7,6 @@
 #include <vector>
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>
-#include <xcb/xinput.h>
 
 constexpr bool k_horizontal_stacking = (dexpo_width == 0);
 constexpr bool k_vertical_stacking = (dexpo_height == 0);
@@ -45,7 +44,7 @@ set_window_dimensions (std::vector<dxp_socket_desktop> &v)
           window_height += dexpo_padding;
         }
     };
-};
+}
 
 /**
  * 1. Get desktops from daemon
@@ -77,27 +76,37 @@ main ()
         case XCB_EXPOSE:
           {
             w.draw_gui ();
-            // w.draw_border (0, dexpo_hlcolor);
+            for (int i = 0; int (i < w.desktops.size ()); i++)
+              {
+                w.draw_border (i, dexpo_desktop_color);
+              }
+            w.desktop_sel = get_property_value (
+                window::c_, window::screen_->root, "_NET_CURRENT_DESKTOP")[0];
+            w.draw_preselection ();
             break;
           }
         case XCB_KEY_PRESS:
           {
             auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
 
-            /// Right arrow or Up arrow
+            /// Right arrow or down arrow
             bool next = kp->detail == 114 || kp->detail == 116;
-            /// Left arrow or down arrow
+            /// Left arrow or up arrow
             bool prev = kp->detail == 113 || kp->detail == 111;
             bool entr = kp->detail == 36; /// Enter
             bool esc = kp->detail == 9;   /// Escape
 
             w.clear_preselection ();
-            if (next) // TODO(mangalinor) Document code
+            if (next)
+              // Pressing right arrow or down arrow
+              // Preselects next desktop
               {
                 w.desktop_sel++;
                 w.desktop_sel %= v.size ();
               }
-            if (prev) // TODO(mangalinor) Document code
+            if (prev)
+              // Pressing left arrow or up arrow
+              // Preselects previous by modulus desktop
               {
                 w.desktop_sel
                     = w.desktop_sel == 0 ? v.size () - 1 : w.desktop_sel - 1;
@@ -106,6 +115,14 @@ main ()
               {
                 ewmh_change_desktop (window::c_, window::screen_,
                                      w.desktop_sel);
+                // Next line fixes bug that appears while switching to active
+                // desktop
+                if (w.desktop_sel
+                    == get_property_value (window::c_, window::screen_->root,
+                                           "_NET_CURRENT_DESKTOP")[0])
+                  {
+                    return 0;
+                  };
               }
             if (esc)
               {
@@ -127,37 +144,25 @@ main ()
               }
             break;
           }
-        case XCB_ENTER_NOTIFY: // pointer enters window
-          {
-            // TODO(mangalinor) Document code
-            // (why doesn't it happen automatically?)
-            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
-                                 w.xcb_id, XCB_TIME_CURRENT_TIME);
-            break;
-          }
-        case XCB_LEAVE_NOTIFY: // pointer leaves window
-          // TODO(mangalinor) Document code
-          // (what is the difference between XCB_LEAVE_NOTIFY and XCB_FOCUS_OUT)
-          {
-            // TODO(mangalinor) Document code (why set focus on leave)
-            w.clear_preselection ();
-            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
-                                 window::screen_->root, XCB_TIME_CURRENT_TIME);
-            break;
-          }
         case XCB_BUTTON_PRESS: // mouse click
           {
             w.clear_preselection ();
             ewmh_change_desktop (window::c_, window::screen_, w.desktop_sel);
+            // Next line fixes bug that appears while switching to active
+            // desktop
+            if (w.desktop_sel
+                == get_property_value (window::c_, window::screen_->root,
+                                       "_NET_CURRENT_DESKTOP")[0])
+              {
+                return 0;
+              };
             break;
           }
         case XCB_FOCUS_OUT:
-          // TODO(mangalinor) Document code
-          // (what is the difference between XCB_LEAVE_NOTIFY and XCB_FOCUS_OUT)
+          // This happens when desktop is switched or
+          // mouse button is pressed in another window
           {
-            // TODO(mangalinor) Document code (why set focus on focus out)
-            xcb_set_input_focus (window::c_, XCB_INPUT_FOCUS_POINTER_ROOT,
-                                 w.xcb_id, XCB_TIME_CURRENT_TIME);
+            _exit (0);
             break;
           }
         }
