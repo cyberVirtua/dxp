@@ -95,7 +95,7 @@ class bind_error : public std::runtime_error
 {
 public:
   bind_error ()
-      : std::runtime_error ("Got an error wile binding name to the socket"){};
+      : std::runtime_error ("Got an error while binding name to the socket"){};
   explicit bind_error (const std::string &msg) : std::runtime_error (msg){};
 };
 
