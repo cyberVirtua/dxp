@@ -108,8 +108,6 @@ dxp_socket::dxp_socket ()
 
   // Create a socket file descriptor
   this->fd = socket (AF_UNIX, SOCK_STREAM, 0);
-
-  // TODO(mmskv):
   is<socket_error> (this->fd, "Failed to create a socket file descriptor");
 
   // Connect to named socket
@@ -123,8 +121,7 @@ dxp_socket::dxp_socket ()
 
       s = bind (this->fd, sock_addr, sizeof (sock_name)); // Bind name to fd
       s = listen (this->fd, 2);                           /* 2 is arbitrary */
-      // TODO(mmskv):
-      is<bind_error> (s, "TODO bind_error");
+      is<bind_error> (s, "Failed to bind a name to the socket");
     }
 };
 
