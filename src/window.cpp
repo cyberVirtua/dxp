@@ -7,10 +7,10 @@
 constexpr bool k_horizontal_stacking = (dexpo_width == 0);
 constexpr bool k_vertical_stacking = (dexpo_height == 0);
 
-window::window (const int16_t x,       ///< x coordinate of the top left corner
-                const int16_t y,       ///< y coordinate of the top left corner
-                const uint16_t width,  ///< width of the window
-                const uint16_t height) ///< height of the window
+window::window (const int16_t x,   ///< x coordinate of the top left corner
+                const int16_t y,   ///< y coordinate of the top left corner
+                const uint width,  ///< width of the window
+                const uint height) ///< height of the window
     : drawable (x, y, width, height)
 {
   this->xcb_id = xcb_generate_id (drawable::c_);

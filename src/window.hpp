@@ -17,10 +17,10 @@ public:
   std::vector<dxp_socket_desktop> desktops; ///< Desktops received from daemon
   uint desktop_sel;
 
-  window (int16_t x,      ///< x coordinate of the top left corner
-          int16_t y,      ///< y coordinate of the top left corner
-          uint16_t width, ///< Width of the display
-          uint16_t height ///< Height of the display
+  window (int16_t x,  ///< x coordinate of the top left corner
+          int16_t y,  ///< y coordinate of the top left corner
+          uint width, ///< Width of the display
+          uint height ///< Height of the display
   );
   ~window ();
 
