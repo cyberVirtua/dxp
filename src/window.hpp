@@ -15,7 +15,7 @@ public:
   inline static xcb_gcontext_t gc_ = 0; ///< Graphic context
   uint32_t xcb_id;
   std::vector<dxp_socket_desktop> desktops; ///< Desktops received from daemon
-  uint desktop_sel;
+  uint pres;
 
   window (int16_t x,  ///< x coordinate of the top left corner
           int16_t y,  ///< y coordinate of the top left corner
@@ -43,18 +43,18 @@ public:
   /**
    * Get position of the desktop's top left corner by desktop's id.
    */
-  int get_desktop_coord (size_t desktop_id);
+  int16_t get_desktop_coord (uint desktop_id);
 
   /**
    * Get id of the desktop above which the mouse is hovering
    * If mouse is not above any desktop return -1
    */
-  int get_hover_desktop (int16_t x, int16_t y);
+  uint get_hover_desktop (int16_t x, int16_t y);
 
   /**
    * Draw a border of specified color around specified desktop.
    */
-  void draw_border (size_t desktop_id, uint32_t color);
+  void draw_border (uint desktop_id, uint32_t color);
 
   /**
    * Draw a preselection border of color=dexpo_hlcolor

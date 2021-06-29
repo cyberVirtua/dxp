@@ -12,11 +12,11 @@
  */
 struct desktop_info
 {
-  int id; // XXX Is it necessary?
+  uint id; // XXX Is it necessary?
   int x;
   int y;
-  int width;
-  int height;
+  uint width;
+  uint height;
 };
 
 /**
@@ -28,8 +28,8 @@ struct monitor_info
 {
   int x;
   int y;
-  int width;
-  int height;
+  uint width;
+  uint height;
 };
 
 /**
@@ -69,7 +69,7 @@ std::vector<desktop_info> get_desktops (xcb_connection_t *c, xcb_window_t root);
 /**
  * Get value of _NET_CURRENT_DESKTOP
  */
-int get_current_desktop (xcb_connection_t *c, xcb_window_t root);
+uint get_current_desktop (xcb_connection_t *c, xcb_window_t root);
 
 void ewmh_change_desktop (xcb_connection_t *c, xcb_screen_t *screen,
                           uint destkop_id);

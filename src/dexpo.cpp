@@ -63,12 +63,14 @@ main ()
 
   window w (dexpo_x, dexpo_y, window_width, window_height);
   w.desktops = v;
+  auto *c = window::c_;              ///< window::c_ alias
+  auto root = window::screen_->root; ///< window::screen_->root alias
 
   // Mapping pixmap onto window
   xcb_generic_event_t *event = nullptr;
 
   // Handling incoming events
-  while ((event = xcb_wait_for_event (window::c_)))
+  while ((event = xcb_wait_for_event (c)))
     {
       // TODO(mangalinor): Document code (why ~0x80)
       switch (event->response_type & ~0x80)
@@ -76,13 +78,14 @@ main ()
         case XCB_EXPOSE:
           {
             w.draw_gui ();
-            for (size_t i = 0; i < w.desktops.size (); i++)
+            w.pres = get_current_desktop (c, root);
+
+            // Drawing borders around all desktops
+            for (uint i = 0; i < w.desktops.size (); i++)
               {
-                w.draw_border (i, dexpo_desktop_color);
+                i == w.pres ? w.draw_preselection ()
+                            : w.draw_border (i, dexpo_desktop_color);
               }
-            w.desktop_sel
-                = get_current_desktop (window::c_, window::screen_->root);
-            w.draw_preselection ();
             break;
           }
         case XCB_KEY_PRESS:
@@ -98,34 +101,25 @@ main ()
 
             w.clear_preselection ();
             if (next)
-              // Pressing right arrow or down arrow
-              // Preselects next desktop
               {
-                w.desktop_sel++;
-                w.desktop_sel %= v.size ();
+                w.pres++;
+                w.pres %= v.size ();
               }
-            if (prev)
-              // Pressing left arrow or up arrow
-              // Preselects previous by modulus desktop
+            if (prev) // Decrementing preselected deskot and taking modulus
               {
-                w.desktop_sel
-                    = w.desktop_sel == 0 ? v.size () - 1 : w.desktop_sel - 1;
+                w.pres = w.pres == 0 ? v.size () - 1 : w.pres - 1;
               }
             if (entr)
               {
-                ewmh_change_desktop (window::c_, window::screen_,
-                                     w.desktop_sel);
-                // Next line fixes bug that appears while switching to active
-                // desktop
-                if (w.desktop_sel
-                    == get_current_desktop (window::c_, window::screen_->root))
-                  {
-                    return 0;
-                  };
+                // Desktop change is thought as an event after which the
+                // user doesn't need dexpo any more
+                ewmh_change_desktop (c, window::screen_, w.pres);
+                xcb_flush (c);
+                return 0;
               }
             if (esc)
               {
-                _exit (0); // Thread safe exit
+                return 0;
               }
             w.draw_preselection ();
             break;
@@ -133,37 +127,32 @@ main ()
         case XCB_MOTION_NOTIFY: // Cursor motion within window
           {
             auto *cur = reinterpret_cast<xcb_motion_notify_event_t *> (event);
-            int d = w.get_hover_desktop (cur->event_x, cur->event_y);
+            auto d = w.get_hover_desktop (cur->event_x, cur->event_y);
 
-            if (d != -1)
+            if (d != -1U)
               {
                 w.clear_preselection ();
-                w.desktop_sel = uint (d);
+                w.pres = d;
                 w.draw_preselection ();
               }
             break;
           }
-        case XCB_BUTTON_PRESS: // mouse click
+        case XCB_BUTTON_PRESS: // Mouse click
           {
-            w.clear_preselection ();
-            ewmh_change_desktop (window::c_, window::screen_, w.desktop_sel);
-            // Next line fixes bug that appears while switching to active
-            // desktop
-            if (w.desktop_sel
-                == get_current_desktop (window::c_, window::screen_->root))
-              {
-                return 0;
-              };
-            break;
+            // Desktop change is thought as an event after which the
+            // user doesn't need dexpo any more
+            ewmh_change_desktop (c, window::screen_, w.pres);
+            xcb_flush (c);
+            return 0;
           }
         case XCB_FOCUS_OUT:
-          // This happens when desktop is switched or
-          // mouse button is pressed in another window
+          // Click otside of window is thought as an event after which the
+          // user doesn't need dexpo any more
           {
             return 0;
             break;
           }
         }
-      xcb_flush (window::c_);
+      xcb_flush (c);
     }
 }

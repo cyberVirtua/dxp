@@ -27,15 +27,15 @@ dxp_desktop::dxp_desktop (
   this->pixmap_width = dexpo_width;
   this->pixmap_height = dexpo_height;
 
+  float screen_ratio = float (this->width) / this->height; ///< width/height
+
   if (this->pixmap_width == 0)
     {
-      this->pixmap_width = uint16_t (double (this->width) / this->height
-                                     * this->pixmap_height);
+      this->pixmap_width = this->pixmap_height * screen_ratio;
     }
   else if (this->pixmap_height == 0)
     {
-      this->pixmap_height
-          = uint16_t (double (this->height) / this->width * this->pixmap_width);
+      this->pixmap_height = this->pixmap_width / screen_ratio;
     }
 
   // Create a small pixmap with the size of downscaled screenshot from config
@@ -56,21 +56,20 @@ void
 dxp_desktop::save_screen ()
 {
   // Set height so that screenshots won't exceed k_max_malloc size
-  auto image_height = uint16_t (k_max_malloc / this->width / 4);
-  uint16_t image_width = this->width;
+  uint16_t screen_height = k_max_malloc / this->width / 4;
+  uint16_t screen_width = this->width;
 
-  const uint screen_size = uint (this->width * this->height * 4);
+  const uint screen_size = this->width * this->height * 4;
 
-  uint16_t i = 0;
-  while (i * k_max_malloc < screen_size)
+  for (uint i = 0; i * k_max_malloc < screen_size; i++)
     {
       // Set screen height that we have already captured
       // New screenshots will be captured with Y offset = image_height_offset
-      auto image_height_offset = int16_t (i * image_height);
+      int16_t screen_height_offset = i * screen_height;
 
       // Last screenshot will be smaller, so we set its height to what's left
-      image_height = std::min (image_height,
-                               uint16_t (this->height - image_height_offset));
+      screen_height = std::min (screen_height,
+                                uint16_t (this->height - screen_height_offset));
 
       // Request the screenshot of the virtual desktop
       auto gi_cookie = xcb_get_image (
@@ -78,8 +77,8 @@ dxp_desktop::save_screen ()
           XCB_IMAGE_FORMAT_Z_PIXMAP, /* Z_Pixmap is 100 faster than XY_PIXMAP */
           drawable::screen_->root,   /* Screenshot relative to root */
           this->x,                   /* X offset */
-          int16_t (this->y + image_height_offset), /* Y offset */
-          image_width, image_height,               /* Dimensions */
+          this->y + screen_height_offset, /* Y offset */
+          screen_width, screen_height,    /* Dimensions */
           uint32_t (~0) /* Plane mask (all bits to get all planes) */
       );
 
@@ -91,18 +90,18 @@ dxp_desktop::save_screen ()
 
       this->image_ptr = xcb_get_image_data (gi_reply.get ());
 
-      int target_width = this->pixmap_width;
-      int target_height
-          = int (float (image_height) / image_width * this->pixmap_width);
+      uint target_width = this->pixmap_width;
+      uint target_height
+          = float (screen_height) / screen_width * this->pixmap_width;
 
-      int target_height_offset = int (float (image_height_offset)
-                                      * this->pixmap_width / image_width);
+      uint target_height_offset ///< y coordinate of the screenshot
+          = float (screen_height_offset) * this->pixmap_width / screen_width;
 
-      auto pixmap_offset = uint32_t (target_height_offset * target_width * 4);
+      /// Offset in bytes at which screenshot should be placed in the 1D array
+      auto pixmap_offset = target_height_offset * target_width * 4;
 
       resize (this->image_ptr, this->pixmap.data () + pixmap_offset,
-              image_width, image_height, target_width, target_height);
-      i++;
+              screen_width, screen_height, target_width, target_height);
     }
 }
 
@@ -115,10 +114,12 @@ dxp_desktop::save_screen ()
 void
 dxp_desktop::resize (const uint8_t *input, uint8_t *output,
                      int source_width, /* Source dimensions */
-                     int source_height, int target_width, int target_height)
+                     int source_height,
+                     int target_width, /* Target dimensions */
+                     int target_height)
 {
   // TODO(mmskv): not sure what this variable is meant to represent
-  constexpr ssize_t k_half_int = 16;
+  constexpr size_t k_half_int = 16;
 
   const int x_ratio = (source_width << k_half_int) / target_width;
   const int y_ratio = (source_height << k_half_int) / target_height;
