@@ -15,12 +15,12 @@ using color = const uint32_t;
 /// Actual window width will be equal to dexpo_width + (dexpo_padding * 2)
 ///
 const uint dexpo_width = 0;
-const uint dexpo_height = 200;
+const uint dexpo_height = 150;
 
 const int16_t dexpo_x = 0; ///< X coordinate of window's top left corner
 const int16_t dexpo_y = 0; ///< Y coordinate of window's top left corner
 
-const uint16_t dexpo_padding = 4; ///< Padding around the screenshots
+const uint16_t dexpo_padding = 3; ///< Padding around the screenshots
 
 color dexpo_background = 0x444444;    ///< Window background
 color dexpo_border_pres = 0xFFFFFF;   ///< Desktop preselection
