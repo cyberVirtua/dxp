@@ -84,7 +84,7 @@ main ()
             for (uint i = 0; i < w.desktops.size (); i++)
               {
                 i == w.pres ? w.draw_preselection ()
-                            : w.draw_border (i, dexpo_desktop_color);
+                            : w.draw_border (i, dexpo_border_nopres);
               }
             break;
           }

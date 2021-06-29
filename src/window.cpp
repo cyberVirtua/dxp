@@ -34,7 +34,7 @@ window::create_window ()
 
   // Each mask value entry corresponds to mask enum first to last
   std::array<uint32_t, 2> mask_values{
-    dexpo_bgcolor,
+    dexpo_background,
     // These values are used to subscribe to relevant events
     XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS
         | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_KEY_RELEASE
@@ -48,7 +48,7 @@ window::create_window ()
                      drawable::screen_->root,       /* parent window */
                      this->x, this->y,              /* x, y */
                      this->width, this->height,     /* width, height */
-                     dexpo_outer_border,            /* border_width */
+                     dexpo_border_width,            /* border_width */
                      XCB_WINDOW_CLASS_INPUT_OUTPUT, /* class */
                      window::screen_->root_visual,  /* visual */
                      mask, &mask_values);           /* masks, not used yet */
@@ -193,31 +193,31 @@ window::draw_border (uint desktop_id, uint32_t color)
   std::array<xcb_rectangle_t, 4> borders{
     // Left border
     xcb_rectangle_t{
-        int16_t (x - dexpo_hlwidth),          /* x */
-        int16_t (y - dexpo_hlwidth),          /* y */
-        uint16_t (dexpo_hlwidth),             /* width */
-        uint16_t (height + 2 * dexpo_hlwidth) /* height */
+        int16_t (x - dexpo_border_pres_width),          /* x */
+        int16_t (y - dexpo_border_pres_width),          /* y */
+        uint16_t (dexpo_border_pres_width),             /* width */
+        uint16_t (height + 2 * dexpo_border_pres_width) /* height */
     },
     // Right border
     xcb_rectangle_t{
-        int16_t (x + width),                  /* x */
-        int16_t (y - dexpo_hlwidth),          /* y */
-        uint16_t (dexpo_hlwidth),             /* width */
-        uint16_t (height + 2 * dexpo_hlwidth) /* height */
+        int16_t (x + width),                            /* x */
+        int16_t (y - dexpo_border_pres_width),          /* y */
+        uint16_t (dexpo_border_pres_width),             /* width */
+        uint16_t (height + 2 * dexpo_border_pres_width) /* height */
     },
     // Top border
     xcb_rectangle_t{
-        int16_t (x - 1),             /* x */
-        int16_t (y - dexpo_hlwidth), /* y */
-        uint16_t (width + 1),        /* width */
-        uint16_t (dexpo_hlwidth)     /* height */
+        int16_t (x - 1),                       /* x */
+        int16_t (y - dexpo_border_pres_width), /* y */
+        uint16_t (width + 1),                  /* width */
+        uint16_t (dexpo_border_pres_width)     /* height */
     },
     // Bottom border
     xcb_rectangle_t{
-        int16_t (x - 1),         /* x */
-        int16_t (y + height),    /* y */
-        uint16_t (width + 1),    /* width */
-        uint16_t (dexpo_hlwidth) /* height */
+        int16_t (x - 1),                   /* x */
+        int16_t (y + height),              /* y */
+        uint16_t (width + 1),              /* width */
+        uint16_t (dexpo_border_pres_width) /* height */
     }
   };
 
@@ -238,7 +238,7 @@ window::draw_border (uint desktop_id, uint32_t color)
 void
 window::draw_preselection ()
 {
-  draw_border (this->pres, dexpo_preselected_desktop_color);
+  draw_border (this->pres, dexpo_border_pres);
 };
 
 /**
@@ -250,7 +250,7 @@ window::draw_preselection ()
 void
 window::clear_preselection ()
 {
-  draw_border (this->pres, dexpo_desktop_color);
+  draw_border (this->pres, dexpo_border_nopres);
 };
 
 /**

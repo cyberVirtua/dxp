@@ -89,7 +89,7 @@ main ()
 
       socket_desktops_lock.unlock ();
 
-      std::this_thread::sleep_for (dexpo_screenshot_timeout);
+      std::this_thread::sleep_for (dexpo_screenshot_period);
     };
 
   return 0;
