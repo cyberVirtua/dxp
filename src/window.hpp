@@ -38,7 +38,7 @@ public:
   /**
    * Draw desktops on the window
    */
-  void draw_gui ();
+  void draw_desktops ();
 
   /**
    * Get position of the desktop's top left corner by desktop's id.
@@ -54,7 +54,7 @@ public:
   /**
    * Draw a border of specified color around specified desktop.
    */
-  void draw_border (uint desktop_id, uint32_t color);
+  void draw_desktop_border (uint desktop_id, uint32_t color);
 
   /**
    * Draw a preselection border of color=dexpo_hlcolor

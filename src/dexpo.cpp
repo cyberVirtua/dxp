@@ -18,30 +18,32 @@ auto window_height = dexpo_height;
 /**
  * Calculate dimensions of the window based on
  * stacking mode and desktops from daemon
+ *
+ * TODO Put this inside window class
  */
 void
 set_window_dimensions (std::vector<dxp_socket_desktop> &v)
 {
   if (k_horizontal_stacking)
     {
-      window_width += dexpo_padding;
-      window_height += 2 * dexpo_padding;
+      window_width += dexpo_padding + dexpo_border_pres_width;
+      window_height += 2 * dexpo_padding + 2 * dexpo_border_pres_width;
 
       for (const auto &dexpo_pixmap : v)
         {
           window_width += dexpo_pixmap.width;
-          window_width += dexpo_padding;
+          window_width += dexpo_padding + 2 * dexpo_border_pres_width;
         }
     }
   else if (k_vertical_stacking)
     {
-      window_height += dexpo_padding;
-      window_width += 2 * dexpo_padding;
+      window_width += 2 * dexpo_padding + 2 * dexpo_border_pres_width;
+      window_height += dexpo_padding + dexpo_border_pres_width;
 
       for (const auto &dexpo_pixmap : v)
         {
           window_height += dexpo_pixmap.height;
-          window_height += dexpo_padding;
+          window_height += dexpo_padding + 2 * dexpo_border_pres_width;
         }
     };
 }
@@ -77,14 +79,14 @@ main ()
         {
         case XCB_EXPOSE:
           {
-            w.draw_gui ();
+            w.draw_desktops ();
             w.pres = get_current_desktop (c, root);
 
             // Drawing borders around all desktops
             for (uint i = 0; i < w.desktops.size (); i++)
               {
                 i == w.pres ? w.draw_preselection ()
-                            : w.draw_border (i, dexpo_border_nopres);
+                            : w.draw_desktop_border (i, dexpo_border_nopres);
               }
             break;
           }

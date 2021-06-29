@@ -73,11 +73,11 @@ window::create_window ()
  * Draw pixmaps on the window
  */
 void
-window::draw_gui ()
+window::draw_desktops ()
 {
   // Coordinates for the desktop relative to the window
-  int16_t x = dexpo_padding;
-  int16_t y = dexpo_padding;
+  int16_t x = dexpo_padding + dexpo_border_pres_width;
+  int16_t y = dexpo_padding + dexpo_border_pres_width;
   for (const auto &desktop : this->desktops)
     {
       xcb_put_image (window::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
@@ -92,12 +92,12 @@ window::draw_gui ()
       if (k_horizontal_stacking)
         {
           x += desktop.width;
-          x += dexpo_padding;
+          x += dexpo_padding + 2 * dexpo_border_pres_width;
         }
       else if (k_vertical_stacking)
         {
           y += desktop.height;
-          y += dexpo_padding;
+          y += dexpo_padding + 2 * dexpo_border_pres_width;
         };
     }
 }
@@ -110,7 +110,7 @@ window::get_desktop_coord (uint desktop_id)
 {
   // As all screenshots have at least one common coordinate of corner, we need
   // to find only the second one
-  auto pos = dexpo_padding;
+  auto pos = dexpo_padding + dexpo_border_pres_width;
   for (const auto &desktop : this->desktops)
     {
       // Counting space for all desktops up to desktop_id
@@ -121,7 +121,7 @@ window::get_desktop_coord (uint desktop_id)
 
       // Append width for horizontal stacking and height for vertical
       pos += k_horizontal_stacking ? desktop.width : desktop.height;
-      pos += dexpo_padding;
+      pos += dexpo_padding + 2 * dexpo_border_pres_width;
     }
   return 0;
 }
@@ -171,53 +171,57 @@ window::get_hover_desktop (int16_t x, int16_t y)
  * @note color can be set to bgcolor to remove highlight
  */
 void
-window::draw_border (uint desktop_id, uint32_t color)
+window::draw_desktop_border (uint desktop_id, uint32_t color)
 {
-  int16_t x = dexpo_padding;
-  int16_t y = dexpo_padding;
+  int16_t x = 0;
+  int16_t y = 0;
 
   uint16_t width = this->desktops[desktop_id].width;
   uint16_t height = this->desktops[desktop_id].height;
 
   if (k_vertical_stacking)
     {
+      x = dexpo_padding + dexpo_border_pres_width;
       y = get_desktop_coord (desktop_id);
     }
   else if (k_horizontal_stacking)
     {
       x = get_desktop_coord (desktop_id);
+      y = dexpo_padding + dexpo_border_pres_width;
     }
+
+  auto border = dexpo_border_pres_width;
 
   // The best way to create rectangular border with xcb
   // is to draw 4 filled rectangles.
   std::array<xcb_rectangle_t, 4> borders{
+    // Top border
+    xcb_rectangle_t{
+        int16_t (x - border),          /* x */
+        int16_t (y - border),          /* y */
+        uint16_t (width + 2 * border), /* width */
+        uint16_t (border)              /* height */
+    },
     // Left border
     xcb_rectangle_t{
-        int16_t (x - dexpo_border_pres_width),          /* x */
-        int16_t (y - dexpo_border_pres_width),          /* y */
-        uint16_t (dexpo_border_pres_width),             /* width */
-        uint16_t (height + 2 * dexpo_border_pres_width) /* height */
+        int16_t (x - border),          /* x */
+        int16_t (y - border),          /* y */
+        uint16_t (border),             /* width */
+        uint16_t (height + 2 * border) /* height */
     },
     // Right border
     xcb_rectangle_t{
-        int16_t (x + width),                            /* x */
-        int16_t (y - dexpo_border_pres_width),          /* y */
-        uint16_t (dexpo_border_pres_width),             /* width */
-        uint16_t (height + 2 * dexpo_border_pres_width) /* height */
-    },
-    // Top border
-    xcb_rectangle_t{
-        int16_t (x - 1),                       /* x */
-        int16_t (y - dexpo_border_pres_width), /* y */
-        uint16_t (width + 1),                  /* width */
-        uint16_t (dexpo_border_pres_width)     /* height */
+        int16_t (x + width),           /* x */
+        int16_t (y - border),          /* y */
+        uint16_t (border),             /* width */
+        uint16_t (height + 2 * border) /* height */
     },
     // Bottom border
     xcb_rectangle_t{
-        int16_t (x - 1),                   /* x */
-        int16_t (y + height),              /* y */
-        uint16_t (width + 1),              /* width */
-        uint16_t (dexpo_border_pres_width) /* height */
+        int16_t (x - border),          /* x */
+        int16_t (y + height),          /* y */
+        uint16_t (width + 2 * border), /* width */
+        uint16_t (border)              /* height */
     }
   };
 
@@ -238,7 +242,7 @@ window::draw_border (uint desktop_id, uint32_t color)
 void
 window::draw_preselection ()
 {
-  draw_border (this->pres, dexpo_border_pres);
+  draw_desktop_border (this->pres, dexpo_border_pres);
 };
 
 /**
@@ -250,7 +254,7 @@ window::draw_preselection ()
 void
 window::clear_preselection ()
 {
-  draw_border (this->pres, dexpo_border_nopres);
+  draw_desktop_border (this->pres, dexpo_border_nopres);
 };
 
 /**
