@@ -76,12 +76,12 @@ main ()
         case XCB_EXPOSE:
           {
             w.draw_gui ();
-            for (int i = 0; int (i < w.desktops.size ()); i++)
+            for (size_t i = 0; i < w.desktops.size (); i++)
               {
                 w.draw_border (i, dexpo_desktop_color);
               }
-            w.desktop_sel = get_property_value (
-                window::c_, window::screen_->root, "_NET_CURRENT_DESKTOP")[0];
+            w.desktop_sel
+                = get_current_desktop (window::c_, window::screen_->root);
             w.draw_preselection ();
             break;
           }
@@ -118,8 +118,7 @@ main ()
                 // Next line fixes bug that appears while switching to active
                 // desktop
                 if (w.desktop_sel
-                    == get_property_value (window::c_, window::screen_->root,
-                                           "_NET_CURRENT_DESKTOP")[0])
+                    == get_current_desktop (window::c_, window::screen_->root))
                   {
                     return 0;
                   };
@@ -151,8 +150,7 @@ main ()
             // Next line fixes bug that appears while switching to active
             // desktop
             if (w.desktop_sel
-                == get_property_value (window::c_, window::screen_->root,
-                                       "_NET_CURRENT_DESKTOP")[0])
+                == get_current_desktop (window::c_, window::screen_->root))
               {
                 return 0;
               };
@@ -162,7 +160,7 @@ main ()
           // This happens when desktop is switched or
           // mouse button is pressed in another window
           {
-            _exit (0);
+            return 0;
             break;
           }
         }

@@ -20,7 +20,7 @@ const uint16_t dexpo_padding = 5; ///< Padding around the screenshots
 const uint16_t dexpo_hlwidth = 4; ///< Width of the preselected desktop border
 const uint32_t dexpo_bgcolor = 0xAA525252; ///< Background color. TODO Alpha and document properly
 const uint32_t dexpo_preselected_desktop_color = 0Xc20a66;///< Color of the preselection border
-const uint32_t dexpo_desktop_color =   0X0066cc;///<Color of the unselected desktops borders
+const uint32_t dexpo_desktop_color =   0X0066cc;///< Color of the unselected desktops borders
 
 const int16_t dexpo_x = 0; ///< X coordinate of window's top left corner
 const int16_t dexpo_y = 0; ///< Y coordinate of window's top left corner
