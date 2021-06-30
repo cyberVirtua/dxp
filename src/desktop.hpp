@@ -20,13 +20,13 @@ class dxp_desktop : public drawable
 public:
   uint8_t *image_ptr;          ///< Pointer to the image structure.
   std::vector<uint8_t> pixmap; ///< Constant id for the screenshot's pixmap
-  uint16_t pixmap_width;       ///< Width of the pixmap that stores screenshot
-  uint16_t pixmap_height;      ///< Height of the pixmap that stores screenshot
+  uint pixmap_width;           ///< Width of the pixmap that stores screenshot
+  uint pixmap_height;          ///< Height of the pixmap that stores screenshot
 
-  dxp_desktop (int16_t x,        ///< x coordinate of the top left corner
-               int16_t y,        ///< y coordinate of the top left corner
-               uint16_t width,   ///< Width of the display
-               uint16_t height); ///< Height of the display
+  dxp_desktop (int16_t x,    ///< x coordinate of the top left corner
+               int16_t y,    ///< y coordinate of the top left corner
+               uint width,   ///< Width of the display
+               uint height); ///< Height of the display
 
   /**
    * Screenshots current desktop, downsizes it and stores inside instance

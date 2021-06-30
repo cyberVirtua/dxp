@@ -47,7 +47,7 @@ main ()
    * Copying only useful data from the desktop objects. */
 
   std::vector<dxp_socket_desktop> socket_desktops{};
-  for (size_t i = 0; i < desktops.size (); i++)
+  for (uint i = 0; i < desktops.size (); i++)
     {
       dxp_socket_desktop p;
 
@@ -73,7 +73,7 @@ main ()
   bool running = true;
   while (running)
     {
-      auto current = size_t (get_current_desktop (c, root));
+      auto current = get_current_desktop (c, root);
       if (!dexpo_viewport.empty () && current >= dexpo_viewport.size () / 2)
         {
           throw std::runtime_error (
@@ -89,7 +89,7 @@ main ()
 
       socket_desktops_lock.unlock ();
 
-      std::this_thread::sleep_for (dexpo_screenshot_timeout);
+      std::this_thread::sleep_for (dexpo_screenshot_period);
     };
 
   return 0;

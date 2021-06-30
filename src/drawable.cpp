@@ -1,9 +1,9 @@
 #include "drawable.hpp"
 
-drawable::drawable (const int16_t x, ///< x coordinate of the top left corner
-                    const int16_t y, ///< y coordinate of the top left corner
-                    const uint16_t width, ///< width of display
-                    const uint16_t height ///< height of display
+drawable::drawable (const int16_t x,  ///< x coordinate of the top left corner
+                    const int16_t y,  ///< y coordinate of the top left corner
+                    const uint width, ///< width of display
+                    const uint height ///< height of display
 )
 {
   this->x = x;

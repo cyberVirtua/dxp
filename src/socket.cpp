@@ -45,7 +45,7 @@ read_unix (int fd, D *dest, size_t length)
       is<read_error> (rcv);
 
       // Increment the received amount with the number of bytes just received
-      received += size_t (rcv);
+      received += rcv;
     }
 }
 
@@ -69,7 +69,7 @@ write_unix (int fd, D *src, size_t length)
       is<read_error> (wr);
 
       // Increment the sent amount with the number of bytes just transferred
-      sent += size_t (wr);
+      sent += wr;
     }
 }
 
@@ -150,7 +150,7 @@ dxp_socket::get_pixmaps () const
   std::vector<dxp_socket_desktop>
       pixmap_array; // Pixmap array that will be returned
 
-  size_t num = 0; // Amount of pixmaps that will be received
+  uint num = 0; // Amount of pixmaps that will be received
   read_unix (this->fd, &num, sizeof (num));
 
   for (; num > 0; num--) // Read `num` pixmaps from socket
@@ -165,7 +165,7 @@ dxp_socket::get_pixmaps () const
       p.pixmap.resize (p.pixmap_len);
 
       // Reading raw pixmap
-      read_unix (this->fd, p.pixmap.data (), size_t (p.pixmap_len));
+      read_unix (this->fd, p.pixmap.data (), p.pixmap_len);
 
       pixmap_array.push_back (p);
     }
@@ -198,7 +198,7 @@ dxp_socket::send_pixmaps_on_event (
           std::scoped_lock<std::mutex> guard (pixmaps_lock);
 
           // First write -- number of subsequent packets
-          size_t num = pixmaps.size ();
+          uint num = pixmaps.size ();
           write_unix (data_fd, &num, sizeof (num));
 
           // Writes from second to `num+1` -- subsequent packets
