@@ -18,8 +18,10 @@ get_property_value (xcb_connection_t *c, xcb_window_t root,
   auto atom_reply = xcb_unique_ptr<xcb_intern_atom_reply_t> (
       xcb_intern_atom_reply (c, atom_cookie, nullptr));
 
-  std::string e_what ("Could not get atom for ", atom_name);
-  auto atom = atom_reply ? atom_reply->atom : throw std::runtime_error (e_what);
+  auto atom = atom_reply
+                  ? atom_reply->atom
+                  : throw std::runtime_error (
+                      std::string ("Could not get atom for ") + atom_name);
 
   /* Getting property from atom */
 
@@ -28,8 +30,6 @@ get_property_value (xcb_connection_t *c, xcb_window_t root,
   auto prop_reply = xcb_unique_ptr<xcb_get_property_reply_t> (
       xcb_get_property_reply (c, prop_cookie, nullptr));
 
-  // auto prop_length = size_t (xcb_get_property_value_length (prop_reply.get
-  // ()));
   auto prop_length = prop_reply->length;
 
   // This shouldn't be unique_ptr as it belongs to prop_reply and
@@ -41,7 +41,7 @@ get_property_value (xcb_connection_t *c, xcb_window_t root,
   std::vector<uint32_t> atom_data;
 
   atom_data.reserve (prop_length);
-  for (size_t i = 0; i < prop_length; i++)
+  for (uint i = 0; i < prop_length; i++)
     {
       atom_data.push_back (prop[i]);
     }
@@ -125,12 +125,12 @@ get_desktops (xcb_connection_t *c, xcb_window_t root)
 
   // Figuring out width and height of a desktop based on existing
   // monitors and desktop x, y coordinates
-  for (size_t i = 0; i < number_of_desktops; i++)
+  for (uint i = 0; i < number_of_desktops; i++)
     {
-      int x = int (viewport[i * 2]);
-      int y = int (viewport[i * 2 + 1]);
-      int width = 0;
-      int height = 0;
+      int x = viewport[i * 2];
+      int y = viewport[i * 2 + 1];
+      uint width = 0;
+      uint height = 0;
 
       for (const auto &m : monitors)
         {
@@ -155,7 +155,7 @@ get_desktops (xcb_connection_t *c, xcb_window_t root)
               "`dexpo_viewport`.");
         }
 
-      info.push_back (desktop_info{ int (i), x, y, width, height });
+      info.push_back (desktop_info{ i, x, y, width, height });
     }
 
   return info;
@@ -164,10 +164,10 @@ get_desktops (xcb_connection_t *c, xcb_window_t root)
 /**
  * Get value of _NET_CURRENT_DESKTOP
  */
-int
+uint32_t
 get_current_desktop (xcb_connection_t *c, xcb_window_t root)
 {
-  return int (get_property_value (c, root, "_NET_CURRENT_DESKTOP")[0]);
+  return get_property_value (c, root, "_NET_CURRENT_DESKTOP")[0];
 };
 
 constexpr uint8_t k_event_data32_length = 5;

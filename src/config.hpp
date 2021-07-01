@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <vector>
 
+using color = const uint32_t;
+
 ///
 /// Dimensions of the screenshots that will be displayed.
 ///
@@ -12,26 +14,30 @@
 ///
 /// Actual window width will be equal to dexpo_width + (dexpo_padding * 2)
 ///
-const int dexpo_width = 200;
-const int dexpo_height = 0;
-
-const uint16_t dexpo_padding = 5; ///< Padding around the screenshots
-
-const uint16_t dexpo_hlwidth = 3; ///< Width of the preselected desktop border
-const uint32_t dexpo_hlcolor = 0XFF662C28; ///< Color of the preselection border
-const uint32_t dexpo_bgcolor = 0xAA525252; ///< Background color. TODO Alpha
+const uint dexpo_width = 0;
+const uint dexpo_height = 150;
 
 const int16_t dexpo_x = 0; ///< X coordinate of window's top left corner
 const int16_t dexpo_y = 0; ///< Y coordinate of window's top left corner
 
-const unsigned int dexpo_outer_border = 0; ///< TODO Window border
+const uint16_t dexpo_padding = 3; ///< Padding around the screenshots
+
+color dexpo_background = 0x444444;    ///< Window background
+color dexpo_border_pres = 0xFFFFFF;   ///< Desktop preselection
+color dexpo_border_nopres = 0x808080; ///< Desktop without preselection
+
+const uint16_t dexpo_border_pres_width = 2; ///< Width of the preselection
+
+const uint dexpo_border_width = 0; ///< dexpo window border
 
 ///
 /// How often to take screenshots.
 ///
-/// Setting timeout to values below 0.1 second may severely increase cpu load.
+/// Recommended value is 10 seconds
+//
+/// NOTE: Setting timeout to values below 5 ms may severely increase CPU load.
 ///
-const auto dexpo_screenshot_timeout = std::chrono::seconds (10);
+const auto dexpo_screenshot_period = std::chrono::seconds (10);
 
 ///
 /// Desktop viewport:

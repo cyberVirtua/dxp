@@ -7,14 +7,14 @@
 constexpr bool k_horizontal_stacking = (dexpo_width == 0);
 constexpr bool k_vertical_stacking = (dexpo_height == 0);
 
-window::window (const int16_t x,       ///< x coordinate of the top left corner
-                const int16_t y,       ///< y coordinate of the top left corner
-                const uint16_t width,  ///< width of the window
-                const uint16_t height) ///< height of the window
+window::window (const int16_t x,   ///< x coordinate of the top left corner
+                const int16_t y,   ///< y coordinate of the top left corner
+                const uint width,  ///< width of the window
+                const uint height) ///< height of the window
     : drawable (x, y, width, height)
 {
   this->xcb_id = xcb_generate_id (drawable::c_);
-  this->desktop_sel = 0; // Id of the preselected desktop
+  this->pres = 0; // Id of the preselected desktop
 
   create_gc ();
   create_window ();
@@ -33,8 +33,8 @@ window::create_window ()
   mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
 
   // Each mask value entry corresponds to mask enum first to last
-  std::array<uint32_t, 3> mask_values{
-    dexpo_bgcolor,
+  std::array<uint32_t, 2> mask_values{
+    dexpo_background,
     // These values are used to subscribe to relevant events
     XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS
         | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_KEY_RELEASE
@@ -48,7 +48,7 @@ window::create_window ()
                      drawable::screen_->root,       /* parent window */
                      this->x, this->y,              /* x, y */
                      this->width, this->height,     /* width, height */
-                     dexpo_outer_border,            /* border_width */
+                     dexpo_border_width,            /* border_width */
                      XCB_WINDOW_CLASS_INPUT_OUTPUT, /* class */
                      window::screen_->root_visual,  /* visual */
                      mask, &mask_values);           /* masks, not used yet */
@@ -73,12 +73,11 @@ window::create_window ()
  * Draw pixmaps on the window
  */
 void
-window::draw_gui ()
+window::draw_desktops ()
 {
   // Coordinates for the desktop relative to the window
-  int16_t x = dexpo_padding;
-  int16_t y = dexpo_padding;
-
+  int16_t x = dexpo_padding + dexpo_border_pres_width;
+  int16_t y = dexpo_padding + dexpo_border_pres_width;
   for (const auto &desktop : this->desktops)
     {
       xcb_put_image (window::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
@@ -93,12 +92,12 @@ window::draw_gui ()
       if (k_horizontal_stacking)
         {
           x += desktop.width;
-          x += dexpo_padding;
+          x += dexpo_padding + 2 * dexpo_border_pres_width;
         }
       else if (k_vertical_stacking)
         {
           y += desktop.height;
-          y += dexpo_padding;
+          y += dexpo_padding + 2 * dexpo_border_pres_width;
         };
     }
 }
@@ -106,12 +105,12 @@ window::draw_gui ()
 /**
  * Get coordinate of the displayed desktop relative to the window
  */
-int
-window::get_desktop_coord (size_t desktop_id)
+int16_t
+window::get_desktop_coord (uint desktop_id)
 {
   // As all screenshots have at least one common coordinate of corner, we need
   // to find only the second one
-  auto pos = dexpo_padding;
+  auto pos = dexpo_padding + dexpo_border_pres_width;
   for (const auto &desktop : this->desktops)
     {
       // Counting space for all desktops up to desktop_id
@@ -122,7 +121,7 @@ window::get_desktop_coord (size_t desktop_id)
 
       // Append width for horizontal stacking and height for vertical
       pos += k_horizontal_stacking ? desktop.width : desktop.height;
-      pos += dexpo_padding;
+      pos += dexpo_padding + 2 * dexpo_border_pres_width;
     }
   return 0;
 }
@@ -130,8 +129,10 @@ window::get_desktop_coord (size_t desktop_id)
 /**
  * Get id of the desktop above which the cursor is hovering.
  * If cursor is not above any desktop return -1.
+ *
+ * TODO Cache desktop coordinates
  */
-int
+uint
 window::get_hover_desktop (int16_t x, int16_t y)
 {
   for (const auto &d : this->desktops)
@@ -145,7 +146,7 @@ window::get_hover_desktop (int16_t x, int16_t y)
               y >= desktop_y &&               // Not above
               y <= d.height + desktop_y)      // Not below
             {
-              return int (d.id);
+              return d.id;
             }
         }
       else if (k_horizontal_stacking)
@@ -157,11 +158,11 @@ window::get_hover_desktop (int16_t x, int16_t y)
               y >= dexpo_padding &&          // Not above
               y <= d.height + dexpo_padding) // Not below
             {
-              return int (d.id);
+              return d.id;
             }
         }
     }
-  return -1;
+  return -1U;
 };
 
 /**
@@ -170,53 +171,57 @@ window::get_hover_desktop (int16_t x, int16_t y)
  * @note color can be set to bgcolor to remove highlight
  */
 void
-window::draw_border (size_t desktop_id, uint32_t color)
+window::draw_desktop_border (uint desktop_id, uint32_t color)
 {
-  int16_t x = dexpo_padding;
-  int16_t y = dexpo_padding;
+  int16_t x = 0;
+  int16_t y = 0;
 
   uint16_t width = this->desktops[desktop_id].width;
   uint16_t height = this->desktops[desktop_id].height;
 
   if (k_vertical_stacking)
     {
-      y = int16_t (get_desktop_coord (desktop_id));
+      x = dexpo_padding + dexpo_border_pres_width;
+      y = get_desktop_coord (desktop_id);
     }
   else if (k_horizontal_stacking)
     {
-      x = int16_t (get_desktop_coord (desktop_id));
+      x = get_desktop_coord (desktop_id);
+      y = dexpo_padding + dexpo_border_pres_width;
     }
+
+  auto border = dexpo_border_pres_width;
 
   // The best way to create rectangular border with xcb
   // is to draw 4 filled rectangles.
   std::array<xcb_rectangle_t, 4> borders{
+    // Top border
+    xcb_rectangle_t{
+        int16_t (x - border),          /* x */
+        int16_t (y - border),          /* y */
+        uint16_t (width + 2 * border), /* width */
+        uint16_t (border)              /* height */
+    },
     // Left border
     xcb_rectangle_t{
-        int16_t (x - dexpo_hlwidth),          /* x */
-        int16_t (y - dexpo_hlwidth),          /* y */
-        uint16_t (dexpo_hlwidth),             /* width */
-        uint16_t (height + 2 * dexpo_hlwidth) /* height */
+        int16_t (x - border),          /* x */
+        int16_t (y - border),          /* y */
+        uint16_t (border),             /* width */
+        uint16_t (height + 2 * border) /* height */
     },
     // Right border
     xcb_rectangle_t{
-        int16_t (x + width),                  /* x */
-        int16_t (y - dexpo_hlwidth),          /* y */
-        uint16_t (dexpo_hlwidth),             /* width */
-        uint16_t (height + 2 * dexpo_hlwidth) /* height */
-    },
-    // Top border
-    xcb_rectangle_t{
-        int16_t (x - 1),             /* x */
-        int16_t (y - dexpo_hlwidth), /* y */
-        uint16_t (width + 1),        /* width */
-        uint16_t (dexpo_hlwidth)     /* height */
+        int16_t (x + width),           /* x */
+        int16_t (y - border),          /* y */
+        uint16_t (border),             /* width */
+        uint16_t (height + 2 * border) /* height */
     },
     // Bottom border
     xcb_rectangle_t{
-        int16_t (x - 1),         /* x */
-        int16_t (y + height),    /* y */
-        uint16_t (width + 1),    /* width */
-        uint16_t (dexpo_hlwidth) /* height */
+        int16_t (x - border),          /* x */
+        int16_t (y + height),          /* y */
+        uint16_t (width + 2 * border), /* width */
+        uint16_t (border)              /* height */
     }
   };
 
@@ -231,25 +236,25 @@ window::draw_border (size_t desktop_id, uint32_t color)
 }
 
 /**
- * Draw a preselection border of color=dexpo_hlcolor
+ * Draw a preselection border of color=dexpo_preselected_desktop_color
  * around desktop=desktop[this->desktop_sel].
  */
 void
 window::draw_preselection ()
 {
-  draw_border (this->desktop_sel, dexpo_hlcolor);
+  draw_desktop_border (this->pres, dexpo_border_pres);
 };
 
 /**
  * Remove a preselection border around desktop[this->desktop_sel].
  *
- * @note This implementation just draws border of color dexpo_bgcolor above
- * existing border.
+ * @note This implementation just draws border of color dexpo_desktop_color
+ * above existing border.
  */
 void
 window::clear_preselection ()
 {
-  draw_border (this->desktop_sel, dexpo_bgcolor);
+  draw_desktop_border (this->pres, dexpo_border_nopres);
 };
 
 /**

@@ -48,7 +48,7 @@ read_unix (int fd, D *dest, size_t length, const std::string &error_msg)
       is<read_error> (rcv, error_msg);
 
       // Increment the received amount with the number of bytes just received
-      received += size_t (rcv);
+      received += rcv;
     }
 }
 
@@ -72,7 +72,7 @@ write_unix (int fd, D *src, size_t length, const std::string &error_msg)
       is<write_error> (wr, error_msg);
 
       // Increment the sent amount with the number of bytes just transferred
-      sent += size_t (wr);
+      sent += wr;
     }
 }
 
