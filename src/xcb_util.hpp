@@ -71,7 +71,7 @@ std::vector<desktop_info> get_desktops (xcb_connection_t *c, xcb_window_t root);
  */
 uint get_current_desktop (xcb_connection_t *c, xcb_window_t root);
 
-void ewmh_change_desktop (xcb_connection_t *c, xcb_screen_t *screen,
+void ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root,
                           uint destkop_id);
 
 #endif /* ifndef DEXPO_XCB_HPP */

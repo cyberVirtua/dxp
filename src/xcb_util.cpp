@@ -175,7 +175,7 @@ constexpr uint8_t k_event_data32_length = 5;
  * Generating and sending client message to the x server
  */
 void
-send_xcb_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
+send_xcb_message (xcb_connection_t *c, xcb_window_t root, const char *msg,
                   const std::array<uint32_t, k_event_data32_length> &data)
 {
 
@@ -192,10 +192,10 @@ send_xcb_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
   constexpr uint8_t k_net_current_desktop_format = 32;
   event.format = k_net_current_desktop_format;
   event.sequence = 0;
-  event.window = screen->root;
+  event.window = root;
   event.type = atom_id;
   std::copy (data.begin (), data.end (), std::begin (event.data.data32));
-  xcb_send_event (c, 0, screen->root, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+  xcb_send_event (c, 0, root, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
                   reinterpret_cast<const char *> (&event));
   // xcb_flush (c);
 }
@@ -204,10 +204,10 @@ send_xcb_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
  * Changing the number of desktop
  */
 void
-ewmh_change_desktop (xcb_connection_t *c, xcb_screen_t *screen, uint destkop_id)
+ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
 {
   // Setting data[1]=timestamp to zero
   // EWMH: Note that the timestamp may be 0 for clients using an older version
   // of this spec, in which case the timestamp field should be ignored.
-  send_xcb_message (c, screen, "_NET_CURRENT_DESKTOP", { destkop_id });
+  send_xcb_message (c, root, "_NET_CURRENT_DESKTOP", { destkop_id });
 }

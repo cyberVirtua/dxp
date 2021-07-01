@@ -18,5 +18,6 @@ drawable::drawable (const int16_t x,  ///< x coordinate of the top left corner
       drawable::c_ = xcb_connect (nullptr, nullptr);
       drawable::screen_
           = xcb_setup_roots_iterator (xcb_get_setup (drawable::c_)).data;
+      drawable::root_ = screen_->root;
     }
 }
