@@ -82,11 +82,12 @@ dxp_desktop::save_screen ()
           uint32_t (~0) /* Plane mask (all bits to get all planes) */
       );
 
-      // TODO(mmskv): Handle errors
       // Not freeing gi_reply causes memory leak, as xcb_get_image always
       // allocates new space for the image
+      xcb_generic_error_t *e = nullptr;
       auto gi_reply = xcb_unique_ptr<xcb_get_image_reply_t> (
-          xcb_get_image_reply (drawable::c_, gi_cookie, nullptr));
+          xcb_get_image_reply (drawable::c_, gi_cookie, &e));
+      check (e, "XCB error while getting image reply");
 
       this->image_ptr = xcb_get_image_data (gi_reply.get ());
 

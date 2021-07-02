@@ -29,10 +29,14 @@ main ()
       while (auto event = xcb_unique_ptr<xcb_generic_event_t> (
                  xcb_wait_for_event (window::c_)))
         {
+          if (event == nullptr)
+            {
+              throw read_error ("Could not read an event from X server");
+            }
           if (w.handle_event (event.get ()) == 0)
             {
               return 0;
-            };
+            }
         }
     }
   catch (const std::runtime_error &e)

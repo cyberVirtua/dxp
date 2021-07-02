@@ -291,8 +291,10 @@ window::clear_preselection ()
 int
 window::handle_event (xcb_generic_event_t *event)
 {
-  // TODO(mangalinor): Document code (why ~0x80)
-  switch (event->response_type & ~0x80)
+  // Ingore the leftmost bit of event
+  // https://stackoverflow.com/questions/60744214
+  constexpr uint8_t k_xcb_event_mask = 127; // 01111111
+  switch (event->response_type & k_xcb_event_mask)
     {
     case XCB_EXPOSE:
       {
@@ -371,6 +373,9 @@ window::handle_event (xcb_generic_event_t *event)
       {
         return 0; // Kill dexpo
       }
+    case 0:
+      auto *e = reinterpret_cast<xcb_generic_error_t *> (event);
+      check (e, "XCB error while receiving event");
     }
   xcb_flush (c_);
   return 1;

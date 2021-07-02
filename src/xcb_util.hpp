@@ -2,6 +2,7 @@
 #define DEXPO_XCB_HPP
 
 #include <cstdlib>
+#include <exception>
 #include <memory>
 #include <vector>
 #include <xcb/randr.h>
@@ -30,6 +31,26 @@ struct monitor_info
   int y;
   uint width;
   uint height;
+};
+
+/**
+ * Check if got an XCB error and throw it in case
+ */
+void check (xcb_generic_error_t *e, const std::string &msg);
+
+class xcb_error : public std::runtime_error
+{
+public:
+  /**
+   * Create a runtime_error and append an error struct to message
+   */
+  explicit xcb_error (xcb_generic_error_t *e, const std::string &msg)
+      : std::runtime_error (
+          msg + " error code: " + std::to_string (e->error_code)
+          + ", sequence:" + std::to_string (e->sequence)
+          + ", resource id:" + std::to_string (e->resource_id)
+          + ", major code: " + std::to_string (e->major_code)
+          + ", minor code: " + std::to_string (e->minor_code)){};
 };
 
 /**
