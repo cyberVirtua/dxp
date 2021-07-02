@@ -6,14 +6,8 @@
 #include <vector>
 #include <xcb/xproto.h>
 
-enum pixmap_format
-{
-  kXyPixmap = 1, // 100 times slower than kZPixmap for big image
-  kZPixmap = 2
-};
-
 /**
- * Captures and stores desktop screenshot in the specified pixmap format
+ * Captures, downsizes and stores desktop screenshot
  */
 class dxp_desktop : public drawable
 {
@@ -29,9 +23,10 @@ public:
                uint height); ///< Height of the display
 
   /**
-   * Screenshots current desktop, downsizes it and stores inside instance
+   * Save screenshot, downsize it and set this->image_ptr to point to it
    */
   void save_screen ();
+
   /**
    * Resizes screenshot to specified dimensions
    */
@@ -42,8 +37,6 @@ public:
           int source_height,
           int target_width, /* Dimensions of screenshot after resize */
           int target_height);
-
-  void render_geometries ();
 };
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */

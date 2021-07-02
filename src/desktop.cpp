@@ -5,9 +5,8 @@
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
 
-// Workaround for xcb_get_image_reply allocation. see save_screen()
-// Represents maximum pixmap size in bytes that xcb_get_image can allocate
-constexpr int k_max_malloc = 16711568;
+constexpr bool k_horizontal_stacking = (dexpo_width == 0);
+constexpr bool k_vertical_stacking = (dexpo_height == 0);
 
 dxp_desktop::dxp_desktop (
     const int16_t x,  ///< x coordinate of the top left corner
@@ -24,17 +23,16 @@ dxp_desktop::dxp_desktop (
   static_assert ((dexpo_height == 0) != (dexpo_width == 0),
                  "Height and width can't be set or unset simultaneously");
 
-  this->pixmap_width = dexpo_width;
-  this->pixmap_height = dexpo_height;
-
   float screen_ratio = float (this->width) / this->height; ///< width/height
 
-  if (this->pixmap_width == 0)
+  if (k_horizontal_stacking)
     {
+      this->pixmap_height = dexpo_height;
       this->pixmap_width = this->pixmap_height * screen_ratio;
     }
-  else if (this->pixmap_height == 0)
+  else if (k_vertical_stacking)
     {
+      this->pixmap_width = dexpo_width;
       this->pixmap_height = this->pixmap_width / screen_ratio;
     }
 
@@ -43,67 +41,32 @@ dxp_desktop::dxp_desktop (
 }
 
 /**
- * Saves pointer to the screen image in the specified pixmap_format.
- *
- * NOTE: malloc() can reserve only 16711568 bytes for a pixmap.
- * But ZPixmap of QHD Ultrawide is 3440 * 1440 * 4 = 19814400 bytes long.
- *
- * The while() loop in save_screen fixes this. It takes multiple screenshots of
- * the screen (top to bottom), each taking up less than k_max_malloc. It
- * downsizes each screenshot and puts it on the pixmap.
+ * Make screenshot, downsize it and set this->image_ptr to point to it
  */
 void
 dxp_desktop::save_screen ()
 {
-  // Set height so that screenshots won't exceed k_max_malloc size
-  uint16_t screen_height = k_max_malloc / this->width / 4;
-  uint16_t screen_width = this->width;
+  // Request the screenshot of the virtual desktop
+  auto gi_cookie = xcb_get_image (
+      drawable::c_,              /* Connection */
+      XCB_IMAGE_FORMAT_Z_PIXMAP, /* Z_Pixmap is 100 faster than XY_PIXMAP */
+      drawable::screen_->root,   /* Screenshot relative to root */
+      this->x, this->y,          /* X, Y offset */
+      this->width, this->height, /* Dimensions */
+      uint32_t (~0)              /* Plane mask (all bits to get all planes) */
+  );
 
-  const uint screen_size = this->width * this->height * 4;
+  // Not freeing gi_reply causes memory leak, as xcb_get_image always
+  // allocates new space for the image
+  xcb_generic_error_t *e = nullptr;
+  auto gi_reply = xcb_unique_ptr<xcb_get_image_reply_t> (
+      xcb_get_image_reply (drawable::c_, gi_cookie, &e));
+  check (e, "XCB error while getting image reply");
 
-  for (uint i = 0; i * k_max_malloc < screen_size; i++)
-    {
-      // Set screen height that we have already captured
-      // New screenshots will be captured with Y offset = image_height_offset
-      int16_t screen_height_offset = i * screen_height;
+  this->image_ptr = xcb_get_image_data (gi_reply.get ());
 
-      // Last screenshot will be smaller, so we set its height to what's left
-      screen_height = std::min (screen_height,
-                                uint16_t (this->height - screen_height_offset));
-
-      // Request the screenshot of the virtual desktop
-      auto gi_cookie = xcb_get_image (
-          drawable::c_,              /* Connection */
-          XCB_IMAGE_FORMAT_Z_PIXMAP, /* Z_Pixmap is 100 faster than XY_PIXMAP */
-          drawable::screen_->root,   /* Screenshot relative to root */
-          this->x,                   /* X offset */
-          this->y + screen_height_offset, /* Y offset */
-          screen_width, screen_height,    /* Dimensions */
-          uint32_t (~0) /* Plane mask (all bits to get all planes) */
-      );
-
-      // Not freeing gi_reply causes memory leak, as xcb_get_image always
-      // allocates new space for the image
-      xcb_generic_error_t *e = nullptr;
-      auto gi_reply = xcb_unique_ptr<xcb_get_image_reply_t> (
-          xcb_get_image_reply (drawable::c_, gi_cookie, &e));
-      check (e, "XCB error while getting image reply");
-
-      this->image_ptr = xcb_get_image_data (gi_reply.get ());
-
-      uint target_width = this->pixmap_width;
-      uint target_height
-          = float (screen_height) / screen_width * this->pixmap_width;
-
-      uint target_height_offset ///< y coordinate of the screenshot
-          = float (screen_height_offset) * this->pixmap_width / screen_width;
-
-      /// Offset in bytes at which screenshot should be placed in the 1D array
-      auto pixmap_offset = target_height_offset * target_width * 4;
-
-      resize (this->image_ptr, this->pixmap.data () + pixmap_offset,
-              screen_width, screen_height, target_width, target_height);
-    }
+  resize (this->image_ptr, this->pixmap.data (), this->width, this->height,
+          this->pixmap_width, this->pixmap_height);
 }
 
 /**
