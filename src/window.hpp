@@ -15,13 +15,11 @@ public:
   inline static xcb_gcontext_t gc_ = 0; ///< Graphic context
   uint32_t xcb_id;
   std::vector<dxp_socket_desktop> desktops; ///< Desktops received from daemon
-  uint pres;
+  uint pres;                                ///< id of the preselected desktop
 
-  window (int16_t x,  ///< x coordinate of the top left corner
-          int16_t y,  ///< y coordinate of the top left corner
-          uint width, ///< Width of the display
-          uint height ///< Height of the display
-  );
+  window (int16_t x, ///< x coordinate of the top left corner
+          int16_t y, ///< y coordinate of the top left corner
+          const std::vector<dxp_socket_desktop> &desktops);
   ~window ();
 
   // Explicitly deleting unused constructors to comply with rule of five
@@ -29,6 +27,12 @@ public:
   window (window &&other) noexcept = delete;
   window &operator= (const window &other) = delete;
   window &operator= (window &&other) = delete;
+
+  /**
+   * Calculate dimensions of the window based on
+   * stacking mode and desktops from daemon
+   */
+  void set_window_dimensions ();
 
   /**
    * Create an empty window to later place gui in it.
@@ -69,6 +73,13 @@ public:
    * existing border.
    */
   void clear_preselection ();
+
+  /**
+   * TODO Document
+   *
+   * Returns zero on exit event
+   */
+  int handle_event (xcb_generic_event_t *event);
 
 private:
   /**

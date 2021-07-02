@@ -1,26 +1,51 @@
 #include "window.hpp"
 #include "config.hpp"
 #include "drawable.hpp"
+#include "xcb_util.hpp"
 #include <vector>
 #include <xcb/xproto.h>
 
 constexpr bool k_horizontal_stacking = (dexpo_width == 0);
 constexpr bool k_vertical_stacking = (dexpo_height == 0);
 
-window::window (const int16_t x,   ///< x coordinate of the top left corner
-                const int16_t y,   ///< y coordinate of the top left corner
-                const uint width,  ///< width of the window
-                const uint height) ///< height of the window
-    : drawable (x, y, width, height)
+window::window (const int16_t x, ///< x coordinate of the top left corner
+                const int16_t y, ///< y coordinate of the top left corner
+                const std::vector<dxp_socket_desktop> &desktops)
+    : drawable (x, y, 0, 0) // Width and height will be calculated from config
 {
   this->xcb_id = xcb_generate_id (drawable::c_);
-  this->pres = 0; // Id of the preselected desktop
+  this->desktops = desktops;
+  this->pres = 0; ///< id of the preselected desktop
 
+  set_window_dimensions ();
   create_gc ();
   create_window ();
 }
 
 window::~window () { xcb_destroy_window (drawable::c_, this->xcb_id); }
+
+/**
+ * Calculate dimensions of the window based on
+ * stacking mode and desktops from the daemon
+ */
+void
+window::set_window_dimensions ()
+{
+  uint constant = 0; ///< Constant dimension. The one specified in the config
+  uint dynamic = 0;  ///< Dynamic dimension dependent on the desktops
+
+  constant += 2 * dexpo_padding + 2 * dexpo_border_pres_width;
+  dynamic += dexpo_padding + dexpo_border_pres_width;
+
+  for (const auto &d : this->desktops)
+    {
+      dynamic += k_horizontal_stacking ? d.width : d.height;
+      dynamic += dexpo_padding + 2 * dexpo_border_pres_width;
+    }
+
+  this->width += k_vertical_stacking ? constant + dexpo_width : dynamic;
+  this->height += k_horizontal_stacking ? constant + dexpo_height : dynamic;
+};
 
 /**
  * Initialize window, subscribe to relevant events and map it onto the desktop
@@ -45,7 +70,7 @@ window::create_window ()
   xcb_create_window (window::c_, /* Connection, separate from one of daemon */
                      XCB_COPY_FROM_PARENT,          /* depth (same as root)*/
                      this->xcb_id,                  /* window Id */
-                     drawable::screen_->root,       /* parent window */
+                     window::root_,                 /* parent window */
                      this->x, this->y,              /* x, y */
                      this->width, this->height,     /* width, height */
                      dexpo_border_width,            /* border_width */
@@ -55,7 +80,7 @@ window::create_window ()
 
   /* Fixes window in place */
   const std::array<uint32_t, 2> override_redirect{ 1U };
-  xcb_change_window_attributes (c_, xcb_id, XCB_CW_OVERRIDE_REDIRECT,
+  xcb_change_window_attributes (c_, this->xcb_id, XCB_CW_OVERRIDE_REDIRECT,
                                 &override_redirect);
 
   /* Map the window onto the screen */
@@ -236,8 +261,7 @@ window::draw_desktop_border (uint desktop_id, uint32_t color)
 }
 
 /**
- * Draw a preselection border of color=dexpo_preselected_desktop_color
- * around desktop=desktop[this->desktop_sel].
+ * Draw a preselection border around current preselected desktop
  */
 void
 window::draw_preselection ()
@@ -246,15 +270,115 @@ window::draw_preselection ()
 };
 
 /**
- * Remove a preselection border around desktop[this->desktop_sel].
+ * Remove a preselection border around current preselected desktop.
  *
- * @note This implementation just draws border of color dexpo_desktop_color
- * above existing border.
+ * @note This implementation just draws border of color dexpo_border_nopres
+ * over existing border.
  */
 void
 window::clear_preselection ()
 {
   draw_desktop_border (this->pres, dexpo_border_nopres);
+};
+
+/**
+ * TODO Document
+ *
+ * XXX Accepting *event does not work. Why?
+ *
+ * Returns zero on exit event
+ */
+int
+window::handle_event (xcb_generic_event_t *event)
+{
+  // Ingore the leftmost bit of event
+  // https://stackoverflow.com/questions/60744214
+  constexpr uint8_t k_xcb_event_mask = 127; // 01111111
+  switch (event->response_type & k_xcb_event_mask)
+    {
+    case XCB_EXPOSE:
+      {
+        draw_desktops ();
+        pres = get_current_desktop (c_, root_);
+
+        // Drawing borders around all desktops
+        for (uint i = 0; i < desktops.size (); i++)
+          {
+            i == pres ? draw_preselection ()
+                      : draw_desktop_border (i, dexpo_border_nopres);
+          }
+        break;
+      }
+    case XCB_KEY_PRESS:
+      {
+        auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
+
+        /// Right arrow or down arrow
+        bool next = kp->detail == 114 || kp->detail == 116;
+        /// Left arrow or up arrow
+        bool prev = kp->detail == 113 || kp->detail == 111;
+        bool entr = kp->detail == 36; /// Enter
+        bool esc = kp->detail == 9;   /// Escape
+
+        clear_preselection ();
+        if (next)
+          {
+            pres++;
+            pres %= desktops.size ();
+          }
+        if (prev) // Decrementing preselected desktop and taking modulus
+          {
+            pres = pres == 0 ? desktops.size () - 1 : pres - 1;
+          }
+        if (entr)
+          {
+            // Desktop change is thought as an event after which the
+            // user doesn't need dexpo any more
+            ewmh_change_desktop (c_, root_, pres);
+            xcb_flush (c_);
+            return 0; // Kill dexpo
+          }
+        if (esc)
+          {
+            return 0;
+          }
+        draw_preselection ();
+        xcb_flush (c_);
+        break;
+      }
+    case XCB_MOTION_NOTIFY: // Cursor motion within window
+      {
+        auto *cur = reinterpret_cast<xcb_motion_notify_event_t *> (event);
+        auto d = get_hover_desktop (cur->event_x, cur->event_y);
+
+        if (d != -1U)
+          {
+            clear_preselection ();
+            pres = d;
+            draw_preselection ();
+          }
+        break;
+      }
+    case XCB_BUTTON_PRESS: // Mouse click
+      {
+        // Desktop change is thought as an event after which the
+        // user doesn't need dexpo any more
+        ewmh_change_desktop (c_, root_, pres);
+        xcb_flush (c_);
+        return 0; // Kill dexpo
+      }
+    case XCB_FOCUS_OUT:
+      // Click outside of the window is thought as an event after which the
+      // user doesn't need dexpo any more
+      {
+        return 0; // Kill dexpo
+      }
+    case 0:
+      auto *e = reinterpret_cast<xcb_generic_error_t *> (event);
+      check (e, "XCB error while receiving event");
+    }
+  xcb_flush (c_);
+  return 1;
 };
 
 /**

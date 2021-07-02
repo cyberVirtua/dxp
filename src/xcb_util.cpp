@@ -2,8 +2,19 @@
 #include "config.hpp"
 #include "window.hpp"
 #include <cstring>
-#include <memory>
 #include <xcb/xcb.h>
+
+/**
+ * Check if got an XCB error and throw it in case
+ */
+void
+check (xcb_generic_error_t *e, const std::string &msg)
+{
+  if (e != nullptr)
+    {
+      throw xcb_error (e, msg);
+    }
+};
 
 /**
  * Get a vector with EWMH property values
@@ -14,19 +25,25 @@ std::vector<uint32_t>
 get_property_value (xcb_connection_t *c, xcb_window_t root,
                     const char *atom_name)
 {
+  xcb_generic_error_t *e = nullptr; // TODO(mmskv): Check for memory leak
+
   auto atom_cookie = xcb_intern_atom (c, 0, strlen (atom_name), atom_name);
   auto atom_reply = xcb_unique_ptr<xcb_intern_atom_reply_t> (
-      xcb_intern_atom_reply (c, atom_cookie, nullptr));
+      xcb_intern_atom_reply (c, atom_cookie, &e));
+  check (e, "XCB error while getting atom reply");
 
-  // TODO(mmskv): add proper exception
-  auto atom = atom_reply ? atom_reply->atom : throw;
+  auto atom = atom_reply
+                  ? atom_reply->atom
+                  : throw std::runtime_error (
+                      std::string ("Could not get atom for ") + atom_name);
 
   /* Getting property from atom */
 
   auto prop_cookie = xcb_get_property (
       c, 0, root, atom, XCB_GET_PROPERTY_TYPE_ANY, 0, UINT32_MAX);
   auto prop_reply = xcb_unique_ptr<xcb_get_property_reply_t> (
-      xcb_get_property_reply (c, prop_cookie, nullptr));
+      xcb_get_property_reply (c, prop_cookie, &e));
+  check (e, "XCB error while getting property reply");
 
   auto prop_length = prop_reply->length;
 
@@ -53,12 +70,14 @@ get_property_value (xcb_connection_t *c, xcb_window_t root,
 std::vector<monitor_info>
 get_monitors (xcb_connection_t *c, xcb_window_t root)
 {
+  xcb_generic_error_t *e = nullptr;
   std::vector<monitor_info> monitors;
 
   auto screen_resources_reply
       = xcb_unique_ptr<xcb_randr_get_screen_resources_current_reply_t> (
           xcb_randr_get_screen_resources_current_reply (
-              c, xcb_randr_get_screen_resources_current (c, root), nullptr));
+              c, xcb_randr_get_screen_resources_current (c, root), &e));
+  check (e, "XCB error while getting randr screen resources reply");
 
   // This shouldn't be unique_ptr as it belongs to screen_resources_reply and
   // will be freed by screen_resources_reply
@@ -77,7 +96,8 @@ get_monitors (xcb_connection_t *c, xcb_window_t root)
 
       // Using free instead of delete to deallocate memory as required by xcb
       auto output = xcb_unique_ptr<xcb_randr_get_output_info_reply_t> (
-          xcb_randr_get_output_info_reply (c, output_cookie, nullptr));
+          xcb_randr_get_output_info_reply (c, output_cookie, &e));
+      check (e, "XCB error while getting randr info reply");
 
       if (output == nullptr || output->crtc == XCB_NONE
           || output->connection == XCB_RANDR_CONNECTION_DISCONNECTED)
@@ -88,7 +108,8 @@ get_monitors (xcb_connection_t *c, xcb_window_t root)
       auto crtc = xcb_unique_ptr<xcb_randr_get_crtc_info_reply_t> (
           xcb_randr_get_crtc_info_reply (
               c, xcb_randr_get_crtc_info (c, output->crtc, XCB_CURRENT_TIME),
-              nullptr));
+              &e));
+      check (e, "XCB error while getting randr info reply");
 
       monitor_info m{ crtc->x, crtc->y, crtc->width, crtc->height };
       monitors.push_back (m);
@@ -141,10 +162,16 @@ get_desktops (xcb_connection_t *c, xcb_window_t root)
         }
 
       // This should not happen
-      // May happen if monitors have some weird configuration
+      // May happen if monitors have some weird configuration or not all
+      // desktops are specified in dexpo_viewport
       if (width == 0 || height == 0)
         {
-          throw; // TODO(mmskv): Log errors
+          throw std::runtime_error (
+              "Couldn't parse your desktops. Perhaps your window manager does "
+              "not support large desktops and _NET_DESKTOP_VIEWPORT property "
+              "is set to (0,0).\nYou might want to manually specify your "
+              "desktop coordinates in the src/config.hpp. See "
+              "`dexpo_viewport`.");
         }
 
       info.push_back (desktop_info{ i, x, y, width, height });
@@ -167,13 +194,17 @@ constexpr uint8_t k_event_data32_length = 5;
  * Generating and sending client message to the x server
  */
 void
-send_xcb_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
+send_xcb_message (xcb_connection_t *c, xcb_window_t root, const char *msg,
                   const std::array<uint32_t, k_event_data32_length> &data)
 {
+  // Making a double pointer to error doesn't look right
+  xcb_generic_error_t *e = nullptr;
 
   auto atom_cookie = xcb_intern_atom (c, 0, strlen (msg), msg);
   auto atom_reply = xcb_unique_ptr<xcb_intern_atom_reply_t> (
-      xcb_intern_atom_reply (c, atom_cookie, nullptr));
+      xcb_intern_atom_reply (c, atom_cookie, &e));
+  check (e, "XCB error while getting internal atom reply");
+
   auto atom_id = atom_reply->atom; /// Id of request
 
   // Building an event to send
@@ -184,10 +215,10 @@ send_xcb_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
   constexpr uint8_t k_net_current_desktop_format = 32;
   event.format = k_net_current_desktop_format;
   event.sequence = 0;
-  event.window = screen->root;
+  event.window = root;
   event.type = atom_id;
   std::copy (data.begin (), data.end (), std::begin (event.data.data32));
-  xcb_send_event (c, 0, screen->root, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+  xcb_send_event (c, 0, root, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
                   reinterpret_cast<const char *> (&event));
   // xcb_flush (c);
 }
@@ -196,10 +227,10 @@ send_xcb_message (xcb_connection_t *c, xcb_screen_t *screen, const char *msg,
  * Changing the number of desktop
  */
 void
-ewmh_change_desktop (xcb_connection_t *c, xcb_screen_t *screen, uint destkop_id)
+ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
 {
   // Setting data[1]=timestamp to zero
   // EWMH: Note that the timestamp may be 0 for clients using an older version
   // of this spec, in which case the timestamp field should be ignored.
-  send_xcb_message (c, screen, "_NET_CURRENT_DESKTOP", { destkop_id });
+  send_xcb_message (c, root, "_NET_CURRENT_DESKTOP", { destkop_id });
 }

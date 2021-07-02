@@ -1,44 +1,22 @@
+#include "daemon.hpp"
 #include "config.hpp"
-#include "desktop.hpp"
-#include "socket.hpp"
-#include "xcb_util.hpp"
-#include <iostream>
-#include <memory>
-#include <sys/un.h>
 #include <thread>
-#include <unistd.h>
-#include <vector>
-#include <xcb/randr.h>
-#include <xcb/xcb.h>
-#include <xcb/xproto.h>
 
-auto *c = xcb_connect (nullptr, nullptr);
-auto *screen = xcb_setup_roots_iterator (xcb_get_setup (c)).data;
-auto root = screen -> root;
-
-/**
- * Parse monitor dimensions and initialize appropriate pixmap objects.
- *
- * At a timeout check current display and screenshot it.
- * Start a socket listener.
- *
- * TODO Handle workspace deletions
- * TODO Handle errors
- */
-int
-main ()
+dxp_daemon::dxp_daemon ()
 {
-  auto desktops_info = get_desktops (c, root);
+  this->c = xcb_connect (nullptr, nullptr);
+  this->screen = xcb_setup_roots_iterator (xcb_get_setup (this->c)).data;
+  this->root = this->screen->root;
+
+  auto desktops_info = get_desktops (this->c, this->root);
 
   /* Initializing desktop objects. They are each binded to a separate
    * virtual desktop */
 
-  std::vector<dxp_desktop> desktops{};
-
-  desktops.reserve (desktops_info.size ());
+  this->desktops.reserve (desktops_info.size ());
   for (const auto &d : desktops_info)
     {
-      desktops.emplace_back (d.x, d.y, d.width, d.height);
+      this->desktops.emplace_back (d.x, d.y, d.width, d.height);
     }
 
   /* Initializing pixmaps that will be shared over socket They are a different
@@ -46,8 +24,7 @@ main ()
    *
    * Copying only useful data from the desktop objects. */
 
-  std::vector<dxp_socket_desktop> socket_desktops{};
-  for (uint i = 0; i < desktops.size (); i++)
+  for (size_t i = 0; i < this->desktops.size (); i++)
     {
       dxp_socket_desktop p;
 
@@ -61,19 +38,19 @@ main ()
 
       socket_desktops.push_back (p);
     }
+}
 
-  dxp_socket server;
-
-  std::mutex socket_desktops_lock;
+void
+dxp_daemon::run ()
+{
   // Start a server that will share pixmaps over socket in a separate thread
-  std::thread daemon_thread (&dxp_socket::send_pixmaps_on_event, &server,
-                             std::ref (socket_desktops),
-                             std::ref (socket_desktops_lock));
+  std::thread daemon_thread (&dxp_socket::send_desktops_on_event, &this->server,
+                             std::ref (this->socket_desktops),
+                             std::ref (this->socket_desktops_lock));
 
-  bool running = true;
-  while (running)
+  while (this->running)
     {
-      auto current = get_current_desktop (c, root);
+      auto current = get_current_desktop (this->c, this->root);
       if (!dexpo_viewport.empty () && current >= dexpo_viewport.size () / 2)
         {
           throw std::runtime_error (
@@ -81,16 +58,14 @@ main ()
               "match the amount of your virtual deskops in your system.");
         }
 
-      socket_desktops_lock.lock ();
-      desktops[current].save_screen ();
+      this->socket_desktops_lock.lock ();
+      this->desktops[current].save_screen ();
 
       // Copying pixmap from desktops into socket pixmaps
-      socket_desktops[current].pixmap = desktops[current].pixmap;
+      this->socket_desktops[current].pixmap = this->desktops[current].pixmap;
 
-      socket_desktops_lock.unlock ();
+      this->socket_desktops_lock.unlock ();
 
       std::this_thread::sleep_for (dexpo_screenshot_period);
     };
-
-  return 0;
 }
