@@ -28,15 +28,26 @@ public:
   void save_screen ();
 
   /**
-   * Resizes screenshot to specified dimensions
+   * Resize image to specified dimensions with nearest neighbour algorithm
    */
   static void
-  resize (const uint8_t *input, ///< Input RGBA 1D array pointer
-          uint8_t *output,      ///< Output RGBA 1D array pointers
-          int source_width,     /* Dimensions of unresized screenshot */
-          int source_height,
-          int target_width, /* Dimensions of screenshot after resize */
-          int target_height);
+  nn_resize (const uint8_t *input, ///< Input RGBA 1D array pointer
+             uint8_t *output,      ///< Output RGBA 1D array pointers
+             int source_width,     /* Dimensions of unresized screenshot */
+             int source_height,
+             int target_width, /* Dimensions of screenshot after resize */
+             int target_height);
+
+  /**
+   * Resize image to specified dimensions with bilinear interpolation algorithm
+   */
+  static void
+  bilinear_resize (const uint8_t *input, ///< Input RGBA 1D array pointer
+                   uint8_t *output,      ///< Output RGBA 1D array pointers
+                   int source_width, /* Dimensions of unresized screenshot */
+                   int source_height,
+                   int target_width, /* Dimensions of screenshot after resize */
+                   int target_height);
 };
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */

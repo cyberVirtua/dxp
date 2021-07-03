@@ -1,7 +1,7 @@
 #include "desktop.hpp"
 #include "config.hpp"
 #include "xcb_util.hpp"
-#include <memory>
+#include <cmath>
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
 
@@ -65,47 +65,93 @@ dxp_desktop::save_screen ()
 
   this->image_ptr = xcb_get_image_data (gi_reply.get ());
 
-  resize (this->image_ptr, this->pixmap.data (), this->width, this->height,
-          this->pixmap_width, this->pixmap_height);
+  bilinear_resize (this->image_ptr, this->pixmap.data (), this->width,
+                   this->height, this->pixmap_width, this->pixmap_height);
 }
 
 /**
- * Nearest neighbour resize
+ * Nearest neighbor resize. Very fast
  * https://stackoverflow.com/questions/28566290
  */
 void
-dxp_desktop::resize (const uint8_t *__restrict input,
-                     uint8_t *__restrict output,
-                     int source_width, /* Source dimensions */
-                     int source_height,
-                     int target_width, /* Target dimensions */
-                     int target_height)
+dxp_desktop::nn_resize (const uint8_t *__restrict input,
+                        uint8_t *__restrict output,
+                        int source_width, /* Source dimensions */
+                        int source_height,
+                        int target_width, /* Target dimensions */
+                        int target_height)
 {
+  //
   // Bitshifts are used to preserve precision in x_ratio and y_ratio.
   // Straight up dividing source_width by target_width will lose some data.
   // Bitshifting this value left increases precision after the division.
   // And when the real x_ratio needs to be used it can be bitshifted right.
-  constexpr size_t k_precision_bytes = 16;
+  //
+  // k_precision_bytes is the number of bits to reserve for precision.
+  // Can be way lower than 16.
+  //
+  constexpr int k_precision_bytes = 16;
 
   const int x_ratio = (source_width << k_precision_bytes) / target_width;
   const int y_ratio = (source_height << k_precision_bytes) / target_height;
-  const int colors = 4;
+
+  const auto *input32 = reinterpret_cast<const uint32_t *> (input);
+  auto *output32 = reinterpret_cast<uint32_t *> (output);
 
   for (int y = 0; y < target_height; y++)
     {
-      int y2_xsource = ((y * y_ratio) >> k_precision_bytes) * source_width;
-      int i_xdest = y * target_width;
+      int y_source = ((y * y_ratio) >> k_precision_bytes) * source_width;
+      int y_dest = y * target_width;
 
+      int x_source = 0;
+      const uint32_t *input32_line = input32 + y_source;
       for (int x = 0; x < target_width; x++)
         {
-          int x2 = ((x * x_ratio) >> k_precision_bytes);
-          int y2_x2_colors = (y2_xsource + x2) * colors;
-          int i_x_colors = (i_xdest + x) * colors;
+          x_source += x_ratio;
+          output32[y_dest + x] = input32_line[x_source >> k_precision_bytes];
+        }
+    }
+}
 
-          output[i_x_colors] = input[y2_x2_colors];
-          output[i_x_colors + 1] = input[y2_x2_colors + 1];
-          output[i_x_colors + 2] = input[y2_x2_colors + 2];
-          output[i_x_colors + 3] = 0; // XXX Ignoring alpha channel
+/**
+ * TODO
+ */
+void
+dxp_desktop::bilinear_resize (const uint8_t *__restrict input,
+                              uint8_t *__restrict output,
+                              int source_width, /* Source dimensions */
+                              int source_height,
+                              int target_width, /* Target dimensions */
+                              int target_height)
+{
+  const float x_ratio = float (source_width) / target_width;
+  const float y_ratio = float (source_height) / target_height;
+
+  for (int y_dst = 0; y_dst < target_height; y_dst++)
+    {
+      float y_src = y_dst * y_ratio;
+      int y = std::floor (y_src);
+      float dy = y_src - y;
+
+      for (int x_dst = 0; x_dst < target_width; x_dst++)
+        {
+          float x_src = x_dst * x_ratio;
+          int x = std::floor (x_src);
+          float dx = x_src - x;
+
+          int y_offset = y_dst * target_width;
+
+          int y0_offset = y * source_width;
+          int y1_offset = y0_offset + source_width;
+
+          for (int n = 0; n < 4; n++)
+            {
+              output[(x_dst + y_offset) * 4 + n]
+                  = (input[(x + y0_offset) * 4 + n] * (1 - dx) * (1 - dy)
+                     + input[(x + y1_offset) * 4 + n] * (1 - dx) * dy
+                     + input[(x + 1 + y0_offset) * 4 + n] * dx * (1 - dy)
+                     + input[(x + 1 + y1_offset) * 4 + n] * dx * dy);
+            }
         }
     }
 }
