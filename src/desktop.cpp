@@ -70,40 +70,42 @@ dxp_desktop::save_screen ()
 }
 
 /**
- * Definitely copied. Looks like I'm too retarded to code this myself.
+ * Nearest neighbour resize
  * https://stackoverflow.com/questions/28566290
- *
- * TODO Optimize and fix warnings, comment on names, add anti aliasing
  */
 void
-dxp_desktop::resize (const uint8_t *input, uint8_t *output,
+dxp_desktop::resize (const uint8_t *__restrict input,
+                     uint8_t *__restrict output,
                      int source_width, /* Source dimensions */
                      int source_height,
                      int target_width, /* Target dimensions */
                      int target_height)
 {
-  // TODO(mmskv): not sure what this variable is meant to represent
-  constexpr size_t k_half_int = 16;
+  // Bitshifts are used to preserve precision in x_ratio and y_ratio.
+  // Straight up dividing source_width by target_width will lose some data.
+  // Bitshifting this value left increases precision after the division.
+  // And when the real x_ratio needs to be used it can be bitshifted right.
+  constexpr size_t k_precision_bytes = 16;
 
-  const int x_ratio = (source_width << k_half_int) / target_width;
-  const int y_ratio = (source_height << k_half_int) / target_height;
+  const int x_ratio = (source_width << k_precision_bytes) / target_width;
+  const int y_ratio = (source_height << k_precision_bytes) / target_height;
   const int colors = 4;
 
   for (int y = 0; y < target_height; y++)
     {
-      int y2_xsource = ((y * y_ratio) >> k_half_int) * source_width;
+      int y2_xsource = ((y * y_ratio) >> k_precision_bytes) * source_width;
       int i_xdest = y * target_width;
 
       for (int x = 0; x < target_width; x++)
         {
-          int x2 = ((x * x_ratio) >> k_half_int);
+          int x2 = ((x * x_ratio) >> k_precision_bytes);
           int y2_x2_colors = (y2_xsource + x2) * colors;
           int i_x_colors = (i_xdest + x) * colors;
 
           output[i_x_colors] = input[y2_x2_colors];
           output[i_x_colors + 1] = input[y2_x2_colors + 1];
           output[i_x_colors + 2] = input[y2_x2_colors + 2];
-          output[i_x_colors + 3] = input[y2_x2_colors + 3];
+          output[i_x_colors + 3] = 0; // XXX Ignoring alpha channel
         }
     }
 }
