@@ -128,15 +128,15 @@ get_desktops (xcb_connection_t *c, xcb_window_t root)
   auto monitors = get_monitors (c, root);
 
   auto number_of_desktops
-      = !dexpo_viewport.empty () /* If config is not empty: */
+      = !dxp_viewport.empty () /* If config is not empty: */
             // Set amount of desktops to the one specified in the config
-            ? dexpo_viewport.size () / 2
+            ? dxp_viewport.size () / 2
             // Otherwise parse amount of desktops from EWMH
             : get_property_value (c, root, "_NET_NUMBER_OF_DESKTOPS")[0];
 
-  auto viewport = !dexpo_viewport.empty () /* If config is not empty: */
+  auto viewport = !dxp_viewport.empty () /* If config is not empty: */
                       // Set viewport to the one specified in the config
-                      ? dexpo_viewport
+                      ? dxp_viewport
                       // Otherwise parse viewport from EWMH
                       : get_property_value (c, root, "_NET_DESKTOP_VIEWPORT");
 
@@ -163,7 +163,7 @@ get_desktops (xcb_connection_t *c, xcb_window_t root)
 
       // This should not happen
       // May happen if monitors have some weird configuration or not all
-      // desktops are specified in dexpo_viewport
+      // desktops are specified in dxp_viewport
       if (width == 0 || height == 0)
         {
           throw std::runtime_error (
@@ -171,7 +171,7 @@ get_desktops (xcb_connection_t *c, xcb_window_t root)
               "not support large desktops and _NET_DESKTOP_VIEWPORT property "
               "is set to (0,0).\nYou might want to manually specify your "
               "desktop coordinates in the src/config.hpp. See "
-              "`dexpo_viewport`.");
+              "`dxp_viewport`.");
         }
 
       info.push_back (desktop_info{ i, x, y, width, height });

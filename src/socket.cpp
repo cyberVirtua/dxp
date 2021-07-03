@@ -183,7 +183,7 @@ dxp_socket::send_desktops_on_event (
     {
       // Check the incoming command
       char cmd = -1;
-      read_unix (data_fd, &cmd, 1, "Failed to get a command from dexpo");
+      read_unix (data_fd, &cmd, 1, "Failed to get a command from dxp");
 
       if (cmd == kRequestDesktops)
         {
@@ -194,18 +194,18 @@ dxp_socket::send_desktops_on_event (
           // First write -- number of desktops to be sent
           size_t num = desktops.size ();
           write_unix (data_fd, &num, sizeof (num),
-                      "Failed to send number of desktops to dexpo");
+                      "Failed to send number of desktops to dxp");
 
           // Writes from second to `num+1` * 2 -- sending desktops
           for (const auto &p : desktops)
             {
               // Sending everything except raw pixmap
               write_unix (data_fd, &p, offsetof (dxp_socket_desktop, pixmap),
-                          "Failed to send desktop data to dexpo");
+                          "Failed to send desktop data to dxp");
 
               // Sending pixmap
               write_unix (data_fd, p.pixmap.data (), p.pixmap_len,
-                          "Failed to send raw desktop pixmap to dexpo");
+                          "Failed to send raw desktop pixmap to dxp");
             }
         }
     }

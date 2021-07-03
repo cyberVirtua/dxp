@@ -5,8 +5,8 @@
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
 
-constexpr bool k_horizontal_stacking = (dexpo_width == 0);
-constexpr bool k_vertical_stacking = (dexpo_height == 0);
+constexpr bool k_horizontal_stacking = (dxp_width == 0);
+constexpr bool k_vertical_stacking = (dxp_height == 0);
 
 dxp_desktop::dxp_desktop (
     const int16_t x,  ///< x coordinate of the top left corner
@@ -20,19 +20,19 @@ dxp_desktop::dxp_desktop (
   this->image_ptr = nullptr;
 
   // Check if both are set or unset simultaneously
-  static_assert ((dexpo_height == 0) != (dexpo_width == 0),
+  static_assert ((dxp_height == 0) != (dxp_width == 0),
                  "Height and width can't be set or unset simultaneously");
 
   float screen_ratio = float (this->width) / this->height; ///< width/height
 
   if (k_horizontal_stacking)
     {
-      this->pixmap_height = dexpo_height;
+      this->pixmap_height = dxp_height;
       this->pixmap_width = this->pixmap_height * screen_ratio;
     }
   else if (k_vertical_stacking)
     {
-      this->pixmap_width = dexpo_width;
+      this->pixmap_width = dxp_width;
       this->pixmap_height = this->pixmap_width / screen_ratio;
     }
 

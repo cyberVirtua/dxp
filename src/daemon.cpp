@@ -51,7 +51,7 @@ dxp_daemon::run ()
   while (this->running)
     {
       auto current = get_current_desktop (this->c, this->root);
-      if (!dexpo_viewport.empty () && current >= dexpo_viewport.size () / 2)
+      if (!dxp_viewport.empty () && current >= dxp_viewport.size () / 2)
         {
           throw std::runtime_error (
               "The amount of virtual desktops specified in the config does not "
@@ -66,6 +66,6 @@ dxp_daemon::run ()
 
       this->socket_desktops_lock.unlock ();
 
-      std::this_thread::sleep_for (dexpo_screenshot_period);
+      std::this_thread::sleep_for (dxp_screenshot_period);
     };
 }
