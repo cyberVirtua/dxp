@@ -113,6 +113,143 @@ dxp_desktop::nn_resize (const uint8_t *__restrict input,
     }
 }
 
+void
+dxp_desktop::resize_hq_4ch (const uint8_t *input, uint8_t *output,
+                            int source_width, int source_height,
+                            int target_width, int target_height)
+{
+  static int *g_px1a = nullptr;
+  static int g_px1a_w = 0;
+  static int *g_px1ab = nullptr;
+  static int g_px1ab_w = 0;
+
+  // Both buffers must be in RGBA format, and a scanline should be w*4 bytes.
+
+  // NOTE: THIS WILL OVERFLOW for really major downsizing (2800x2800 to 1x1 or
+  // more) (2800 ~ sqrt(2^23)) - for a lazy fix, just call this in two passes.
+
+  const auto *input32 = reinterpret_cast<const uint32_t *> (input);
+  auto *output32 = reinterpret_cast<uint32_t *> (output);
+
+  // If too many input pixels map to one output pixel, our 32-bit
+  // accumulation values could overflow - so, if we have huge mappings like
+  // that, cut down the weights:
+  //    256 max color value
+  //   *256 weight_x
+  //   *256 weight_y
+  //   *256 (16*16) maximum # of input pixels (x,y) - unless we cut the
+  //   weights down...
+  int weight_shift = 0;
+  float source_texels_per_out_pixel
+      = ((source_width / float (target_width) + 1)
+         * (source_height / float (target_height) + 1));
+  float weight_per_pixel
+      = source_texels_per_out_pixel * 256 * 256;  // weight_x * weight_y
+  float accum_per_pixel = weight_per_pixel * 256; // color value is 0-255
+  float weight_div = accum_per_pixel / 4294967000.0f;
+  if (weight_div > 1)
+    {
+      weight_shift = int (ceilf (logf (weight_div) / logf (2.0f)));
+    }
+  weight_shift = 1; // this could go to 15 and still be ok.
+
+  float y_ratio = 256 * source_height / float (target_height);
+  float x_ratio = 256 * source_width / float (target_width);
+
+  // cache x1a, x1b for all the columns:
+  // ...and your OS better have garbage collection on process exit :)
+  if (g_px1ab_w < target_width)
+    {
+      if (g_px1ab)
+        delete[] g_px1ab;
+      g_px1ab = new int[target_width * 2 * 2];
+      g_px1ab_w = target_width * 2;
+    }
+  for (int x_dst = 0; x_dst < target_width; x_dst++)
+    {
+      // find the x-range of input pixels that will contribute:
+      int x1a = int (x_dst * x_ratio);
+      int x1b = int ((x_dst + 1) * x_ratio);
+      x1b = std::min (x1b, 256 * source_width - 1);
+      g_px1ab[x_dst * 2 + 0] = x1a;
+      g_px1ab[x_dst * 2 + 1] = x1b;
+    }
+
+  // For every output pixel
+  for (int y_dst = 0; y_dst < target_height; y_dst++)
+    {
+      // Find the y-range of input pixels that will contribute:
+      int y1a = int ((y_dst)*y_ratio);
+      int y1b = int ((y_dst + 1) * y_ratio);
+      // Map to same pixel -> we want to interpolate Between two pixels!
+      y1b = std::min (y1b, 256 * source_height - 1);
+      int y1c = y1a >> 8;
+      int y1d = y1b >> 8;
+
+      for (int x_dst = 0; x_dst < target_width; x_dst++)
+        {
+          // find the x-range of input pixels that will contribute:
+          int x1a = g_px1ab[x_dst * 2 + 0]; // (computed earlier)
+          int x1b = g_px1ab[x_dst * 2 + 1]; // (computed earlier)
+          int x1c = x1a >> 8;
+          int x1d = x1b >> 8;
+
+          // ADD UP ALL INPUT PIXELS CONTRIBUTING TO THIS OUTPUT PIXEL:
+          uint r = 0, g = 0, b = 0, a = 0, d = 0;
+          for (int y = y1c; y <= y1d; y++)
+            {
+              uint weight_y = 256;
+              if (y1c != y1d)
+                {
+                  if (y == y1c)
+                    {
+                      weight_y = 256 - (y1a & 0xFF);
+                    }
+
+                  else if (y == y1d)
+                    {
+                      weight_y = (y1b & 0xFF);
+                    }
+                }
+
+              const auto *dsrc2 = &input32[y * source_width + x1c];
+              for (int x = x1c; x <= x1d; x++)
+                {
+                  uint weight_x = 256;
+                  if (x1c != x1d)
+                    {
+                      if (x == x1c)
+                        {
+                          weight_x = 256 - (x1a & 0xFF);
+                        }
+                      else if (x == x1d)
+                        {
+                          weight_x = (x1b & 0xFF);
+                        }
+                    }
+
+                  uint c = *dsrc2++; // dsrc[y*w1 + x];
+                  uint r_src = (c)&0xFF;
+                  uint g_src = (c >> 8) & 0xFF;
+                  uint b_src = (c >> 16) & 0xFF;
+                  uint d_src = (c >> 24) & 0xFF;
+                  uint w = (weight_x * weight_y) >> weight_shift;
+                  r += r_src * w;
+                  g += g_src * w;
+                  b += b_src * w;
+                  d += d_src * w;
+                  a += w;
+                }
+            }
+
+          // write results
+          uint c
+              = ((r / a)) | ((g / a) << 8) | ((b / a) << 16) | ((d / a) << 24);
+          *output32++ = c; // ddest[y2*w2 + x2] = c;
+        }
+    }
+}
+
 /**
  * TODO
  */
