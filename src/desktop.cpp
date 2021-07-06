@@ -90,7 +90,7 @@ box_blur (uint32_t *img, int width, int height, uint radius)
       std::vector<uint32_t> left_pixels{};
       left_pixels.reserve (radius + 2);
 
-      for (int x = 0; x < radius + 1; x++)
+      for (int x = radius; x > 0; x--)
         {
           r += 2 * (row[x] & r_mask);
           g += 2 * (row[x] & g_mask);
@@ -99,9 +99,9 @@ box_blur (uint32_t *img, int width, int height, uint radius)
           left_pixels.insert (left_pixels.cbegin (), row[x]);
         }
 
-      r -= row[0] & r_mask;
-      g -= row[0] & g_mask;
-      b -= row[0] & b_mask;
+      r += row[0] & r_mask;
+      g += row[0] & g_mask;
+      b += row[0] & b_mask;
 
       for (int x = 0; x < width - radius - 1; x++)
         {
@@ -155,7 +155,7 @@ dxp_desktop::nn_resize (uint8_t *__restrict input, uint8_t *__restrict output,
   auto *input32 = reinterpret_cast<uint32_t *> (input);
   auto *output32 = reinterpret_cast<uint32_t *> (output);
 
-  box_blur (input32, source_width, source_height, 10);
+  box_blur (input32, source_width, source_height, 100);
 
   //
   // Bitshifts are used to preserve precision in x_ratio and y_ratio.
