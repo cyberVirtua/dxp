@@ -65,48 +65,70 @@ dxp_desktop::save_screen ()
 
   this->image_ptr = xcb_get_image_data (gi_reply.get ());
 
+  // To remove aliasing in the resulting image,
+  // a low pass filter should be used on the source.
+  auto *input32 = reinterpret_cast<uint32_t *> (this->image_ptr);
+
+  class pixmap input_pix (input32, this->width);
+  int radius = this->width / this->pixmap_width / 2;
+
+  box_blur_horizontal (input_pix, this->width, this->height, radius);
+  box_blur_vertical (input_pix, this->width, this->height, radius);
+
   nn_resize (this->image_ptr, this->pixmap.data (), this->width, this->height,
              this->pixmap_width, this->pixmap_height);
 }
 
+/**
+ * Apply a horizontal box filter (low pass) to the image.
+ *
+ * Uses algorithm described here
+ * http://blog.ivank.net/fastest-gaussian-blur.html
+ * and here https://www.gamasutra.com/view/feature/3102
+ */
 void
-box_blur (uint32_t *img, int width, int height, uint radius)
+box_blur_horizontal (pixmap img, int width, int height, uint radius)
 {
   constexpr uint32_t r_mask = 0x00FF0000;
   constexpr uint32_t g_mask = 0x0000FF00;
   constexpr uint32_t b_mask = 0x000000FF;
 
-  // Do hblur
-  int num = radius * 2 + 1;
+  int n = radius * 2 + 1; ///< Amount of pixels in a kernel
 
   for (int y = 0; y < height; y++)
     {
+      // Accumulators for color values
       uint32_t r = 0;
       uint32_t g = 0;
       uint32_t b = 0;
 
-      uint32_t *row = &img[y * width];
-
+      /// Leftmost part of the kernel.
+      /// As changes to the image are made in place,
+      /// unchanged kernel values must be stored
       std::vector<uint32_t> left_pixels{};
       left_pixels.reserve (radius + 2);
 
+      // Fill accumulators. Image gets mirrored for edge pixels
       for (int x = radius; x > 0; x--)
         {
-          r += 2 * (row[x] & r_mask);
-          g += 2 * (row[x] & g_mask);
-          b += 2 * (row[x] & b_mask);
+          r += 2 * (img[x][y] & r_mask);
+          g += 2 * (img[x][y] & g_mask);
+          b += 2 * (img[x][y] & b_mask);
 
-          left_pixels.insert (left_pixels.cbegin (), row[x]);
+          left_pixels.insert (left_pixels.cbegin (), img[x][y]);
         }
 
-      r += row[0] & r_mask;
-      g += row[0] & g_mask;
-      b += row[0] & b_mask;
+      // Add the first pixel to the accumulators
+      r += img[0][y] & r_mask;
+      g += img[0][y] & g_mask;
+      b += img[0][y] & b_mask;
 
+      // Main loop.
+      // Set pixel to the accumulated value and increment accumulator
       for (int x = 0; x < width - radius - 1; x++)
         {
-          left_pixels.push_back (row[x]);
-          row[x] = (r / num) & r_mask | (g / num) & g_mask | (b / num) & b_mask;
+          left_pixels.push_back (img[x][y]);
+          img[x][y] = (r / n) & r_mask | (g / n) & g_mask | (b / n) & b_mask;
 
           // Subtract leftmost
           r -= left_pixels[0] & r_mask;
@@ -114,31 +136,99 @@ box_blur (uint32_t *img, int width, int height, uint radius)
           b -= left_pixels[0] & b_mask;
 
           // Add rightmost
-          r += row[x + radius + 1] & r_mask;
-          g += row[x + radius + 1] & g_mask;
-          b += row[x + radius + 1] & b_mask;
+          r += img[x + radius + 1][y] & r_mask;
+          g += img[x + radius + 1][y] & g_mask;
+          b += img[x + radius + 1][y] & b_mask;
 
           left_pixels.erase (left_pixels.cbegin ());
         }
+
+      // Mirror image for edge pixels
       for (int i = 1, x = width - radius - 1; x < width; x++)
         {
-          left_pixels.push_back (row[x]);
-          row[x] = (r / num) & r_mask | (g / num) & g_mask | (b / num) & b_mask;
+          left_pixels.push_back (img[x][y]);
+          img[x][y] = (r / n) & r_mask | (g / n) & g_mask | (b / n) & b_mask;
 
           r -= left_pixels[0] & r_mask;
           g -= left_pixels[0] & g_mask;
           b -= left_pixels[0] & b_mask;
 
-          r += row[width - i] & r_mask;
-          g += row[width - i] & g_mask;
-          b += row[width - i] & b_mask;
+          r += img[width - i][y] & r_mask;
+          g += img[width - i][y] & g_mask;
+          b += img[width - i][y] & b_mask;
           i++;
 
           left_pixels.erase (left_pixels.cbegin ());
         }
     }
+}
 
-  // Do vblur
+/**
+ * Apply a vertical box filter (low pass) to the image.
+ */
+void
+box_blur_vertical (pixmap img, int width, int height, uint radius)
+{
+  constexpr uint32_t r_mask = 0x00FF0000;
+  constexpr uint32_t g_mask = 0x0000FF00;
+  constexpr uint32_t b_mask = 0x000000FF;
+
+  int n = radius * 2 + 1;
+
+  for (int x = 0; x < width; x++)
+    {
+      uint32_t r = 0;
+      uint32_t g = 0;
+      uint32_t b = 0;
+
+      std::vector<uint32_t> top_pixels{};
+      top_pixels.reserve (radius + 2);
+
+      for (int y = radius; y > 0; y--)
+        {
+          r += 2 * (img[x][y] & r_mask);
+          g += 2 * (img[x][y] & g_mask);
+          b += 2 * (img[x][y] & b_mask);
+
+          top_pixels.insert (top_pixels.cbegin (), img[x][y]);
+        }
+
+      r += img[x][0] & r_mask;
+      g += img[x][0] & g_mask;
+      b += img[x][0] & b_mask;
+
+      for (int y = 0; y < height - radius - 1; y++)
+        {
+          top_pixels.push_back (img[x][y]);
+          img[x][y] = (r / n) & r_mask | (g / n) & g_mask | (b / n) & b_mask;
+
+          r -= top_pixels[0] & r_mask;
+          g -= top_pixels[0] & g_mask;
+          b -= top_pixels[0] & b_mask;
+
+          r += img[x][y + radius + 1] & r_mask;
+          g += img[x][y + radius + 1] & g_mask;
+          b += img[x][y + radius + 1] & b_mask;
+
+          top_pixels.erase (top_pixels.cbegin ());
+        }
+      for (int i = 1, y = height - radius - 1; y < height; y++)
+        {
+          top_pixels.push_back (img[x][y]);
+          img[x][y] = (r / n) & r_mask | (g / n) & g_mask | (b / n) & b_mask;
+
+          r -= top_pixels[0] & r_mask;
+          g -= top_pixels[0] & g_mask;
+          b -= top_pixels[0] & b_mask;
+
+          r += img[x][height - i] & r_mask;
+          g += img[x][height - i] & g_mask;
+          b += img[x][height - i] & b_mask;
+          i++;
+
+          top_pixels.erase (top_pixels.cbegin ());
+        }
+    }
 }
 
 /**
@@ -146,16 +236,15 @@ box_blur (uint32_t *img, int width, int height, uint radius)
  * https://stackoverflow.com/questions/28566290
  */
 void
-dxp_desktop::nn_resize (uint8_t *__restrict input, uint8_t *__restrict output,
+dxp_desktop::nn_resize (const uint8_t *__restrict input,
+                        uint8_t *__restrict output,
                         int source_width, /* Source dimensions */
                         int source_height,
                         int target_width, /* Target dimensions */
                         int target_height)
 {
-  auto *input32 = reinterpret_cast<uint32_t *> (input);
+  const auto *input32 = reinterpret_cast<const uint32_t *> (input);
   auto *output32 = reinterpret_cast<uint32_t *> (output);
-
-  box_blur (input32, source_width, source_height, 100);
 
   //
   // Bitshifts are used to preserve precision in x_ratio and y_ratio.
@@ -187,23 +276,18 @@ dxp_desktop::nn_resize (uint8_t *__restrict input, uint8_t *__restrict output,
 }
 
 /**
- * TODO
+ * Bilinear resize.
+ * Additional overhead compared to nearest neighbor resize does not result in
+ * significantly better images. So this resize algorithm is not used.
  */
 void
-dxp_desktop::bilinear_resize (uint8_t *__restrict input,
+dxp_desktop::bilinear_resize (const uint8_t *__restrict input,
                               uint8_t *__restrict output,
                               int source_width, /* Source dimensions */
                               int source_height,
                               int target_width, /* Target dimensions */
                               int target_height)
 {
-  // To remove aliasing in the resulting image,
-  // a low pass filter should be used on the source.
-  auto *input32 = reinterpret_cast<uint32_t *> (input);
-  auto *output32 = reinterpret_cast<uint32_t *> (output);
-
-  box_blur (input32, source_width, source_height, 10);
-
   const float x_ratio = float (source_width) / target_width;
   const float y_ratio = float (source_height) / target_height;
 

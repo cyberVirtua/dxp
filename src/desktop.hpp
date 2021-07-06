@@ -70,9 +70,9 @@ public:
    * Resize image to specified dimensions with nearest neighbour algorithm
    */
   static void
-  nn_resize (uint8_t *input,   ///< Input RGBA 1D array pointer
-             uint8_t *output,  ///< Output RGBA 1D array pointers
-             int source_width, /* Dimensions of unresized screenshot */
+  nn_resize (const uint8_t *input, ///< Input RGBA 1D array pointer
+             uint8_t *output,      ///< Output RGBA 1D array pointers
+             int source_width,     /* Dimensions of unresized screenshot */
              int source_height,
              int target_width, /* Dimensions of screenshot after resize */
              int target_height);
@@ -81,12 +81,21 @@ public:
    * Resize image to specified dimensions with bilinear interpolation algorithm
    */
   static void
-  bilinear_resize (uint8_t *input,   ///< Input RGBA 1D array pointer
-                   uint8_t *output,  ///< Output RGBA 1D array pointers
+  bilinear_resize (const uint8_t *input, ///< Input RGBA 1D array pointer
+                   uint8_t *output,      ///< Output RGBA 1D array pointers
                    int source_width, /* Dimensions of unresized screenshot */
                    int source_height,
                    int target_width, /* Dimensions of screenshot after resize */
                    int target_height);
 };
+
+/**
+ * Apply a horizontal box filter (low pass) to the image.
+ */
+void box_blur_horizontal (class pixmap img, int width, int height, uint radius);
+/**
+ * Apply a vertical box filter (low pass) to the image.
+ */
+void box_blur_vertical (class pixmap img, int width, int height, uint radius);
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */
