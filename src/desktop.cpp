@@ -67,13 +67,10 @@ dxp_desktop::save_screen ()
 
   // To remove aliasing in the resulting image,
   // a low pass filter should be used on the source.
-  auto *input32 = reinterpret_cast<uint32_t *> (this->image_ptr);
-
-  class pixmap input_pix (input32, this->width);
   int radius = this->width / this->pixmap_width / 2;
 
-  box_blur_horizontal (input_pix, this->width, this->height, radius);
-  box_blur_vertical (input_pix, this->width, this->height, radius);
+  box_blur_horizontal (this->image_ptr, this->width, this->height, radius);
+  box_blur_vertical (this->image_ptr, this->width, this->height, radius);
 
   nn_resize (this->image_ptr, this->pixmap.data (), this->width, this->height,
              this->pixmap_width, this->pixmap_height);
@@ -87,8 +84,12 @@ dxp_desktop::save_screen ()
  * and here https://www.gamasutra.com/view/feature/3102
  */
 void
-box_blur_horizontal (pixmap img, int width, int height, uint radius)
+box_blur_horizontal (uint8_t *image, int width, int height, uint radius)
 {
+  auto *input32 = reinterpret_cast<uint32_t *> (image);
+  class pixmap img (input32, width); // Adds operator[][]
+
+  constexpr uint32_t a_mask = 0xFF000000;
   constexpr uint32_t r_mask = 0x00FF0000;
   constexpr uint32_t g_mask = 0x0000FF00;
   constexpr uint32_t b_mask = 0x000000FF;
@@ -167,8 +168,11 @@ box_blur_horizontal (pixmap img, int width, int height, uint radius)
  * Apply a vertical box filter (low pass) to the image.
  */
 void
-box_blur_vertical (pixmap img, int width, int height, uint radius)
+box_blur_vertical (uint8_t *image, int width, int height, uint radius)
 {
+  auto *input32 = reinterpret_cast<uint32_t *> (image);
+  class pixmap img (input32, width);
+
   constexpr uint32_t r_mask = 0x00FF0000;
   constexpr uint32_t g_mask = 0x0000FF00;
   constexpr uint32_t b_mask = 0x000000FF;

@@ -92,10 +92,10 @@ public:
 /**
  * Apply a horizontal box filter (low pass) to the image.
  */
-void box_blur_horizontal (class pixmap img, int width, int height, uint radius);
+void box_blur_horizontal (uint8_t *image, int width, int height, uint radius);
 /**
  * Apply a vertical box filter (low pass) to the image.
  */
-void box_blur_vertical (class pixmap img, int width, int height, uint radius);
+void box_blur_vertical (uint8_t *image, int width, int height, uint radius);
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */
