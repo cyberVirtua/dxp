@@ -6,6 +6,45 @@
 #include <vector>
 #include <xcb/xproto.h>
 
+class pixmap
+{
+public:
+  uint32_t *data;
+  int width;
+
+  pixmap (uint32_t *img, int width)
+  {
+    this->data = img;
+    this->width = width;
+  }
+
+  class proxy
+  {
+  public:
+    explicit proxy (uint32_t *data, int width)
+    {
+      this->data = data;
+      this->width = width;
+    }
+
+    uint32_t &
+    operator[] (int y)
+    {
+      return data[y * width];
+    }
+
+  private:
+    uint32_t *data;
+    int width;
+  };
+
+  proxy
+  operator[] (int x) const
+  {
+    return proxy (&data[x], width);
+  }
+};
+
 /**
  * Captures, downsizes and stores desktop screenshot
  */
