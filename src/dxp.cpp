@@ -22,7 +22,7 @@ main ()
       dxp_socket client;
       auto v = client.get_desktops ();
 
-      window w (dxp_x, dxp_y, v);
+      window w (v);
 
       // Handling incoming events
       // Freeing it with free() is not specified in the docs, but it works

@@ -1,5 +1,6 @@
 #include <chrono>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 using color = const uint32_t;
@@ -17,8 +18,31 @@ using color = const uint32_t;
 const uint dxp_width = 0;
 const uint dxp_height = 150;
 
-const int16_t dxp_x = 0; ///< X coordinate of window's top left corner
-const int16_t dxp_y = 0; ///< Y coordinate of window's top left corner
+///
+/// Name of the monitor to put window on. Will use primary if unset.
+///
+const std::string dxp_monitor_name = "DVI-D-0";
+
+///
+/// Prepending minus to the coordinate value will switch the corner side:
+///
+/// +x, +y: top left corner
+/// +x, -y: bottom left corner
+/// -x, +y: top right corner
+/// -x, -y: bottom right corner
+///
+/// Coordinates are relative to the specified monitor.
+///
+/// NOTE: To specify -0, write = -0.0
+///
+const float dxp_x = -10; ///< X coordinate of window's corner
+const float dxp_y = -22; ///< Y coordinate of window's corner
+
+///
+/// If centering is enabled, corresponding coordinate will be ignored
+///
+const bool dxp_center_x = false; ///< Center dxp on the monitor horizontally
+const bool dxp_center_y = false; ///< Center dxp on the monitor vertically
 
 const uint16_t dxp_padding = 3; ///< Padding around the screenshots
 
@@ -33,8 +57,8 @@ const uint dxp_border_width = 0; ///< dxp window border
 ///
 /// How often to take screenshots.
 ///
-/// Recommended value is 10 seconds
-//
+/// Recommended value is 10 seconds.
+///
 /// NOTE: Setting timeout to values below 5 ms may severely increase CPU load.
 ///
 const auto dxp_screenshot_period = std::chrono::seconds (1);

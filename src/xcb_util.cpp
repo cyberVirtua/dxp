@@ -1,6 +1,7 @@
 #include "xcb_util.hpp"
 #include "config.hpp"
 #include "window.hpp"
+#include <cstdint>
 #include <cstring>
 #include <xcb/xcb.h>
 
@@ -104,6 +105,9 @@ get_monitors (xcb_connection_t *c, xcb_window_t root)
         {
           continue;
         }
+      std::string name (reinterpret_cast<char *> (
+                            xcb_randr_get_output_info_name (output.get ())),
+                        output->name_len);
 
       auto crtc = xcb_unique_ptr<xcb_randr_get_crtc_info_reply_t> (
           xcb_randr_get_crtc_info_reply (
@@ -111,10 +115,43 @@ get_monitors (xcb_connection_t *c, xcb_window_t root)
               &e));
       check (e, "XCB error while getting randr info reply");
 
-      monitor_info m{ crtc->x, crtc->y, crtc->width, crtc->height };
+      monitor_info m{ crtc->x, crtc->y, crtc->width, crtc->height, name };
       monitors.push_back (m);
     }
   return monitors;
+}
+
+/**
+ * Get crtc of the primary monitor.
+ *
+ * NOTE: Returned monitor_info.name is unsed as it is unused.
+ */
+monitor_info
+get_monitor_primary (xcb_connection_t *c, xcb_window_t root)
+{
+
+  xcb_generic_error_t *e = nullptr;
+  auto primary_cookie = xcb_randr_get_output_primary (c, root);
+
+  auto primary = xcb_unique_ptr<xcb_randr_get_output_primary_reply_t> (
+      xcb_randr_get_output_primary_reply (c, primary_cookie, &e));
+  check (e, "XCB error while getting primary monitor reply");
+
+  auto primary_info
+      = xcb_randr_get_output_info (c, primary->output, XCB_CURRENT_TIME);
+
+  auto primary_output = xcb_unique_ptr<xcb_randr_get_output_info_reply_t> (
+      xcb_randr_get_output_info_reply (c, primary_info, &e));
+  check (e, "XCB error while getting randr info reply");
+
+  auto crtc = xcb_unique_ptr<xcb_randr_get_crtc_info_reply_t> (
+      xcb_randr_get_crtc_info_reply (
+          c,
+          xcb_randr_get_crtc_info (c, primary_output->crtc, XCB_CURRENT_TIME),
+          &e));
+  check (e, "XCB error while getting randr info reply");
+
+  return monitor_info{ crtc->x, crtc->y, crtc->width, crtc->height, "" };
 }
 
 /**
