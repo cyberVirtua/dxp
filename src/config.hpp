@@ -21,7 +21,7 @@ const uint dxp_height = 150;
 ///
 /// Name of the monitor to put window on. Will use primary if unset.
 ///
-const std::string dxp_monitor_name = "DVI-D-0";
+const std::string dxp_monitor_name = "";
 
 ///
 /// Prepending minus to the coordinate value will switch the corner side:
