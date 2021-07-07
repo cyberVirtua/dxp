@@ -6,6 +6,45 @@
 #include <vector>
 #include <xcb/xproto.h>
 
+class pixmap
+{
+public:
+  uint32_t *data;
+  int width;
+
+  pixmap (uint32_t *img, int width)
+  {
+    this->data = img;
+    this->width = width;
+  }
+
+  class proxy
+  {
+  public:
+    explicit proxy (uint32_t *data, int width)
+    {
+      this->data = data;
+      this->width = width;
+    }
+
+    uint32_t &
+    operator[] (int y)
+    {
+      return data[y * width];
+    }
+
+  private:
+    uint32_t *data;
+    int width;
+  };
+
+  proxy
+  operator[] (int x) const
+  {
+    return proxy (&data[x], width);
+  }
+};
+
 /**
  * Captures, downsizes and stores desktop screenshot
  */
@@ -28,15 +67,35 @@ public:
   void save_screen ();
 
   /**
-   * Resizes screenshot to specified dimensions
+   * Resize image to specified dimensions with nearest neighbour algorithm
    */
   static void
-  resize (const uint8_t *input, ///< Input RGBA 1D array pointer
-          uint8_t *output,      ///< Output RGBA 1D array pointers
-          int source_width,     /* Dimensions of unresized screenshot */
-          int source_height,
-          int target_width, /* Dimensions of screenshot after resize */
-          int target_height);
+  nn_resize (const uint8_t *input, ///< Input RGBA 1D array pointer
+             uint8_t *output,      ///< Output RGBA 1D array pointers
+             int source_width,     /* Dimensions of unresized screenshot */
+             int source_height,
+             int target_width, /* Dimensions of screenshot after resize */
+             int target_height);
+
+  /**
+   * Resize image to specified dimensions with bilinear interpolation algorithm
+   */
+  static void
+  bilinear_resize (const uint8_t *input, ///< Input RGBA 1D array pointer
+                   uint8_t *output,      ///< Output RGBA 1D array pointers
+                   int source_width, /* Dimensions of unresized screenshot */
+                   int source_height,
+                   int target_width, /* Dimensions of screenshot after resize */
+                   int target_height);
 };
+
+/**
+ * Apply a horizontal box filter (low pass) to the image.
+ */
+void box_blur_horizontal (uint8_t *image, int width, int height, uint radius);
+/**
+ * Apply a vertical box filter (low pass) to the image.
+ */
+void box_blur_vertical (uint8_t *image, int width, int height, uint radius);
 
 #endif /* ifndef DESKTOP_PIXMAP_HPP */
