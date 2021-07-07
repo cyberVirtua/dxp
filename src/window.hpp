@@ -61,7 +61,7 @@ public:
   void draw_desktop_border (uint desktop_id, uint32_t color);
 
   /**
-   * Draw a preselection border of color=dexpo_hlcolor
+   * Draw a preselection border of color=dxp_hlcolor
    * around desktop=desktop[this->desktop_sel].
    */
   void draw_preselection ();
@@ -69,7 +69,7 @@ public:
   /**
    * Remove a preselection border around desktop[this->desktop_sel].
    *
-   * @note This implementation just draws border of color dexpo_bgcolor above
+   * @note This implementation just draws border of color dxp_bgcolor above
    * existing border.
    */
   void clear_preselection ();

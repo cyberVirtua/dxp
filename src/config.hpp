@@ -12,23 +12,23 @@ using color = const uint32_t;
 ///
 /// One dimension *must* be set to zero and will be calculated at runtime.
 ///
-/// Actual window width will be equal to dexpo_width + (dexpo_padding * 2)
+/// Actual window width will be equal to dxp_width + (dxp_padding * 2)
 ///
-const uint dexpo_width = 0;
-const uint dexpo_height = 150;
+const uint dxp_width = 0;
+const uint dxp_height = 150;
 
-const int16_t dexpo_x = 0; ///< X coordinate of window's top left corner
-const int16_t dexpo_y = 0; ///< Y coordinate of window's top left corner
+const int16_t dxp_x = 0; ///< X coordinate of window's top left corner
+const int16_t dxp_y = 0; ///< Y coordinate of window's top left corner
 
-const uint16_t dexpo_padding = 3; ///< Padding around the screenshots
+const uint16_t dxp_padding = 3; ///< Padding around the screenshots
 
-color dexpo_background = 0x444444;    ///< Window background
-color dexpo_border_pres = 0xFFFFFF;   ///< Desktop preselection
-color dexpo_border_nopres = 0x808080; ///< Desktop without preselection
+color dxp_background = 0x444444;    ///< Window background
+color dxp_border_pres = 0xFFFFFF;   ///< Desktop preselection
+color dxp_border_nopres = 0x808080; ///< Desktop without preselection
 
-const uint16_t dexpo_border_pres_width = 2; ///< Width of the preselection
+const uint16_t dxp_border_pres_width = 2; ///< Width of the preselection
 
-const uint dexpo_border_width = 0; ///< dexpo window border
+const uint dxp_border_width = 0; ///< dxp window border
 
 ///
 /// How often to take screenshots.
@@ -37,7 +37,7 @@ const uint dexpo_border_width = 0; ///< dexpo window border
 //
 /// NOTE: Setting timeout to values below 5 ms may severely increase CPU load.
 ///
-const auto dexpo_screenshot_period = std::chrono::seconds (10);
+const auto dxp_screenshot_period = std::chrono::seconds (1);
 
 ///
 /// Desktop viewport:
@@ -50,4 +50,4 @@ const auto dexpo_screenshot_period = std::chrono::seconds (10);
 ///
 /// Otherwise leave empty.
 ///
-const std::vector<uint32_t> dexpo_viewport = {};
+const std::vector<uint32_t> dxp_viewport = {};

@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 #include <vector>
 
-constexpr const char *k_socket_path = "/tmp/dexpo.socket";
+constexpr const char *k_socket_path = "/tmp/dxp.socket";
 
 /**
  * Dekstop struct that will be transferred over socket

@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Project info (version may be edited)
-project(dexpo CXX)
+project(dxp CXX)
 include(cmake/StandardProjectSettings.cmake)
 include(cmake/PreventInSourceBuilds.cmake)
 
