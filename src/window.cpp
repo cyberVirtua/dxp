@@ -74,14 +74,28 @@ window::set_window_dimensions ()
     }
 
   // Set window coordinates based on config values
-  x = dxp_x >= 0 && !std::signbit (dxp_x) // signbit is to handle negative zero
-          ? dxp_x
-          : dxp_monitor.width - this->width - std::abs (dxp_x);
-  x += dxp_monitor.x; // Add monitor's offset
-
-  y += dxp_y >= 0 && !std::signbit (dxp_y)
-           ? dxp_y
-           : dxp_monitor.height - this->height - std::abs (dxp_y);
+  if (dxp_center_x)
+    {
+      x = dxp_monitor.width / 2 - this->width / 2;
+    }
+  else
+    {
+      x = dxp_x >= 0 && !std::signbit (dxp_x) // handle negative zero
+              ? dxp_x
+              : dxp_monitor.width - this->width - std::abs (dxp_x);
+    }
+  if (dxp_center_y)
+    {
+      y = dxp_monitor.height / 2 - this->height / 2;
+    }
+  else
+    {
+      y += dxp_y >= 0 && !std::signbit (dxp_y)
+               ? dxp_y
+               : dxp_monitor.height - this->height - std::abs (dxp_y);
+    }
+  // Add monitor offsets
+  x += dxp_monitor.x;
   y += dxp_monitor.y;
 };
 

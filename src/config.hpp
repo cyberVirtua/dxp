@@ -35,13 +35,13 @@ const std::string dxp_monitor_name = "DVI-D-0";
 ///
 /// NOTE: To specify -0, write = -0.0
 ///
-const float dxp_x = -10; ///< X coordinate of window's corner
-const float dxp_y = -22; ///< Y coordinate of window's corner
+const float dxp_x = 0; ///< X coordinate of window's corner
+const float dxp_y = 0; ///< Y coordinate of window's corner
 
 ///
 /// If centering is enabled, corresponding coordinate will be ignored
 ///
-const bool dxp_center_x = false; ///< Center dxp on the monitor horizontally
+const bool dxp_center_x = true;  ///< Center dxp on the monitor horizontally
 const bool dxp_center_y = false; ///< Center dxp on the monitor vertically
 
 const uint16_t dxp_padding = 3; ///< Padding around the screenshots
