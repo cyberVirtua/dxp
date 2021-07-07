@@ -49,5 +49,5 @@ endif()
 
 add_subdirectory(src)
 
-add_library(dexpo_lib OBJECT src/desktop.cpp src/drawable.cpp src/socket.cpp
-                             src/window.cpp src/xcb_util.cpp src/daemon.cpp)
+add_library(dxp_lib OBJECT src/desktop.cpp src/drawable.cpp src/socket.cpp
+                           src/window.cpp src/xcb_util.cpp src/daemon.cpp)
