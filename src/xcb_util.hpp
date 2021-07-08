@@ -82,9 +82,7 @@ std::vector<uint32_t> get_property_value (xcb_connection_t *c,
 std::vector<monitor_info> get_monitors (xcb_connection_t *c, xcb_window_t root);
 
 /**
- * Get crtc of the primary monitor.
- *
- * NOTE: Returned monitor_info.name is unsed as it is unused.
+ * Get monitor_info of the primary monitor
  */
 monitor_info get_monitor_primary (xcb_connection_t *c, xcb_window_t root);
 
