@@ -3,7 +3,7 @@
 #include "window.hpp"
 #include <cstring>
 #include <xcb/xcb.h>
-
+#include <xcb/xcb_keysyms.h>
 /**
  * Check if got an XCB error and throw it in case
  */
@@ -233,4 +233,42 @@ ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
   // EWMH: Note that the timestamp may be 0 for clients using an older version
   // of this spec, in which case the timestamp field should be ignored.
   send_xcb_message (c, root, "_NET_CURRENT_DESKTOP", { destkop_id });
+}
+
+xcb_keycode_t *
+get_keycodes (xcb_connection_t *c, xcb_keysym_t sym) // const char * name)
+{
+  /**
+   * 1. Find a keysym for keyname in struct
+   * 2. Find possible keycodes for keysym
+   * 3. Return a vector of results.
+   */
+  auto key_symbols = xcb_key_symbols_alloc (c);
+  if (!key_symbols)
+    {
+      throw std::runtime_error("Couldn't allocate your keyboard symbols");
+    }
+  return xcb_key_symbols_get_keycode (key_symbols, sym);
+}
+
+bool
+check_key (xcb_connection_t *c, int received_key_code,
+           std::vector<int> key_function)
+{
+  for (uint i = 0; i < key_function.size (); i++)
+    {
+      auto keycodes = get_keycodes (c, key_function[i]);
+      int j = 0;
+      while (keycodes[j] != XCB_NO_SYMBOL)
+        {
+          if (keycodes[j] == received_key_code)
+            {
+              free (keycodes);
+              return true;
+            };
+          j++;
+        }
+      free (keycodes);
+    }
+  return false;
 }

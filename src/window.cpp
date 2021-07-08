@@ -4,7 +4,6 @@
 #include "xcb_util.hpp"
 #include <vector>
 #include <xcb/xproto.h>
-
 constexpr bool k_horizontal_stacking = (dxp_width == 0);
 constexpr bool k_vertical_stacking = (dxp_height == 0);
 
@@ -313,12 +312,10 @@ window::handle_event (xcb_generic_event_t *event)
       {
         auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
 
-        /// Right arrow or down arrow
-        bool next = kp->detail == 114 || kp->detail == 116;
-        /// Left arrow or up arrow
-        bool prev = kp->detail == 113 || kp->detail == 111;
-        bool entr = kp->detail == 36; /// Enter
-        bool esc = kp->detail == 9;   /// Escape
+        bool next = check_key(c_,kp->detail, action_next);
+        bool prev = check_key(c_,kp->detail, action_prev);
+        bool select = check_key(c_,kp->detail, action_select);
+        bool exit = check_key(c_,kp->detail, action_exit);
 
         clear_preselection ();
         if (next)
@@ -330,7 +327,7 @@ window::handle_event (xcb_generic_event_t *event)
           {
             pres = pres == 0 ? desktops.size () - 1 : pres - 1;
           }
-        if (entr)
+        if (select)
           {
             // Desktop change is thought as an event after which the
             // user doesn't need dxp any more
@@ -338,7 +335,7 @@ window::handle_event (xcb_generic_event_t *event)
             xcb_flush (c_);
             return 0; // Kill dxp
           }
-        if (esc)
+        if (exit)
           {
             return 0;
           }

@@ -1,8 +1,11 @@
+#include "keynames.hpp"
 #include <chrono>
 #include <cstdint>
 #include <vector>
 
 using color = const uint32_t;
+
+using keys_for = const std::vector<int>;
 
 ///
 /// Dimensions of the screenshots that will be displayed.
@@ -15,7 +18,7 @@ using color = const uint32_t;
 /// Actual window width will be equal to dxp_width + (dxp_padding * 2)
 ///
 const uint dxp_width = 0;
-const uint dxp_height = 150;
+const uint dxp_height = 250;
 
 const int16_t dxp_x = 0; ///< X coordinate of window's top left corner
 const int16_t dxp_y = 0; ///< Y coordinate of window's top left corner
@@ -50,4 +53,30 @@ const auto dxp_screenshot_period = std::chrono::seconds (1);
 ///
 /// Otherwise leave empty.
 ///
-const std::vector<uint32_t> dxp_viewport = {};
+const std::vector<uint32_t> dxp_viewport = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+///
+/// Key settings:
+///
+/// Next - preselect next desktop
+/// (Right & down arrows by default)
+///
+/// Prev - preselect previous desktop
+/// (Left & up arrows by default)
+///
+/// Exit - kill dxp
+/// (Escape by default)
+///
+/// Choose - select desktop
+/// (Enter by deafault)
+///
+/// View keynames.hpp for a list of supported keys
+/// and their names
+
+keys_for action_next = { Down, Right, latin_l, latin_k };
+
+keys_for action_prev = { Left, Up, latin_h, latin_j };
+
+keys_for action_exit = { Escape };
+
+keys_for action_select = { Return };

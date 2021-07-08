@@ -95,4 +95,19 @@ uint get_current_desktop (xcb_connection_t *c, xcb_window_t root);
 void ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root,
                           uint destkop_id);
 
+/**
+ * Get an array of all
+ * possible key codes that
+ * can be assostiated with 
+ * given keysym
+ */
+xcb_keycode_t* get_keycodes(xcb_connection_t *c, xcb_keysym_t sym);
+
+/**
+ * Check if the key pressed
+ * matches any of listed keys
+ * that invoke an action
+ */
+bool check_key(xcb_connection_t *c, int received_key_code, std::vector<int> key_function);
+
 #endif /* ifndef DEXPO_XCB_HPP */
