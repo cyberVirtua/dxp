@@ -11,7 +11,7 @@ constexpr bool k_horizontal_stacking = (dxp_width == 0);
 constexpr bool k_vertical_stacking = (dxp_height == 0);
 
 window::window (const std::vector<dxp_socket_desktop> &desktops)
-    : drawable (0, 0, 0, 0) // Width and height will be calculated from config
+    : drawable () // x, y, widht, height will be set later based on config
 {
   this->xcb_id = xcb_generate_id (drawable::c_);
   this->desktops = desktops;

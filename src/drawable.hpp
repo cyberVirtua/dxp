@@ -17,6 +17,8 @@ public:
   uint width;
   uint height;
 
+  /// Initialize static variables, set x, y, width, height to zero
+  drawable ();
   drawable (int16_t x,  ///< x coordinate of the top left corner
             int16_t y,  ///< y coordinate of the top left corner
             uint width, ///< Width of the display
