@@ -21,3 +21,5 @@ drawable::drawable (const int16_t x,  ///< x coordinate of the top left corner
       drawable::root_ = screen_->root;
     }
 }
+
+drawable::drawable () : drawable (0, 0, 0, 0) {}
