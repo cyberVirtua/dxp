@@ -1506,4 +1506,4 @@ const int RupeeSign = 0x20a8;
 const int WonSign = 0x20a9;
 const int NewSheqelSign = 0x20aa;
 const int DongSign = 0x20ab;
-const int EuroSign = 0x20ac; //
+const int EuroSign = 0x20ac; 

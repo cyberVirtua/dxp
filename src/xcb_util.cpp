@@ -238,11 +238,6 @@ ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
 xcb_keycode_t *
 get_keycodes (xcb_connection_t *c, xcb_keysym_t sym) // const char * name)
 {
-  /**
-   * 1. Find a keysym for keyname in struct
-   * 2. Find possible keycodes for keysym
-   * 3. Return a vector of results.
-   */
   auto key_symbols = xcb_key_symbols_alloc (c);
   if (!key_symbols)
     {
