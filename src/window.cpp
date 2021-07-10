@@ -72,7 +72,7 @@ window::create_window ()
                      window::root_,                 /* parent window */
                      this->x, this->y,              /* x, y */
                      this->width, this->height,     /* width, height */
-                     dxp_border_width,            /* border_width */
+                     dxp_border_width,              /* border_width */
                      XCB_WINDOW_CLASS_INPUT_OUTPUT, /* class */
                      window::screen_->root_visual,  /* visual */
                      mask, &mask_values);           /* masks, not used yet */
@@ -167,8 +167,8 @@ window::get_hover_desktop (int16_t x, int16_t y)
           // Check if cursor is inside of the desktop
           if (x >= dxp_padding &&           // Not to the left
               x <= d.width + dxp_padding && // Not to the right
-              y >= desktop_y &&               // Not above
-              y <= d.height + desktop_y)      // Not below
+              y >= desktop_y &&             // Not above
+              y <= d.height + desktop_y)    // Not below
             {
               return d.id;
             }
@@ -177,8 +177,8 @@ window::get_hover_desktop (int16_t x, int16_t y)
         {
           auto desktop_x = get_desktop_coord (d.id);
           // Check if cursor is inside of the desktop
-          if (x >= desktop_x &&              // To the right of left border
-              x <= d.width + desktop_x &&    // To the left of right border
+          if (x >= desktop_x &&            // To the right of left border
+              x <= d.width + desktop_x &&  // To the left of right border
               y >= dxp_padding &&          // Not above
               y <= d.height + dxp_padding) // Not below
             {
@@ -312,10 +312,10 @@ window::handle_event (xcb_generic_event_t *event)
       {
         auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
 
-        bool next = check_key(c_,kp->detail, action_next);
-        bool prev = check_key(c_,kp->detail, action_prev);
-        bool select = check_key(c_,kp->detail, action_select);
-        bool exit = check_key(c_,kp->detail, action_exit);
+        bool next = check_key (c_, kp->detail, dxp_next);
+        bool prev = check_key (c_, kp->detail, dxp_prev);
+        bool select = check_key (c_, kp->detail, dxp_select);
+        bool exit = check_key (c_, kp->detail, dxp_exit);
 
         clear_preselection ();
         if (next)

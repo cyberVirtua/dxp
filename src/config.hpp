@@ -4,8 +4,7 @@
 #include <vector>
 
 using color = const uint32_t;
-
-using keys_for = const std::vector<int>;
+using keys = const std::vector<int>;
 
 ///
 /// Dimensions of the screenshots that will be displayed.
@@ -40,7 +39,7 @@ const uint dxp_border_width = 0; ///< dxp window border
 //
 /// NOTE: Setting timeout to values below 5 ms may severely increase CPU load.
 ///
-const auto dxp_screenshot_period = std::chrono::seconds (1);
+const auto dxp_screenshot_period = std::chrono::seconds (10);
 
 ///
 /// Desktop viewport:
@@ -72,11 +71,7 @@ const std::vector<uint32_t> dxp_viewport = {};
 ///
 /// View keynames.hpp for a list of supported keys
 /// and their names
-
-keys_for action_next = { Down, Right, latin_l, latin_j };
-
-keys_for action_prev = { Left, Up, latin_h, latin_k };
-
-keys_for action_exit = { Escape };
-
-keys_for action_select = { Return };
+keys dxp_next = { Down, Right, latin_l, latin_j };
+keys dxp_prev = { Left, Up, latin_h, latin_k };
+keys dxp_exit = { Escape };
+keys dxp_select = { Return };
