@@ -1,11 +1,12 @@
-#include "keynames.hpp"
+#include "keys.hpp"
 #include <chrono>
 #include <cstdint>
 #include <string>
 #include <vector>
 
+constexpr std::size_t keys_size = 10;
 using color = const uint32_t;
-using keys = const std::vector<int>;
+using keys = std::array<std::string_view, keys_size>;
 
 ///
 /// Dimensions of the screenshots that will be displayed.
@@ -81,15 +82,15 @@ const std::vector<uint32_t> dxp_viewport = {};
 ///
 /// Key bindings:
 ///
-/// Next - preselect next desktop
-/// Prev - preselect previous desktop
-/// Exit - kill dxp
-/// Select - select desktop
+/// next: preselect next desktop
+/// prev: preselect previous desktop
+/// exit: kill dxp
+/// slct: switch to preselected desktop
 ///
 /// View keynames.hpp for a list of supported keys
 /// and their names
 ///
-keys dxp_next = { Down, Right, latin_l, latin_j };
-keys dxp_prev = { Left, Up, latin_h, latin_k };
-keys dxp_exit = { Escape };
-keys dxp_select = { Return };
+constexpr keys dxp_next = { "Down", "Right", "l", "j" };
+constexpr keys dxp_prev = { "Left", "Up", "h", "k" };
+constexpr keys dxp_exit = { "Escape" };
+constexpr keys dxp_slct = { "Return" };
