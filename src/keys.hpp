@@ -4,13 +4,14 @@
 #include <array>
 #include <stdexcept>
 #include <string>
+#include <xcb/xproto.h>
 
 /**
  * Constexpr keyname : keysym map
  *
  * NOTE: the array lenght is hardcoded
  */
-static constexpr std::array<std::pair<std::string_view, int>, 2291> keymap{{
+static constexpr std::array<std::pair<std::string_view, xcb_keysym_t>, 2291> keymap{{
 	{"VoidSymbol"                  , 0xffffff}   ,
 	{"BackSpace"                   , 0xff08}     ,
 	{"Tab"                         , 0xff09}     ,

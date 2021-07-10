@@ -132,16 +132,16 @@ template <typename Key, typename Value, std::size_t size> struct map
 
 /// Constexpr map of keyname : keysym
 static constexpr auto dxp_keymap
-    = map<std::string_view, int, keymap.size ()>{ { keymap } };
+    = map<std::string_view, xcb_keysym_t, keymap.size ()>{ { keymap } };
 
 /**
  * Get array of keynames from array of keysyms
  */
 template <std::size_t size>
-constexpr std::array<int, size>
+constexpr std::array<xcb_keysym_t, size>
 get_keysyms (const std::array<std::string_view, size> &keynames)
 {
-  std::array<int, size> keysyms{};
+  std::array<xcb_keysym_t, size> keysyms{};
   for (std::size_t i = 0; i < size; i++)
     {
       if (keynames[i] != "")

@@ -2,10 +2,20 @@
 #include "config.hpp"
 #include "drawable.hpp"
 #include "xcb_util.hpp"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <vector>
 #include <xcb/xproto.h>
+
+using keysyms = std::array<xcb_keysym_t, keys_size>;
+using keycodes = std::vector<xcb_keycode_t>;
+
+constexpr keysyms dxp_next_keysyms = get_keysyms<keys_size> (dxp_next);
+constexpr keysyms dxp_prev_keysyms = get_keysyms<keys_size> (dxp_prev);
+constexpr keysyms dxp_exit_keysyms = get_keysyms<keys_size> (dxp_exit);
+constexpr keysyms dxp_slct_keysyms = get_keysyms<keys_size> (dxp_slct);
+
 constexpr bool k_horizontal_stacking = (dxp_width == 0);
 constexpr bool k_vertical_stacking = (dxp_height == 0);
 
@@ -19,6 +29,7 @@ window::window (const std::vector<dxp_socket_desktop> &desktops)
   set_window_dimensions ();
   create_gc ();
   create_window ();
+  /* Get static keycodes from constexpr keysyms */
 }
 
 window::~window () { xcb_destroy_window (drawable::c_, this->xcb_id); }
@@ -332,6 +343,11 @@ window::clear_preselection ()
   draw_desktop_border (this->pres, dxp_border_nopres);
 };
 
+bool
+in_keycodes (keysyms s, xcb_keycode_t code)
+{
+}
+
 /**
  * TODO Document
  *
@@ -364,10 +380,12 @@ window::handle_event (xcb_generic_event_t *event)
       {
         auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
 
-        bool next = check_key (c_, kp->detail, dxp_next);
+        bool next = in_keycodes (dxp_next_keysyms, kp->detail);
+        /* BEGIN_WIP */
         bool prev = check_key (c_, kp->detail, dxp_prev);
-        bool select = check_key (c_, kp->detail, dxp_select);
+        bool select = check_key (c_, kp->detail, dxp_slct);
         bool exit = check_key (c_, kp->detail, dxp_exit);
+        /* END_WIP */
 
         clear_preselection ();
         if (next)
