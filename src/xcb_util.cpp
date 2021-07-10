@@ -235,6 +235,12 @@ ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
   send_xcb_message (c, root, "_NET_CURRENT_DESKTOP", { destkop_id });
 }
 
+/**
+ * Get an array of all
+ * possible key codes that
+ * can be assostiated with 
+ * given keysym
+ */
 xcb_keycode_t *
 get_keycodes (xcb_connection_t *c, xcb_keysym_t sym) // const char * name)
 {
@@ -246,6 +252,11 @@ get_keycodes (xcb_connection_t *c, xcb_keysym_t sym) // const char * name)
   return xcb_key_symbols_get_keycode (key_symbols, sym);
 }
 
+/**
+ * Check if the key pressed
+ * matches any of listed keys
+ * that invoke an action
+ */
 bool
 check_key (xcb_connection_t *c, int received_key_code,
            std::vector<int> key_function)
