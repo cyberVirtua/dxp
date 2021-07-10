@@ -1,6 +1,7 @@
 #ifndef DEXPO_XCB_HPP
 #define DEXPO_XCB_HPP
 
+#include "keys.hpp"
 #include <cstdlib>
 #include <exception>
 #include <memory>
@@ -34,11 +35,6 @@ struct monitor_info
   std::string name;
 };
 
-/**
- * Check if got an XCB error and throw it in case
- */
-void check (xcb_generic_error_t *e, const std::string &msg);
-
 class xcb_error : public std::runtime_error
 {
 public:
@@ -53,6 +49,11 @@ public:
           + ", major code: " + std::to_string (e->major_code)
           + ", minor code: " + std::to_string (e->minor_code)){};
 };
+
+/**
+ * Check if got an XCB error and throw it in case
+ */
+void check (xcb_generic_error_t *e, const std::string &msg);
 
 /**
  * Create unique_ptr with free as default deleter.
@@ -98,22 +99,62 @@ std::vector<desktop_info> get_desktops (xcb_connection_t *c, xcb_window_t root);
  */
 uint get_current_desktop (xcb_connection_t *c, xcb_window_t root);
 
+/**
+ * Change _NET_CURRENT_DESKTOP to destkop_id
+ */
 void ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root,
                           uint destkop_id);
 
-/**
- * Get an array of all
- * possible key codes that
- * can be assostiated with 
- * given keysym
- */
-xcb_keycode_t* get_keycodes(xcb_connection_t *c, xcb_keysym_t sym);
+/*******************************************************************************
+ * XKB Related code
+ ******************************************************************************/
 
 /**
- * Check if the key pressed
- * matches any of listed keys
- * that invoke an action
+ * Constexpr map template from Jason Turner
  */
-bool check_key(xcb_connection_t *c, int received_key_code, std::vector<int> key_function);
+template <typename Key, typename Value, std::size_t size> struct map
+{
+  std::array<std::pair<Key, Value>, size> data{};
+
+  [[nodiscard]] constexpr Value
+  at (const Key &key) const
+  {
+    const auto itr
+        = std::find_if (begin (data), end (data),
+                        [&key] (const auto &v) { return v.first == key; });
+    if (itr != end (data))
+      {
+        return itr->second;
+      }
+    throw std::range_error ("Not Found");
+  }
+};
+
+/// Constexpr map of keyname : keysym
+static constexpr auto dxp_keymap
+    = map<std::string_view, int, keymap.size ()>{ { keymap } };
+
+/**
+ * Get array of keynames from array of keysyms
+ */
+template <std::size_t size>
+constexpr std::array<int, size>
+get_keysyms (const std::array<std::string_view, size> &keynames)
+{
+  std::array<int, size> keysyms{};
+  for (std::size_t i = 0; i < size; i++)
+    {
+      if (keynames[i] != "")
+        {
+          keysyms[i] = dxp_keymap.at (keynames[i]);
+        }
+    }
+  return keysyms;
+};
+
+/**
+ * Get an array of all keycodes that can be assostiated with a keysym
+ */
+std::vector<xcb_keycode_t> get_keycodes (xcb_connection_t *c, xcb_keysym_t sym);
 
 #endif /* ifndef DEXPO_XCB_HPP */

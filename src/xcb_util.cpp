@@ -5,6 +5,7 @@
 #include <cstring>
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>
+
 /**
  * Check if got an XCB error and throw it in case
  */
@@ -259,7 +260,7 @@ send_xcb_message (xcb_connection_t *c, xcb_window_t root, const char *msg,
 }
 
 /**
- * Changing the number of desktop
+ * Change _NET_CURRENT_DESKTOP to destkop_id
  */
 void
 ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
@@ -271,45 +272,18 @@ ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
 }
 
 /**
- * Get an array of all
- * possible key codes that
- * can be assostiated with
- * given keysym
+ * Get an array of all keycodes that can be assostiated with a keysym
  */
-xcb_keycode_t *
-get_keycodes (xcb_connection_t *c, xcb_keysym_t sym) // const char * name)
+std::vector<xcb_keycode_t>
+get_keycodes (xcb_connection_t *c, xcb_keysym_t keysym)
 {
-  auto key_symbols = xcb_key_symbols_alloc (c);
-  if (!key_symbols)
+  auto *keysyms = xcb_key_symbols_alloc (c);
+  if (!keysyms)
     {
-      throw std::runtime_error ("Couldn't allocate your keyboard symbols");
+      throw std::runtime_error ("Could not get keycodes for the keysym \""
+                                + std::to_string (keysym) + "\"");
     }
-  return xcb_key_symbols_get_keycode (key_symbols, sym);
-}
-
-/**
- * Check if the key pressed
- * matches any of listed keys
- * that invoke an action
- */
-bool
-check_key (xcb_connection_t *c, int received_key_code,
-           std::vector<int> key_function)
-{
-  for (uint i = 0; i < key_function.size (); i++)
-    {
-      auto keycodes = get_keycodes (c, key_function[i]);
-      int j = 0;
-      while (keycodes[j] != XCB_NO_SYMBOL)
-        {
-          if (keycodes[j] == received_key_code)
-            {
-              free (keycodes);
-              return true;
-            };
-          j++;
-        }
-      free (keycodes);
-    }
-  return false;
+  auto *keycode = xcb_key_symbols_get_keycode (keysyms, keysym);
+  /* WIP Make smart */
+  return std::vector<xcb_keycode_t> ();
 }
