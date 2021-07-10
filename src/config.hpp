@@ -55,22 +55,16 @@ const auto dxp_screenshot_period = std::chrono::seconds (10);
 const std::vector<uint32_t> dxp_viewport = {};
 
 ///
-/// Key settings:
+/// Key bindings:
 ///
 /// Next - preselect next desktop
-/// (Right & down arrows by default)
-///
 /// Prev - preselect previous desktop
-/// (Left & up arrows by default)
-///
 /// Exit - kill dxp
-/// (Escape by default)
-///
-/// Choose - select desktop
-/// (Enter by deafault)
+/// Select - select desktop
 ///
 /// View keynames.hpp for a list of supported keys
 /// and their names
+///
 keys dxp_next = { Down, Right, latin_l, latin_j };
 keys dxp_prev = { Left, Up, latin_h, latin_k };
 keys dxp_exit = { Escape };
