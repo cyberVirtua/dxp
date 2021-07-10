@@ -2,15 +2,15 @@
 #include "config.hpp"
 #include "drawable.hpp"
 #include "xcb_util.hpp"
+#include <cmath>
+#include <iostream>
 #include <vector>
 #include <xcb/xproto.h>
 constexpr bool k_horizontal_stacking = (dxp_width == 0);
 constexpr bool k_vertical_stacking = (dxp_height == 0);
 
-window::window (const int16_t x, ///< x coordinate of the top left corner
-                const int16_t y, ///< y coordinate of the top left corner
-                const std::vector<dxp_socket_desktop> &desktops)
-    : drawable (x, y, 0, 0) // Width and height will be calculated from config
+window::window (const std::vector<dxp_socket_desktop> &desktops)
+    : drawable () // x, y, widht, height will be set later based on config
 {
   this->xcb_id = xcb_generate_id (drawable::c_);
   this->desktops = desktops;
@@ -44,6 +44,58 @@ window::set_window_dimensions ()
 
   this->width += k_vertical_stacking ? constant + dxp_width : dynamic;
   this->height += k_horizontal_stacking ? constant + dxp_height : dynamic;
+
+  /* Determine what monitor to draw window on */
+  monitor_info dxp_monitor{ 0, 0, 0, 0, "" };
+
+  if (dxp_monitor_name.empty ()) // Use primary if name is not specified
+    {
+      dxp_monitor = get_monitor_primary (window::c_, window::root_);
+    }
+  else // Get coordinates of the monitor that was specified in the config
+    {
+      auto monitors = get_monitors (window::c_, window::root_);
+      for (const auto &m : monitors)
+        {
+          if (m.name == dxp_monitor_name)
+            {
+              dxp_monitor = m;
+              break;
+            }
+        }
+      if (dxp_monitor.height == 0) // If target monitor was not found
+        {
+          std::cerr << "Monitor with name \"" << dxp_monitor_name
+                    << "\" was not found. Using primary monitor" << std::endl;
+
+          dxp_monitor = get_monitor_primary (window::c_, window::root_);
+        }
+    }
+
+  // Set window coordinates based on config values
+  if (dxp_center_x)
+    {
+      x = dxp_monitor.width / 2 - this->width / 2;
+    }
+  else
+    {
+      x = dxp_x >= 0 && !std::signbit (dxp_x) // handle negative zero
+              ? dxp_x
+              : dxp_monitor.width - this->width - std::abs (dxp_x);
+    }
+  if (dxp_center_y)
+    {
+      y = dxp_monitor.height / 2 - this->height / 2;
+    }
+  else
+    {
+      y += dxp_y >= 0 && !std::signbit (dxp_y)
+               ? dxp_y
+               : dxp_monitor.height - this->height - std::abs (dxp_y);
+    }
+  // Add monitor offsets
+  x += dxp_monitor.x;
+  y += dxp_monitor.y;
 };
 
 /**

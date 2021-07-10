@@ -31,6 +31,7 @@ struct monitor_info
   int y;
   uint width;
   uint height;
+  std::string name;
 };
 
 /**
@@ -79,6 +80,11 @@ std::vector<uint32_t> get_property_value (xcb_connection_t *c,
  * Get monitor_info for each connected monitor
  */
 std::vector<monitor_info> get_monitors (xcb_connection_t *c, xcb_window_t root);
+
+/**
+ * Get monitor_info of the primary monitor
+ */
+monitor_info get_monitor_primary (xcb_connection_t *c, xcb_window_t root);
 
 /**
  * Get an array of desktop_info.

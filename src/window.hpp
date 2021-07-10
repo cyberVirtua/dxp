@@ -17,9 +17,7 @@ public:
   std::vector<dxp_socket_desktop> desktops; ///< Desktops received from daemon
   uint pres;                                ///< id of the preselected desktop
 
-  window (int16_t x, ///< x coordinate of the top left corner
-          int16_t y, ///< y coordinate of the top left corner
-          const std::vector<dxp_socket_desktop> &desktops);
+  explicit window (const std::vector<dxp_socket_desktop> &desktops);
   ~window ();
 
   // Explicitly deleting unused constructors to comply with rule of five
