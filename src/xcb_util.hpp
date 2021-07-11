@@ -8,6 +8,7 @@
 #include <vector>
 #include <xcb/randr.h>
 #include <xcb/xcb.h>
+#include <xcb/xcb_keysyms.h>
 
 /**
  * Virtual desktop information
@@ -153,8 +154,44 @@ get_keysyms (const std::array<std::string_view, size> &keynames)
 };
 
 /**
- * Get an array of all keycodes that can be assostiated with a keysym
+ * Get an array of all keycodes that can be assostiated with the given keysyms
  */
-std::vector<xcb_keycode_t> get_keycodes (xcb_connection_t *c, xcb_keysym_t sym);
+template <std::size_t size>
+std::vector<xcb_keycode_t>
+keysyms2keycodes (xcb_connection_t *c,
+                  const std::array<xcb_keysym_t, size> &all_keysyms)
+{
+  std::vector<xcb_keycode_t> all_keycodes{};
+  all_keycodes.reserve (size * 2);
+
+  for (const auto &keysym : all_keysyms)
+    {
+      if (keysym == 0) // Ignore empty array elements
+        {
+          continue;
+        }
+
+      // Use custom deleter
+      auto keysyms = std::unique_ptr<xcb_key_symbols_t,
+                                     decltype (xcb_key_symbols_free) *> (
+          xcb_key_symbols_alloc (c), xcb_key_symbols_free);
+
+      if (!keysyms)
+        {
+          throw std::runtime_error ("Could not get keycodes for the keysym \""
+                                    + std::to_string (keysym) + "\"");
+        }
+      auto smart_keycodes = xcb_unique_ptr<xcb_keycode_t> (
+          xcb_key_symbols_get_keycode (keysyms.get (), keysym));
+
+      auto keycodes = smart_keycodes.get ();
+      while (*keycodes != XCB_NO_SYMBOL)
+        {
+          all_keycodes.push_back (*keycodes);
+          keycodes++;
+        }
+    }
+  return all_keycodes;
+}
 
 #endif /* ifndef DEXPO_XCB_HPP */

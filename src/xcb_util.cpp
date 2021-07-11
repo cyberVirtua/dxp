@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 #include <xcb/xcb.h>
-#include <xcb/xcb_keysyms.h>
 
 /**
  * Check if got an XCB error and throw it in case
@@ -269,21 +268,4 @@ ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
   // EWMH: Note that the timestamp may be 0 for clients using an older version
   // of this spec, in which case the timestamp field should be ignored.
   send_xcb_message (c, root, "_NET_CURRENT_DESKTOP", { destkop_id });
-}
-
-/**
- * Get an array of all keycodes that can be assostiated with a keysym
- */
-std::vector<xcb_keycode_t>
-get_keycodes (xcb_connection_t *c, xcb_keysym_t keysym)
-{
-  auto *keysyms = xcb_key_symbols_alloc (c);
-  if (!keysyms)
-    {
-      throw std::runtime_error ("Could not get keycodes for the keysym \""
-                                + std::to_string (keysym) + "\"");
-    }
-  auto *keycode = xcb_key_symbols_get_keycode (keysyms, keysym);
-  /* WIP Make smart */
-  return std::vector<xcb_keycode_t> ();
 }

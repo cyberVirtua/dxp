@@ -13,8 +13,13 @@ using keycodes = std::vector<xcb_keycode_t>;
 
 constexpr keysyms dxp_next_keysyms = get_keysyms<keys_size> (dxp_next);
 constexpr keysyms dxp_prev_keysyms = get_keysyms<keys_size> (dxp_prev);
-constexpr keysyms dxp_exit_keysyms = get_keysyms<keys_size> (dxp_exit);
 constexpr keysyms dxp_slct_keysyms = get_keysyms<keys_size> (dxp_slct);
+constexpr keysyms dxp_exit_keysyms = get_keysyms<keys_size> (dxp_exit);
+
+keycodes dxp_next_keycodes{};
+keycodes dxp_prev_keycodes{};
+keycodes dxp_slct_keycodes{};
+keycodes dxp_exit_keycodes{};
 
 constexpr bool k_horizontal_stacking = (dxp_width == 0);
 constexpr bool k_vertical_stacking = (dxp_height == 0);
@@ -29,7 +34,13 @@ window::window (const std::vector<dxp_socket_desktop> &desktops)
   set_window_dimensions ();
   create_gc ();
   create_window ();
-  /* Get static keycodes from constexpr keysyms */
+
+  // Parse keycodes from X server
+  // TODO(mmskv): benchmark
+  dxp_next_keycodes = keysyms2keycodes<keys_size> (c_, dxp_next_keysyms);
+  dxp_prev_keycodes = keysyms2keycodes<keys_size> (c_, dxp_prev_keysyms);
+  dxp_slct_keycodes = keysyms2keycodes<keys_size> (c_, dxp_slct_keysyms);
+  dxp_exit_keycodes = keysyms2keycodes<keys_size> (c_, dxp_exit_keysyms);
 }
 
 window::~window () { xcb_destroy_window (drawable::c_, this->xcb_id); }
@@ -343,9 +354,14 @@ window::clear_preselection ()
   draw_desktop_border (this->pres, dxp_border_nopres);
 };
 
+/**
+ * Check if there is a keycode present in a vector of keycodes.
+ * Used to check if pressed key matches any keys of interest.
+ */
 bool
-in_keycodes (keysyms s, xcb_keycode_t code)
+has_keycode (keycodes &codes, xcb_keycode_t code)
 {
+  return std::find (codes.cbegin (), codes.cend (), code) != codes.cend ();
 }
 
 /**
@@ -380,12 +396,11 @@ window::handle_event (xcb_generic_event_t *event)
       {
         auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
 
-        bool next = in_keycodes (dxp_next_keysyms, kp->detail);
-        /* BEGIN_WIP */
-        bool prev = check_key (c_, kp->detail, dxp_prev);
-        bool select = check_key (c_, kp->detail, dxp_slct);
-        bool exit = check_key (c_, kp->detail, dxp_exit);
-        /* END_WIP */
+        // Determine what key has been pressed
+        bool next = has_keycode (dxp_next_keycodes, kp->detail);
+        bool prev = has_keycode (dxp_prev_keycodes, kp->detail);
+        bool slct = has_keycode (dxp_slct_keycodes, kp->detail);
+        bool exit = has_keycode (dxp_exit_keycodes, kp->detail);
 
         clear_preselection ();
         if (next)
@@ -397,7 +412,7 @@ window::handle_event (xcb_generic_event_t *event)
           {
             pres = pres == 0 ? desktops.size () - 1 : pres - 1;
           }
-        if (select)
+        if (slct)
           {
             // Desktop change is thought as an event after which the
             // user doesn't need dxp any more
