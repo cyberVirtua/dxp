@@ -92,5 +92,5 @@ const std::vector<uint32_t> dxp_viewport = {};
 ///
 constexpr keys dxp_next = { "Down", "Right", "l", "j" };
 constexpr keys dxp_prev = { "Left", "Up", "h", "k" };
-constexpr keys dxp_exit = { "Escape" };
 constexpr keys dxp_slct = { "Return" };
+constexpr keys dxp_exit = { "Escape" };
