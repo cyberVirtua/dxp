@@ -12,13 +12,13 @@ drawable::drawable (const int16_t x,  ///< x coordinate of the top left corner
   this->height = height;
 
   // Initialize static attributes only when they don't already exist
-  if (!drawable::c_ || !drawable::screen_)
+  if (!drawable::c || !drawable::screen)
     {
       // Connect to X. NULL will use $DISPLAY
-      drawable::c_ = xcb_connect (nullptr, nullptr);
-      drawable::screen_
-          = xcb_setup_roots_iterator (xcb_get_setup (drawable::c_)).data;
-      drawable::root_ = screen_->root;
+      drawable::c = xcb_connect (nullptr, nullptr);
+      drawable::screen
+          = xcb_setup_roots_iterator (xcb_get_setup (drawable::c)).data;
+      drawable::root = screen->root;
     }
 }
 
