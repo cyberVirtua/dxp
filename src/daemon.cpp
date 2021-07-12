@@ -1,6 +1,12 @@
 #include "daemon.hpp"
-#include "config.hpp"
-#include <thread>
+#include "config.hpp"               // for dxp_viewport, dxp_screenshot_period
+#include <bits/this_thread_sleep.h> // for sleep_for
+#include <cstddef>                  // for size_t
+#include <cstdint>                  // for uint8_t
+#include <functional>               // for ref
+#include <memory>                   // for allocator_traits<>::value_type
+#include <stdexcept>                // for runtime_error
+#include <thread>                   // for thread
 
 dxp_daemon::dxp_daemon ()
 {

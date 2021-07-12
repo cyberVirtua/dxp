@@ -1,11 +1,14 @@
 #include "window.hpp"
-#include "config.hpp"
-#include "drawable.hpp"
-#include "xcb_util.hpp"
-#include <cmath>
-#include <iostream>
-#include <vector>
-#include <xcb/xproto.h>
+#include "config.hpp"   // for dxp_padding, dxp_border_pres_width, dxp_x
+#include "drawable.hpp" // for drawable::c, drawable::root, drawable::screen
+#include "xcb_util.hpp" // for monitor_info, dxp_keycodes, ewmh_change_desktop
+#include <array>        // for array
+#include <cmath>        // for signbit
+#include <iostream>     // for operator<<, basic_ostream, endl, cerr, ostream
+#include <memory>       // for allocator_traits<>::value_type
+#include <string>       // for allocator, operator<<, operator==, string
+#include <vector>       // for vector
+#include <xcb/xproto.h> // for xcb_rectangle_t, xcb_key_press_event_t, xcb_...
 
 constexpr bool dxp_horizontal_stacking = (dxp_width == 0);
 constexpr bool dxp_vertical_stacking = (dxp_height == 0);

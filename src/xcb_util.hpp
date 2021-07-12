@@ -1,15 +1,23 @@
 #ifndef DEXPO_XCB_HPP
 #define DEXPO_XCB_HPP
 
-#include "config.hpp"
-#include "keys.hpp"
-#include <cstdlib>
-#include <exception>
-#include <memory>
-#include <vector>
-#include <xcb/randr.h>
-#include <xcb/xcb.h>
-#include <xcb/xcb_keysyms.h>
+#include "config.hpp"        // for keys_size, dxp_keys, dxp_keys::next
+#include "keys.hpp"          // for keymap
+#include <algorithm>         // for find, find_if
+#include <array>             // for array
+#include <cstdint>           // for uint32_t
+#include <cstdlib>           // for free, size_t
+#include <iterator>          // for pair
+#include <memory>            // for allocator, unique_ptr
+#include <stdexcept>         // for runtime_error, range_error
+#include <string>            // for char_traits, operator+, to_string, string
+#include <string_view>       // for basic_string_view, operator==, string_view
+#include <sys/types.h>       // for uint
+#include <utility>           // for pair
+#include <vector>            // for vector
+#include <xcb/xcb.h>         // for xcb_connection_t, xcb_generic_error_t
+#include <xcb/xcb_keysyms.h> // for xcb_key_symbols_free, xcb_key_symbols_a...
+#include <xcb/xproto.h>      // for xcb_keycode_t, xcb_window_t, xcb_keysym_t
 
 /**
  * Virtual desktop information
