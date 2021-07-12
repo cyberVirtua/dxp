@@ -9,11 +9,11 @@
 class drawable
 {
 public:
-  inline static xcb_connection_t *c_;  ///< Xserver connection
-  inline static xcb_screen_t *screen_; ///< X screen
-  inline static xcb_window_t root_;    ///< Root window of the screen
-  int16_t x;                           ///< x coordinate of the top left corner
-  int16_t y;                           ///< y coordinate of the top left corner
+  inline static xcb_connection_t *c;  ///< Xserver connection
+  inline static xcb_screen_t *screen; ///< X screen
+  inline static xcb_window_t root;    ///< Root window of the screen
+  int16_t x;                          ///< x coordinate of the top left corner
+  int16_t y;                          ///< y coordinate of the top left corner
   uint width;
   uint height;
 

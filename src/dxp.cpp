@@ -27,7 +27,7 @@ main ()
       // Handling incoming events
       // Freeing it with free() is not specified in the docs, but it works
       while (auto event = xcb_unique_ptr<xcb_generic_event_t> (
-                 xcb_wait_for_event (window::c_)))
+                 xcb_wait_for_event (window::c)))
         {
           if (event == nullptr)
             {
