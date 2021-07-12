@@ -1,3 +1,6 @@
+#ifndef DXP_CONFIG_HPP
+#define DXP_CONFIG_HPP
+
 #include "keys.hpp"
 #include <chrono>
 #include <cstdint>
@@ -90,7 +93,12 @@ const std::vector<uint32_t> dxp_viewport = {};
 /// View keynames.hpp for a list of supported keys
 /// and their names
 ///
-constexpr keys dxp_next = { "Down", "Right", "l", "j" };
-constexpr keys dxp_prev = { "Left", "Up", "h", "k" };
-constexpr keys dxp_slct = { "Return" };
-constexpr keys dxp_exit = { "Escape" };
+struct dxp_keys
+{
+  static constexpr keys next = { "Down", "Right", "l", "j" };
+  static constexpr keys prev = { "Left", "Up", "h", "k" };
+  static constexpr keys slct = { "Return" };
+  static constexpr keys exit = { "Escape" };
+};
+
+#endif /* ifndef DXP_CONFIG_HPP */

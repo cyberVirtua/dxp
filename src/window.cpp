@@ -2,27 +2,15 @@
 #include "config.hpp"
 #include "drawable.hpp"
 #include "xcb_util.hpp"
-#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <vector>
 #include <xcb/xproto.h>
 
-using keysyms = std::array<xcb_keysym_t, keys_size>;
-using keycodes = std::vector<xcb_keycode_t>;
-
-constexpr keysyms dxp_next_keysyms = get_keysyms<keys_size> (dxp_next);
-constexpr keysyms dxp_prev_keysyms = get_keysyms<keys_size> (dxp_prev);
-constexpr keysyms dxp_slct_keysyms = get_keysyms<keys_size> (dxp_slct);
-constexpr keysyms dxp_exit_keysyms = get_keysyms<keys_size> (dxp_exit);
-
-keycodes dxp_next_keycodes{};
-keycodes dxp_prev_keycodes{};
-keycodes dxp_slct_keycodes{};
-keycodes dxp_exit_keycodes{};
-
 constexpr bool dxp_horizontal_stacking = (dxp_width == 0);
 constexpr bool dxp_vertical_stacking = (dxp_height == 0);
+
+dxp_keycodes keycodes; ///< Keycodes of the keys specified in config
 
 window::window (const std::vector<dxp_socket_desktop> &desktops)
     : drawable () // x, y, widht, height will be set later based on config
@@ -48,11 +36,8 @@ window::window (const std::vector<dxp_socket_desktop> &desktops)
   create_window ();
 
   // Parse keycodes from X server
-  // TODO(mmskv): benchmark
-  dxp_next_keycodes = keysyms2keycodes<keys_size> (c, dxp_next_keysyms);
-  dxp_prev_keycodes = keysyms2keycodes<keys_size> (c, dxp_prev_keysyms);
-  dxp_slct_keycodes = keysyms2keycodes<keys_size> (c, dxp_slct_keysyms);
-  dxp_exit_keycodes = keysyms2keycodes<keys_size> (c, dxp_exit_keysyms);
+  // TODO(mmskv): profile
+  keycodes = get_keycodes<keys_size> (c);
 }
 
 window::~window () { xcb_destroy_window (drawable::c, this->xcb_id); }
@@ -401,16 +386,6 @@ window::clear_preselection ()
 };
 
 /**
- * Check if there is a keycode present in a vector of keycodes.
- * Used to check if pressed key matches any keys of interest.
- */
-bool
-has_keycode (keycodes &codes, xcb_keycode_t code)
-{
-  return std::find (codes.cbegin (), codes.cend (), code) != codes.cend ();
-}
-
-/**
  * TODO Document
  *
  * XXX Accepting *event does not work. Why?
@@ -443,10 +418,10 @@ window::handle_event (xcb_generic_event_t *event)
         auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
 
         // Determine what key has been pressed
-        bool next = has_keycode (dxp_next_keycodes, kp->detail);
-        bool prev = has_keycode (dxp_prev_keycodes, kp->detail);
-        bool slct = has_keycode (dxp_slct_keycodes, kp->detail);
-        bool exit = has_keycode (dxp_exit_keycodes, kp->detail);
+        bool next = dxp_keycodes::has (keycodes.next, kp->detail);
+        bool prev = dxp_keycodes::has (keycodes.prev, kp->detail);
+        bool slct = dxp_keycodes::has (keycodes.slct, kp->detail);
+        bool exit = dxp_keycodes::has (keycodes.exit, kp->detail);
 
         clear_preselection ();
         if (next)

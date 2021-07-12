@@ -1,6 +1,7 @@
 #ifndef DEXPO_XCB_HPP
 #define DEXPO_XCB_HPP
 
+#include "config.hpp"
 #include "keys.hpp"
 #include <cstdlib>
 #include <exception>
@@ -110,6 +111,30 @@ void ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root,
  * XKB Related code
  ******************************************************************************/
 
+using keysyms = std::array<xcb_keysym_t, keys_size>;
+using codes = std::vector<xcb_keycode_t>;
+
+/**
+ * Keycodes parsed from keys specified in config
+ */
+struct dxp_keycodes
+{
+  codes next;
+  codes prev;
+  codes slct;
+  codes exit;
+
+  /**
+   * Check if there is a keycode present in a vector of keycodes.
+   * Used to check if pressed key matches any keys of interest.
+   */
+  static bool
+  has (codes &codes, xcb_keycode_t code)
+  {
+    return std::find (codes.cbegin (), codes.cend (), code) != codes.cend ();
+  }
+};
+
 /**
  * Constexpr map template from Jason Turner
  */
@@ -145,9 +170,9 @@ get_keysyms (const std::array<std::string_view, size> &keynames)
   std::array<xcb_keysym_t, size> keysyms{};
   for (std::size_t i = 0; i < size; i++)
     {
-      if (keynames[i] != "")
+      if (keynames.at (i) != "")
         {
-          keysyms[i] = dxp_keymap.at (keynames[i]);
+          keysyms.at (i) = dxp_keymap.at (keynames.at (i));
         }
     }
   return keysyms;
@@ -192,6 +217,34 @@ keysyms2keycodes (xcb_connection_t *c,
         }
     }
   return all_keycodes;
+}
+
+/**
+ * Keysyms parsed from keynames.
+ * This is an intermediate step in conversion of keynames -> keycodes.
+ */
+struct dxp_keysyms
+{
+  static constexpr keysyms next = get_keysyms<keys_size> (dxp_keys::next);
+  static constexpr keysyms prev = get_keysyms<keys_size> (dxp_keys::prev);
+  static constexpr keysyms slct = get_keysyms<keys_size> (dxp_keys::slct);
+  static constexpr keysyms exit = get_keysyms<keys_size> (dxp_keys::exit);
+};
+
+/**
+ * Get all keycodes for keys in the config
+ */
+template <std::size_t size>
+dxp_keycodes
+get_keycodes (xcb_connection_t *c)
+{
+  dxp_keycodes keycodes;
+  keycodes.next = keysyms2keycodes<size> (c, dxp_keysyms::next);
+  keycodes.prev = keysyms2keycodes<size> (c, dxp_keysyms::prev);
+  keycodes.slct = keysyms2keycodes<size> (c, dxp_keysyms::slct);
+  keycodes.exit = keysyms2keycodes<size> (c, dxp_keysyms::exit);
+
+  return keycodes;
 }
 
 #endif /* ifndef DEXPO_XCB_HPP */
