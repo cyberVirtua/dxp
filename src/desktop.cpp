@@ -1,10 +1,11 @@
 #include "desktop.hpp"
-#include <xcb/xcb.h>     // for xcb_generic_error_t
-#include <xcb/xproto.h>  // for xcb_get_image, xcb_get_image_data, xcb_get_i...
-#include <memory>        // for unique_ptr
-#include <string>        // for allocator
-#include "config.hpp"    // for dxp_height, dxp_width
-#include "xcb_util.hpp"  // for check, xcb_unique_ptr
+#include "config.hpp"   // for dxp_height, dxp_width
+#include "xcb_util.hpp" // for check, xcb_unique_ptr
+#include <cmath>        // for floor
+#include <memory>       // for unique_ptr
+#include <string>       // for allocator
+#include <xcb/xcb.h>    // for xcb_generic_error_t
+#include <xcb/xproto.h> // for xcb_get_image, xcb_get_image_data, xcb_get_i...
 
 constexpr bool dxp_horizontal_stacking = (dxp_width == 0);
 constexpr bool dxp_vertical_stacking = (dxp_height == 0);

@@ -1,10 +1,10 @@
 #ifndef DESKTOP_HPP
 #define DESKTOP_HPP
 
-#include <sys/types.h>   // for uint
-#include <cstdint>       // for uint8_t, uint32_t, int16_t
-#include <vector>        // for vector
-#include "drawable.hpp"  // for drawable
+#include "drawable.hpp" // for drawable
+#include <cstdint>      // for uint8_t, uint32_t, int16_t
+#include <sys/types.h>  // for uint
+#include <vector>       // for vector
 
 class pixmap
 {

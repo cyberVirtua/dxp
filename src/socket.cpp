@@ -1,12 +1,12 @@
 #include "socket.hpp"
-#include <stddef.h>      // for offsetof
-#include <stdio.h>       // for perror
-#include <sys/socket.h>  // for accept4, bind, connect, listen, socket, AF_UNIX
-#include <sys/un.h>      // for sockaddr_un
-#include <unistd.h>      // for ssize_t, close, unlink, read, write
-#include <cstring>       // for size_t, strlen, strncpy
-#include <mutex>         // for mutex, scoped_lock
-#include <type_traits>   // for is_base_of
+#include <cstddef>      // for offsetof
+#include <cstdio>       // for perror
+#include <cstring>      // for size_t, strlen, strncpy
+#include <mutex>        // for mutex, scoped_lock
+#include <sys/socket.h> // for accept4, bind, connect, listen, socket, AF_UNIX
+#include <sys/un.h>     // for sockaddr_un
+#include <type_traits>  // for is_base_of
+#include <unistd.h>     // for ssize_t, close, unlink, read, write
 
 /**
  * Thrower for custom errors.
@@ -135,7 +135,7 @@ std::vector<dxp_socket_desktop>
 dxp_socket::get_desktops () const
 {
   // Send pixmap request to daemon
-  char cmd = kRequestDesktops;
+  char cmd = RequestDesktops;
   write_unix (this->fd, &cmd, 1,
               "Failed to send a desktops request to the daemon. "
               "Please check if the daemon is running");
@@ -186,7 +186,7 @@ dxp_socket::send_desktops_on_event (
       char cmd = -1;
       read_unix (data_fd, &cmd, 1, "Failed to get a command from dxp");
 
-      if (cmd == kRequestDesktops)
+      if (cmd == RequestDesktops)
         {
           // Lock desktops to prevent race condition when reading and writing
           // desktops to socket

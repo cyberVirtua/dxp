@@ -1,14 +1,14 @@
 #ifndef DXP_DAEMON_HPP
 #define DXP_DAEMON_HPP
 
-#include <xcb/xcb.h>     // for xcb_connection_t
-#include <xcb/xproto.h>  // for xcb_screen_t, xcb_window_t
-#include <atomic>        // for atomic
-#include <mutex>         // for mutex
-#include <vector>        // for vector
-#include "desktop.hpp"   // for dxp_desktop
-#include "socket.hpp"    // for dxp_socket_desktop, dxp_socket
-#include "xcb_util.hpp"  // for desktop_info
+#include "desktop.hpp"  // for dxp_desktop
+#include "socket.hpp"   // for dxp_socket_desktop, dxp_socket
+#include "xcb_util.hpp" // for desktop_info
+#include <atomic>       // for atomic
+#include <mutex>        // for mutex
+#include <vector>       // for vector
+#include <xcb/xcb.h>    // for xcb_connection_t
+#include <xcb/xproto.h> // for xcb_screen_t, xcb_window_t
 
 class dxp_daemon
 {

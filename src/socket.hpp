@@ -1,13 +1,13 @@
 #ifndef DEXPO_SOCKET_HPP
 #define DEXPO_SOCKET_HPP
 
-#include <sys/types.h>  // for uint
-#include <atomic>       // for atomic
-#include <cstdint>      // for uint8_t, uint16_t, uint32_t
-#include <mutex>        // for mutex
-#include <stdexcept>    // for runtime_error
-#include <string>       // for string
-#include <vector>       // for vector
+#include <atomic>      // for atomic
+#include <cstdint>     // for uint8_t, uint16_t, uint32_t
+#include <mutex>       // for mutex
+#include <stdexcept>   // for runtime_error
+#include <string>      // for string
+#include <sys/types.h> // for uint
+#include <vector>      // for vector
 
 constexpr const char *k_socket_path = "/tmp/dxp.socket";
 
@@ -29,7 +29,7 @@ struct dxp_socket_desktop
  */
 enum dxp_event
 {
-  kRequestDesktops = 1 // Request all pixmaps
+  RequestDesktops = 1 // Request all pixmaps
 };
 
 class dxp_socket

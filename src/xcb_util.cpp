@@ -1,9 +1,9 @@
 #include "xcb_util.hpp"
-#include <xcb/randr.h>  // for xcb_randr_get_crtc_info_reply_t, xcb_randr_ge...
-#include <xcb/xcb.h>    // for xcb_connection_t, xcb_generic_error_t, XCB_CU...
-#include <cstdint>      // for uint32_t, uint8_t, UINT32_MAX
-#include <cstring>      // for strlen
-#include "config.hpp"   // for dxp_viewport
+#include "config.hpp"  // for dxp_viewport
+#include <cstdint>     // for uint32_t, uint8_t, UINT32_MAX
+#include <cstring>     // for strlen
+#include <xcb/randr.h> // for xcb_randr_get_crtc_info_reply_t, xcb_randr_ge...
+#include <xcb/xcb.h>   // for xcb_connection_t, xcb_generic_error_t, XCB_CU...
 
 /**
  * Check if got an XCB error and throw it in case

@@ -1,13 +1,13 @@
 #ifndef WINDOW_HPP
 #define WINDOW_HPP
 
-#include <stdint.h>      // for int16_t, uint32_t
-#include <sys/types.h>   // for uint
-#include <xcb/xcb.h>     // for xcb_generic_event_t
-#include <xcb/xproto.h>  // for xcb_gcontext_t
-#include <vector>        // for vector
-#include "drawable.hpp"  // for drawable
-#include "socket.hpp"    // for dxp_socket_desktop
+#include "drawable.hpp" // for drawable
+#include "socket.hpp"   // for dxp_socket_desktop
+#include <cstdint>      // for int16_t, uint32_t
+#include <sys/types.h>  // for uint
+#include <vector>       // for vector
+#include <xcb/xcb.h>    // for xcb_generic_event_t
+#include <xcb/xproto.h> // for xcb_gcontext_t
 
 /**
  * Stores x and y coordinates of desktop.
