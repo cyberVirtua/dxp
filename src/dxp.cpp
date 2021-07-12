@@ -1,11 +1,11 @@
-#include "config.hpp"
-#include "socket.hpp"
-#include "window.hpp"
-#include "xcb_util.hpp"
-#include <iostream>
-#include <unistd.h>
-#include <vector>
-#include <xcb/xcb.h>
+#include <xcb/xcb.h>     // for xcb_wait_for_event, xcb_generic_event_t
+#include <iostream>      // for operator<<, endl, basic_ostream, cerr, ostream
+#include <memory>        // for allocator, unique_ptr, operator==
+#include <stdexcept>     // for runtime_error
+#include "drawable.hpp"  // for drawable::c
+#include "socket.hpp"    // for dxp_socket, read_error
+#include "window.hpp"    // for window
+#include "xcb_util.hpp"  // for xcb_unique_ptr
 
 /**
  * 1. Get desktops from daemon

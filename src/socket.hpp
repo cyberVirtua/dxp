@@ -1,13 +1,13 @@
 #ifndef DEXPO_SOCKET_HPP
 #define DEXPO_SOCKET_HPP
 
-#include "desktop.hpp"
-#include <atomic>
-#include <cstdint>
-#include <mutex>
-#include <stdexcept>
-#include <sys/socket.h>
-#include <vector>
+#include <sys/types.h>  // for uint
+#include <atomic>       // for atomic
+#include <cstdint>      // for uint8_t, uint16_t, uint32_t
+#include <mutex>        // for mutex
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string
+#include <vector>       // for vector
 
 constexpr const char *k_socket_path = "/tmp/dxp.socket";
 

@@ -1,11 +1,12 @@
 #include "socket.hpp"
-#include <cstring>
-#include <iostream>
-#include <mutex>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/un.h>
-#include <unistd.h>
+#include <stddef.h>      // for offsetof
+#include <stdio.h>       // for perror
+#include <sys/socket.h>  // for accept4, bind, connect, listen, socket, AF_UNIX
+#include <sys/un.h>      // for sockaddr_un
+#include <unistd.h>      // for ssize_t, close, unlink, read, write
+#include <cstring>       // for size_t, strlen, strncpy
+#include <mutex>         // for mutex, scoped_lock
+#include <type_traits>   // for is_base_of
 
 /**
  * Thrower for custom errors.

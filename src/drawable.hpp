@@ -1,7 +1,10 @@
 #ifndef DRAWABLE_HPP
 #define DRAWABLE_HPP
 
-#include <xcb/xproto.h>
+#include <stdint.h>      // for int16_t
+#include <sys/types.h>   // for uint
+#include <xcb/xcb.h>     // for xcb_connection_t
+#include <xcb/xproto.h>  // for xcb_screen_t, xcb_window_t
 
 /**
  * XCB base drawable class. Implements static connection and dimensions
