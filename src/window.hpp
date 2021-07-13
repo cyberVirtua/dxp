@@ -1,10 +1,24 @@
 #ifndef WINDOW_HPP
 #define WINDOW_HPP
 
-#include "socket.hpp"
-#include <string>
-#include <vector>
-#include <xcb/xproto.h>
+#include "drawable.hpp" // for drawable
+#include "socket.hpp"   // for dxp_socket_desktop
+#include <cstdint>      // for int16_t, uint32_t
+#include <sys/types.h>  // for uint
+#include <vector>       // for vector
+#include <xcb/xcb.h>    // for xcb_generic_event_t
+#include <xcb/xproto.h> // for xcb_gcontext_t
+
+/**
+ * Stores x and y coordinates of desktop.
+ * Optimizes get_hover_desktop function by avoiding
+ * frequent calls to get_desktop_coord.
+ */
+struct dxp_window_desktop : public dxp_socket_desktop
+{
+  int16_t x = 0;
+  int16_t y = 0;
+};
 
 /**
  * Draws desktop previews
@@ -12,9 +26,10 @@
 class window : public drawable
 {
 public:
-  inline static xcb_gcontext_t gc_ = 0; ///< Graphic context
+  inline static xcb_gcontext_t gc = 0; ///< Graphic context
   uint32_t xcb_id;
   std::vector<dxp_socket_desktop> desktops; ///< Desktops received from daemon
+  dxp_window_desktop recent_hover_desktop;  ///< Recently cached hover desktop
   uint pres;                                ///< id of the preselected desktop
 
   explicit window (const std::vector<dxp_socket_desktop> &desktops);

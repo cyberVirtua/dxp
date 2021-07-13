@@ -1,9 +1,15 @@
+#ifndef DXP_CONFIG_HPP
+#define DXP_CONFIG_HPP
+
+#include "keys.hpp"
 #include <chrono>
 #include <cstdint>
 #include <string>
 #include <vector>
 
+constexpr std::size_t keys_size = 10;
 using color = const uint32_t;
+using keys = std::array<std::string_view, keys_size>;
 
 ///
 /// Dimensions of the screenshots that will be displayed.
@@ -61,7 +67,7 @@ const uint dxp_border_width = 0; ///< dxp window border
 ///
 /// NOTE: Setting timeout to values below 5 ms may severely increase CPU load.
 ///
-const auto dxp_screenshot_period = std::chrono::seconds (1);
+const auto dxp_screenshot_period = std::chrono::seconds (10);
 
 ///
 /// Desktop viewport:
@@ -75,3 +81,24 @@ const auto dxp_screenshot_period = std::chrono::seconds (1);
 /// Otherwise leave empty.
 ///
 const std::vector<uint32_t> dxp_viewport = {};
+
+///
+/// Key bindings:
+///
+/// next: preselect next desktop
+/// prev: preselect previous desktop
+/// exit: kill dxp
+/// slct: switch to preselected desktop
+///
+/// View keynames.hpp for a list of supported keys
+/// and their names
+///
+struct dxp_keys
+{
+  static constexpr keys next = { "Down", "Right", "l", "j" };
+  static constexpr keys prev = { "Left", "Up", "h", "k" };
+  static constexpr keys slct = { "Return" };
+  static constexpr keys exit = { "Escape" };
+};
+
+#endif /* ifndef DXP_CONFIG_HPP */

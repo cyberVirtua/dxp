@@ -1,5 +1,6 @@
-#include "daemon.hpp"
-#include <iostream>
+#include "daemon.hpp" // for dxp_daemon
+#include <iostream>   // for operator<<, endl, basic_ostream, cerr, ostream
+#include <stdexcept>  // for runtime_error
 
 /**
  * Parse monitor dimensions and initialize appropriate pixmap objects.

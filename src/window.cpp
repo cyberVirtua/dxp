@@ -1,28 +1,49 @@
 #include "window.hpp"
-#include "config.hpp"
-#include "drawable.hpp"
-#include "xcb_util.hpp"
-#include <cmath>
-#include <iostream>
-#include <vector>
-#include <xcb/xproto.h>
+#include "config.hpp"   // for dxp_padding, dxp_border_pres_width, dxp_x
+#include "drawable.hpp" // for drawable::c, drawable::root, drawable::screen
+#include "xcb_util.hpp" // for monitor_info, dxp_keycodes, ewmh_change_desktop
+#include <array>        // for array
+#include <cmath>        // for signbit
+#include <iostream>     // for operator<<, basic_ostream, endl, cerr, ostream
+#include <memory>       // for allocator_traits<>::value_type
+#include <string>       // for allocator, operator<<, operator==, string
+#include <vector>       // for vector
+#include <xcb/xproto.h> // for xcb_rectangle_t, xcb_key_press_event_t, xcb_...
 
-constexpr bool k_horizontal_stacking = (dxp_width == 0);
-constexpr bool k_vertical_stacking = (dxp_height == 0);
+constexpr bool dxp_horizontal_stacking = (dxp_width == 0);
+constexpr bool dxp_vertical_stacking = (dxp_height == 0);
+
+dxp_keycodes keycodes; ///< Keycodes of the keys specified in config
 
 window::window (const std::vector<dxp_socket_desktop> &desktops)
     : drawable () // x, y, widht, height will be set later based on config
 {
-  this->xcb_id = xcb_generate_id (drawable::c_);
+  this->xcb_id = xcb_generate_id (drawable::c);
   this->desktops = desktops;
   this->pres = 0; ///< id of the preselected desktop
+
+  // Construct recent_hover_desktop
+  if (dxp_vertical_stacking)
+    {
+      this->recent_hover_desktop
+          = { { desktops[0] }, 0, get_desktop_coord (desktops[0].id) };
+    }
+  else if (dxp_horizontal_stacking)
+    {
+      this->recent_hover_desktop
+          = { { desktops[0] }, get_desktop_coord (desktops[0].id), 0 };
+    }
 
   set_window_dimensions ();
   create_gc ();
   create_window ();
+
+  // Parse keycodes from X server
+  // TODO(mmskv): profile
+  keycodes = get_keycodes<keys_size> (c);
 }
 
-window::~window () { xcb_destroy_window (drawable::c_, this->xcb_id); }
+window::~window () { xcb_destroy_window (drawable::c, this->xcb_id); }
 
 /**
  * Calculate dimensions of the window based on
@@ -39,23 +60,23 @@ window::set_window_dimensions ()
 
   for (const auto &d : this->desktops)
     {
-      dynamic += k_horizontal_stacking ? d.width : d.height;
+      dynamic += dxp_horizontal_stacking ? d.width : d.height;
       dynamic += dxp_padding + 2 * dxp_border_pres_width;
     }
 
-  this->width += k_vertical_stacking ? constant + dxp_width : dynamic;
-  this->height += k_horizontal_stacking ? constant + dxp_height : dynamic;
+  this->width += dxp_vertical_stacking ? constant + dxp_width : dynamic;
+  this->height += dxp_horizontal_stacking ? constant + dxp_height : dynamic;
 
   /* Determine what monitor to draw window on */
   monitor_info dxp_monitor{ 0, 0, 0, 0, "" };
 
   if (dxp_monitor_name.empty ()) // Use primary if name is not specified
     {
-      dxp_monitor = get_monitor_primary (window::c_, window::root_);
+      dxp_monitor = get_monitor_primary (window::c, window::root);
     }
   else // Get coordinates of the monitor that was specified in the config
     {
-      auto monitors = get_monitors (window::c_, window::root_);
+      auto monitors = get_monitors (window::c, window::root);
       for (const auto &m : monitors)
         {
           if (m.name == dxp_monitor_name)
@@ -69,7 +90,7 @@ window::set_window_dimensions ()
           std::cerr << "Monitor with name \"" << dxp_monitor_name
                     << "\" was not found. Using primary monitor" << std::endl;
 
-          dxp_monitor = get_monitor_primary (window::c_, window::root_);
+          dxp_monitor = get_monitor_primary (window::c, window::root);
         }
     }
 
@@ -119,31 +140,31 @@ window::create_window ()
         | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_ENTER_WINDOW
   };
 
-  xcb_create_window (window::c_, /* Connection, separate from one of daemon */
+  xcb_create_window (window::c, /* Connection, separate from one of daemon */
                      XCB_COPY_FROM_PARENT,          /* depth (same as root)*/
                      this->xcb_id,                  /* window Id */
-                     window::root_,                 /* parent window */
+                     window::root,                  /* parent window */
                      this->x, this->y,              /* x, y */
                      this->width, this->height,     /* width, height */
                      dxp_border_width,              /* border_width */
                      XCB_WINDOW_CLASS_INPUT_OUTPUT, /* class */
-                     window::screen_->root_visual,  /* visual */
+                     window::screen->root_visual,   /* visual */
                      mask, &mask_values);           /* masks, not used yet */
 
   /* Fixes window in place */
   const std::array<uint32_t, 2> override_redirect{ 1U };
-  xcb_change_window_attributes (c_, this->xcb_id, XCB_CW_OVERRIDE_REDIRECT,
+  xcb_change_window_attributes (c, this->xcb_id, XCB_CW_OVERRIDE_REDIRECT,
                                 &override_redirect);
 
   /* Map the window onto the screen */
-  xcb_map_window (window::c_, this->xcb_id);
+  xcb_map_window (window::c, this->xcb_id);
 
   /* Focus on the window. Doing it *after* mapping the window is crucial. */
-  xcb_set_input_focus (c_, XCB_INPUT_FOCUS_POINTER_ROOT, this->xcb_id,
+  xcb_set_input_focus (c, XCB_INPUT_FOCUS_POINTER_ROOT, this->xcb_id,
                        XCB_TIME_CURRENT_TIME);
 
   /* Sends commands to the server */
-  xcb_flush (window::c_);
+  xcb_flush (window::c);
 }
 
 /**
@@ -157,21 +178,21 @@ window::draw_desktops ()
   int16_t y = dxp_padding + dxp_border_pres_width;
   for (const auto &desktop : this->desktops)
     {
-      xcb_put_image (window::c_, XCB_IMAGE_FORMAT_Z_PIXMAP,
+      xcb_put_image (window::c, XCB_IMAGE_FORMAT_Z_PIXMAP,
                      this->xcb_id,                  /* Pixmap to put image on */
-                     window::gc_,                   /* Graphic context */
+                     window::gc,                    /* Graphic context */
                      desktop.width, desktop.height, /* Dimensions */
                      x, /* Destination X coordinate */
                      y, /* Destination Y coordinate */
-                     0, drawable::screen_->root_depth,
+                     0, window::screen->root_depth,
                      desktop.pixmap_len, /* Image size in bytes */
                      desktop.pixmap.data ());
-      if (k_horizontal_stacking)
+      if (dxp_horizontal_stacking)
         {
           x += desktop.width;
           x += dxp_padding + 2 * dxp_border_pres_width;
         }
-      else if (k_vertical_stacking)
+      else if (dxp_vertical_stacking)
         {
           y += desktop.height;
           y += dxp_padding + 2 * dxp_border_pres_width;
@@ -197,7 +218,7 @@ window::get_desktop_coord (uint desktop_id)
         }
 
       // Append width for horizontal stacking and height for vertical
-      pos += k_horizontal_stacking ? desktop.width : desktop.height;
+      pos += dxp_horizontal_stacking ? desktop.width : desktop.height;
       pos += dxp_padding + 2 * dxp_border_pres_width;
     }
   return 0;
@@ -206,15 +227,45 @@ window::get_desktop_coord (uint desktop_id)
 /**
  * Get id of the desktop above which the cursor is hovering.
  * If cursor is not above any desktop return -1.
- *
- * TODO Cache desktop coordinates
  */
 uint
 window::get_hover_desktop (int16_t x, int16_t y)
 {
+  dxp_window_desktop d = recent_hover_desktop;
+
+  // At first check if cursor is still over the cached desktop
+  if (dxp_vertical_stacking)
+    {
+      // Check if cursor is inside of the desktop
+      if (x >= dxp_padding &&           // Not to the left
+          x <= d.width + dxp_padding && // Not to the right
+          y >= d.y &&                   // Not above
+          y <= d.height + d.y)          // Not below
+        {
+          return d.id;
+        }
+    }
+  else if (dxp_horizontal_stacking)
+    {
+      // Check if cursor is inside of the desktop
+      if (x >= d.x &&                  // To the right of left border
+          x <= d.width + d.x &&        // To the left of right border
+          y >= dxp_padding &&          // Not above
+          y <= d.height + dxp_padding) // Not below
+        {
+          return d.id;
+        }
+    }
+
+  // Check if cursor is above other desktops
   for (const auto &d : this->desktops)
     {
-      if (k_vertical_stacking)
+      if (d.id == recent_hover_desktop.id) // Dont check same desktop twice
+        {
+          continue;
+        }
+
+      if (dxp_vertical_stacking)
         {
           auto desktop_y = get_desktop_coord (d.id);
           // Check if cursor is inside of the desktop
@@ -223,10 +274,12 @@ window::get_hover_desktop (int16_t x, int16_t y)
               y >= desktop_y &&             // Not above
               y <= d.height + desktop_y)    // Not below
             {
+              // Cache new desktop
+              recent_hover_desktop = { { d }, 0, desktop_y };
               return d.id;
             }
         }
-      else if (k_horizontal_stacking)
+      else if (dxp_horizontal_stacking)
         {
           auto desktop_x = get_desktop_coord (d.id);
           // Check if cursor is inside of the desktop
@@ -235,6 +288,8 @@ window::get_hover_desktop (int16_t x, int16_t y)
               y >= dxp_padding &&          // Not above
               y <= d.height + dxp_padding) // Not below
             {
+              // Cache new desktop
+              recent_hover_desktop = { { d }, desktop_x, 0 };
               return d.id;
             }
         }
@@ -256,12 +311,12 @@ window::draw_desktop_border (uint desktop_id, uint32_t color)
   uint16_t width = this->desktops[desktop_id].width;
   uint16_t height = this->desktops[desktop_id].height;
 
-  if (k_vertical_stacking)
+  if (dxp_vertical_stacking)
     {
       x = dxp_padding + dxp_border_pres_width;
       y = get_desktop_coord (desktop_id);
     }
-  else if (k_horizontal_stacking)
+  else if (dxp_horizontal_stacking)
     {
       x = get_desktop_coord (desktop_id);
       y = dxp_padding + dxp_border_pres_width;
@@ -305,11 +360,11 @@ window::draw_desktop_border (uint desktop_id, uint32_t color)
   // Setting border color
   uint32_t mask = XCB_GC_FOREGROUND;
   std::array<uint32_t, 1> mask_values{ color }; // Mask value
-  xcb_change_gc (c_, window::gc_, mask, &mask_values);
+  xcb_change_gc (c, window::gc, mask, &mask_values);
 
   // Drawing the preselection border
-  xcb_poly_fill_rectangle (window::c_, this->xcb_id, window::gc_,
-                           borders.size (), &borders[0]);
+  xcb_poly_fill_rectangle (window::c, this->xcb_id, window::gc, borders.size (),
+                           &borders[0]);
 }
 
 /**
@@ -351,7 +406,7 @@ window::handle_event (xcb_generic_event_t *event)
     case XCB_EXPOSE:
       {
         draw_desktops ();
-        pres = get_current_desktop (c_, root_);
+        pres = get_current_desktop (c, root);
 
         // Drawing borders around all desktops
         for (uint i = 0; i < desktops.size (); i++)
@@ -365,12 +420,11 @@ window::handle_event (xcb_generic_event_t *event)
       {
         auto *kp = reinterpret_cast<xcb_key_press_event_t *> (event);
 
-        /// Right arrow or down arrow
-        bool next = kp->detail == 114 || kp->detail == 116;
-        /// Left arrow or up arrow
-        bool prev = kp->detail == 113 || kp->detail == 111;
-        bool entr = kp->detail == 36; /// Enter
-        bool esc = kp->detail == 9;   /// Escape
+        // Determine what key has been pressed
+        bool next = dxp_keycodes::has (keycodes.next, kp->detail);
+        bool prev = dxp_keycodes::has (keycodes.prev, kp->detail);
+        bool slct = dxp_keycodes::has (keycodes.slct, kp->detail);
+        bool exit = dxp_keycodes::has (keycodes.exit, kp->detail);
 
         clear_preselection ();
         if (next)
@@ -382,20 +436,20 @@ window::handle_event (xcb_generic_event_t *event)
           {
             pres = pres == 0 ? desktops.size () - 1 : pres - 1;
           }
-        if (entr)
+        if (slct)
           {
             // Desktop change is thought as an event after which the
             // user doesn't need dxp any more
-            ewmh_change_desktop (c_, root_, pres);
-            xcb_flush (c_);
+            ewmh_change_desktop (c, root, pres);
+            xcb_flush (c);
             return 0; // Kill dxp
           }
-        if (esc)
+        if (exit)
           {
             return 0;
           }
         draw_preselection ();
-        xcb_flush (c_);
+        xcb_flush (c);
         break;
       }
     case XCB_MOTION_NOTIFY: // Cursor motion within window
@@ -415,8 +469,8 @@ window::handle_event (xcb_generic_event_t *event)
       {
         // Desktop change is thought as an event after which the
         // user doesn't need dxp any more
-        ewmh_change_desktop (c_, root_, pres);
-        xcb_flush (c_);
+        ewmh_change_desktop (c, root, pres);
+        xcb_flush (c);
         return 0; // Kill dxp
       }
     case XCB_FOCUS_OUT:
@@ -429,7 +483,7 @@ window::handle_event (xcb_generic_event_t *event)
       auto *e = reinterpret_cast<xcb_generic_error_t *> (event);
       check (e, "XCB error while receiving event");
     }
-  xcb_flush (c_);
+  xcb_flush (c);
   return 1;
 };
 
@@ -443,9 +497,9 @@ window::create_gc ()
 {
   // TODO(mangalinor): Figure out correct mask and values
   uint32_t mask = XCB_GC_FOREGROUND | XCB_GC_GRAPHICS_EXPOSURES;
-  std::array<uint32_t, 2> mask_values{ drawable::screen_->black_pixel, 0 };
+  std::array<uint32_t, 2> mask_values{ window::screen->black_pixel, 0 };
 
-  window::gc_ = xcb_generate_id (c_);
-  xcb_create_gc (drawable::c_, window::gc_, drawable::screen_->root, mask,
+  window::gc = xcb_generate_id (c);
+  xcb_create_gc (window::c, window::gc, window::screen->root, mask,
                  &mask_values);
 }

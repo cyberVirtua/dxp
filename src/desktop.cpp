@@ -1,12 +1,14 @@
 #include "desktop.hpp"
-#include "config.hpp"
-#include "xcb_util.hpp"
-#include <cmath>
-#include <xcb/xcb.h>
-#include <xcb/xproto.h>
+#include "config.hpp"   // for dxp_height, dxp_width
+#include "xcb_util.hpp" // for check, xcb_unique_ptr
+#include <cmath>        // for floor
+#include <memory>       // for unique_ptr
+#include <string>       // for allocator
+#include <xcb/xcb.h>    // for xcb_generic_error_t
+#include <xcb/xproto.h> // for xcb_get_image, xcb_get_image_data, xcb_get_i...
 
-constexpr bool k_horizontal_stacking = (dxp_width == 0);
-constexpr bool k_vertical_stacking = (dxp_height == 0);
+constexpr bool dxp_horizontal_stacking = (dxp_width == 0);
+constexpr bool dxp_vertical_stacking = (dxp_height == 0);
 
 dxp_desktop::dxp_desktop (
     const int16_t x,  ///< x coordinate of the top left corner
@@ -25,12 +27,12 @@ dxp_desktop::dxp_desktop (
 
   float screen_ratio = float (this->width) / this->height; ///< width/height
 
-  if (k_horizontal_stacking)
+  if (dxp_horizontal_stacking)
     {
       this->pixmap_height = dxp_height;
       this->pixmap_width = this->pixmap_height * screen_ratio;
     }
-  else if (k_vertical_stacking)
+  else if (dxp_vertical_stacking)
     {
       this->pixmap_width = dxp_width;
       this->pixmap_height = this->pixmap_width / screen_ratio;
@@ -48,9 +50,9 @@ dxp_desktop::save_screen ()
 {
   // Request the screenshot of the virtual desktop
   auto gi_cookie = xcb_get_image (
-      drawable::c_,              /* Connection */
+      drawable::c,               /* Connection */
       XCB_IMAGE_FORMAT_Z_PIXMAP, /* Z_Pixmap is 100 faster than XY_PIXMAP */
-      drawable::screen_->root,   /* Screenshot relative to root */
+      drawable::screen->root,    /* Screenshot relative to root */
       this->x, this->y,          /* X, Y offset */
       this->width, this->height, /* Dimensions */
       uint32_t (~0)              /* Plane mask (all bits to get all planes) */
@@ -60,7 +62,7 @@ dxp_desktop::save_screen ()
   // allocates new space for the image
   xcb_generic_error_t *e = nullptr;
   auto gi_reply = xcb_unique_ptr<xcb_get_image_reply_t> (
-      xcb_get_image_reply (drawable::c_, gi_cookie, &e));
+      xcb_get_image_reply (drawable::c, gi_cookie, &e));
   check (e, "XCB error while getting image reply");
 
   this->image_ptr = xcb_get_image_data (gi_reply.get ());

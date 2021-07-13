@@ -1,9 +1,9 @@
 #include "xcb_util.hpp"
-#include "config.hpp"
-#include "window.hpp"
-#include <cstdint>
-#include <cstring>
-#include <xcb/xcb.h>
+#include "config.hpp"  // for dxp_viewport
+#include <cstdint>     // for uint32_t, uint8_t, UINT32_MAX
+#include <cstring>     // for strlen
+#include <xcb/randr.h> // for xcb_randr_get_crtc_info_reply_t, xcb_randr_ge...
+#include <xcb/xcb.h>   // for xcb_connection_t, xcb_generic_error_t, XCB_CU...
 
 /**
  * Check if got an XCB error and throw it in case
@@ -259,7 +259,7 @@ send_xcb_message (xcb_connection_t *c, xcb_window_t root, const char *msg,
 }
 
 /**
- * Changing the number of desktop
+ * Change _NET_CURRENT_DESKTOP to destkop_id
  */
 void
 ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
