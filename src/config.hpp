@@ -22,7 +22,7 @@ using keys = std::array<std::string_view, keys_size>;
 /// Actual window width will be equal to dxp_width + (dxp_padding * 2)
 ///
 const uint dxp_width = 0;
-const uint dxp_height = 150;
+const uint dxp_height = 175;
 
 ///
 /// Name of the monitor to put window on. Will use primary if unset.
@@ -48,7 +48,7 @@ const float dxp_y = 0; ///< Y coordinate of window's corner
 /// If centering is enabled, corresponding coordinate will be ignored
 ///
 const bool dxp_center_x = true;  ///< Center dxp on the monitor horizontally
-const bool dxp_center_y = false; ///< Center dxp on the monitor vertically
+const bool dxp_center_y = true; ///< Center dxp on the monitor vertically
 
 const uint16_t dxp_padding = 3; ///< Padding around the screenshots
 
@@ -67,7 +67,7 @@ const uint dxp_border_width = 0; ///< dxp window border
 ///
 /// NOTE: Setting timeout to values below 5 ms may severely increase CPU load.
 ///
-const auto dxp_screenshot_period = std::chrono::seconds (10);
+const auto dxp_screenshot_period = std::chrono::seconds (2);
 
 ///
 /// Desktop viewport:
@@ -80,7 +80,7 @@ const auto dxp_screenshot_period = std::chrono::seconds (10);
 ///
 /// Otherwise leave empty.
 ///
-const std::vector<uint32_t> dxp_viewport = {};
+const std::vector<uint32_t> dxp_viewport = {0,0,0,0,0,0,0,0};
 
 ///
 /// Key bindings:
@@ -98,7 +98,7 @@ struct dxp_keys
   static constexpr keys next = { "Down", "Right", "l", "j" };
   static constexpr keys prev = { "Left", "Up", "h", "k" };
   static constexpr keys slct = { "Return" };
-  static constexpr keys exit = { "Escape" };
+  static constexpr keys exit = { "Escape", "Cyrillic_hardsign" };
 };
 
 #endif /* ifndef DXP_CONFIG_HPP */

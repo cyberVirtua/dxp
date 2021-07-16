@@ -255,4 +255,16 @@ get_keycodes (xcb_connection_t *c)
   return keycodes;
 }
 
+struct render_info{
+  uint x;
+  uint y;
+  uint width;
+  uint height;
+  //xcb_pixmap_t *icon ; TODO(sthussky): implement this
+};
+
+std::vector <uint32_t> get_desktop_windows(xcb_connection_t *c, xcb_window_t root, uint32_t desktop);
+
+std::vector <render_info> get_prerenders(xcb_connection_t *c, xcb_window_t root, uint desktop);
+
 #endif /* ifndef DEXPO_XCB_HPP */
