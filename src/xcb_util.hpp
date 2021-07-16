@@ -45,6 +45,21 @@ struct monitor_info
   std::string name;
 };
 
+/**
+ * Information about window on a desktop.
+ *
+ * Used to draw desktop layouts in place of desktop screenshots
+ */
+struct window_info
+{
+  uint id; ///< Id of the desktop the window belongs to
+  uint x;
+  uint y;
+  uint width;
+  uint height;
+  // xcb_pixmap_t *icon ; TODO(sthussky): implement this
+};
+
 class xcb_error : public std::runtime_error
 {
 public:
@@ -113,6 +128,11 @@ uint get_current_desktop (xcb_connection_t *c, xcb_window_t root);
  */
 void ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root,
                           uint destkop_id);
+
+/**
+ * Returns an array of window informations
+ */
+std::vector<window_info> get_windows (xcb_connection_t *c, xcb_window_t root);
 
 /*******************************************************************************
  * XKB Related code
@@ -253,17 +273,5 @@ get_keycodes (xcb_connection_t *c)
 
   return keycodes;
 }
-
-struct render_info{
-  uint x;
-  uint y;
-  uint width;
-  uint height;
-  //xcb_pixmap_t *icon ; TODO(sthussky): implement this
-};
-
-std::vector <uint32_t> get_desktop_windows(xcb_connection_t *c, xcb_window_t root, uint32_t desktop);
-
-std::vector <render_info> get_prerenders(xcb_connection_t *c, xcb_window_t root, uint desktop);
 
 #endif /* ifndef DEXPO_XCB_HPP */

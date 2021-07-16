@@ -269,39 +269,34 @@ ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
   send_xcb_message (c, root, "_NET_CURRENT_DESKTOP", { destkop_id });
 }
 
-std::vector<uint32_t>
-get_desktop_windows_ids (xcb_connection_t *c, xcb_window_t root,
-                         uint32_t desktop)
+std::vector<window_info>
+get_windows (xcb_connection_t *c, xcb_window_t root)
 {
-  std::vector<uint32_t> desktop_windows_ids;
-  auto list = get_property_value (c, root, "_NET_CLIENT_LIST");
-  for (uint32_t client : list)
-    {
-      bool is_on_desktop
-          = (desktop
-             == get_property_value (c, client, "_NET_WINDOW_DESKTOP")[0]);
-      if (is_on_desktop)
-        {
-          desktop_windows_ids.push_back (client);
-        }
-    }
-  return desktop_windows_ids;
-}
+  xcb_generic_error_t *e = nullptr;
+  std::vector<window_info> windows;
 
-std::vector<render_info>
-get_prerenders (xcb_connection_t *c, xcb_window_t root, uint desktop)
-{
-  std::vector<render_info> info;
-  std::vector<uint32_t> ids = get_desktop_windows_ids (c, root, desktop);
-  xcb_generic_error_t *e = nullptr; // TODO(mmskv): Check for memory leak
-  for (uint32_t id : ids)
+  std::vector<uint32_t> desktop_windows_ids;
+  auto ids = get_property_value (c, root, "_NET_CLIENT_LIST");
+
+  windows.reserve (ids.size ());
+  for (const auto id : ids)
     {
+      /* Get window dimensions */
+
       auto geometry_cookie = xcb_get_geometry (c, id);
-      auto geometry = xcb_unique_ptr<xcb_get_geometry_reply_t> (xcb_get_geometry_reply (c, geometry_cookie, &e));
+      auto geometry = xcb_unique_ptr<xcb_get_geometry_reply_t> (
+          xcb_get_geometry_reply (c, geometry_cookie, &e));
       check (e, "XCB error while getting geometry reply");
-      // auto icons = get_property_value(c, id, "_NET_WM_ICONS");
-      render_info id_info={geometry.get()->x, geometry.get()->y, geometry.get()->width, geometry.get()->height};
-      info.push_back(id_info);
+
+      /* Get window's desktop id */
+
+      auto desktop_id = get_property_value (c, id, "_NET_WM_DESKTOP");
+
+      // TODO(sthussky): Get suitable window icon
+
+      windows.emplace_back (desktop_id[0], uint (geometry->x),
+                            uint (geometry->y), geometry->width,
+                            geometry->height);
     }
-  return info;
+  return windows;
 }
