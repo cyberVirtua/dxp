@@ -24,19 +24,18 @@ check (xcb_generic_error_t *e, const std::string &msg)
  */
 std::vector<uint32_t>
 get_property_value (xcb_connection_t *c, xcb_window_t root,
-                    const char *atom_name)
+                    const std::string &name)
 {
-  xcb_generic_error_t *e = nullptr; // TODO(mmskv): Check for memory leak
+  xcb_generic_error_t *e = nullptr;
 
-  auto atom_cookie = xcb_intern_atom (c, 0, strlen (atom_name), atom_name);
+  auto atom_cookie = xcb_intern_atom (c, 0, name.length (), name.c_str ());
   auto atom_reply = xcb_unique_ptr<xcb_intern_atom_reply_t> (
       xcb_intern_atom_reply (c, atom_cookie, &e));
   check (e, "XCB error while getting atom reply");
 
   auto atom = atom_reply
                   ? atom_reply->atom
-                  : throw std::runtime_error (
-                      std::string ("Could not get atom for ") + atom_name);
+                  : throw std::runtime_error ("Could not get atom for " + name);
 
   /* Getting property from atom */
 

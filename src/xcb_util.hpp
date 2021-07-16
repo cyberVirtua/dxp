@@ -84,8 +84,7 @@ xcb_unique_ptr (T *ptr)
  * @note vector size is inconsistent so vector may contain other data
  */
 std::vector<uint32_t> get_property_value (xcb_connection_t *c,
-                                          xcb_window_t root,
-                                          const char *atom_name);
+                                          xcb_window_t root, std::string &name);
 
 /**
  * Get monitor_info for each connected monitor
