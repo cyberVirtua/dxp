@@ -60,7 +60,7 @@ window::set_window_dimensions ()
 
   for (const auto &d : this->desktops)
     {
-      dynamic += dxp_horizontal_stacking ? d.width : d.height;
+      dynamic += dxp_horizontal_stacking ? d.pixmap_width : d.pixmap_height;
       dynamic += dxp_padding + 2 * dxp_border_pres_width;
     }
 
@@ -179,9 +179,9 @@ window::draw_desktops ()
   for (const auto &desktop : this->desktops)
     {
       xcb_put_image (window::c, XCB_IMAGE_FORMAT_Z_PIXMAP,
-                     this->xcb_id,                  /* Pixmap to put image on */
-                     window::gc,                    /* Graphic context */
-                     desktop.width, desktop.height, /* Dimensions */
+                     this->xcb_id, /* Pixmap to put image on */
+                     window::gc,   /* Graphic context */
+                     desktop.pixmap_width, desktop.pixmap_height,
                      x, /* Destination X coordinate */
                      y, /* Destination Y coordinate */
                      0, window::screen->root_depth,
@@ -189,12 +189,12 @@ window::draw_desktops ()
                      desktop.pixmap.data ());
       if (dxp_horizontal_stacking)
         {
-          x += desktop.width;
+          x += desktop.pixmap_width;
           x += dxp_padding + 2 * dxp_border_pres_width;
         }
       else if (dxp_vertical_stacking)
         {
-          y += desktop.height;
+          y += desktop.pixmap_height;
           y += dxp_padding + 2 * dxp_border_pres_width;
         };
     }
@@ -218,7 +218,8 @@ window::get_desktop_coord (uint desktop_id)
         }
 
       // Append width for horizontal stacking and height for vertical
-      pos += dxp_horizontal_stacking ? desktop.width : desktop.height;
+      pos += dxp_horizontal_stacking ? desktop.pixmap_width
+                                     : desktop.pixmap_height;
       pos += dxp_padding + 2 * dxp_border_pres_width;
     }
   return 0;
@@ -237,10 +238,10 @@ window::get_hover_desktop (int16_t x, int16_t y)
   if (dxp_vertical_stacking)
     {
       // Check if cursor is inside of the desktop
-      if (x >= dxp_padding &&           // Not to the left
-          x <= d.width + dxp_padding && // Not to the right
-          y >= d.y &&                   // Not above
-          y <= d.height + d.y)          // Not below
+      if (x >= dxp_padding &&                  // Not to the left
+          x <= d.pixmap_width + dxp_padding && // Not to the right
+          y >= d.y &&                          // Not above
+          y <= d.pixmap_height + d.y)          // Not below
         {
           return d.id;
         }
@@ -248,10 +249,10 @@ window::get_hover_desktop (int16_t x, int16_t y)
   else if (dxp_horizontal_stacking)
     {
       // Check if cursor is inside of the desktop
-      if (x >= d.x &&                  // To the right of left border
-          x <= d.width + d.x &&        // To the left of right border
-          y >= dxp_padding &&          // Not above
-          y <= d.height + dxp_padding) // Not below
+      if (x >= d.x &&                         // To the right of left border
+          x <= d.pixmap_width + d.x &&        // To the left of right border
+          y >= dxp_padding &&                 // Not above
+          y <= d.pixmap_height + dxp_padding) // Not below
         {
           return d.id;
         }
@@ -269,10 +270,10 @@ window::get_hover_desktop (int16_t x, int16_t y)
         {
           auto desktop_y = get_desktop_coord (d.id);
           // Check if cursor is inside of the desktop
-          if (x >= dxp_padding &&           // Not to the left
-              x <= d.width + dxp_padding && // Not to the right
-              y >= desktop_y &&             // Not above
-              y <= d.height + desktop_y)    // Not below
+          if (x >= dxp_padding &&                  // Not to the left
+              x <= d.pixmap_width + dxp_padding && // Not to the right
+              y >= desktop_y &&                    // Not above
+              y <= d.pixmap_height + desktop_y)    // Not below
             {
               // Cache new desktop
               recent_hover_desktop = { { d }, 0, desktop_y };
@@ -283,10 +284,10 @@ window::get_hover_desktop (int16_t x, int16_t y)
         {
           auto desktop_x = get_desktop_coord (d.id);
           // Check if cursor is inside of the desktop
-          if (x >= desktop_x &&            // To the right of left border
-              x <= d.width + desktop_x &&  // To the left of right border
-              y >= dxp_padding &&          // Not above
-              y <= d.height + dxp_padding) // Not below
+          if (x >= desktop_x &&                   // To the right of left border
+              x <= d.pixmap_width + desktop_x &&  // To the left of right border
+              y >= dxp_padding &&                 // Not above
+              y <= d.pixmap_height + dxp_padding) // Not below
             {
               // Cache new desktop
               recent_hover_desktop = { { d }, desktop_x, 0 };
@@ -308,8 +309,8 @@ window::draw_desktop_border (uint desktop_id, uint32_t color)
   int16_t x = 0;
   int16_t y = 0;
 
-  uint16_t width = this->desktops[desktop_id].width;
-  uint16_t height = this->desktops[desktop_id].height;
+  uint16_t width = this->desktops[desktop_id].pixmap_width;
+  uint16_t height = this->desktops[desktop_id].pixmap_height;
 
   if (dxp_vertical_stacking)
     {

@@ -17,9 +17,12 @@ constexpr const char *k_socket_path = "/tmp/dxp.socket";
  */
 struct dxp_socket_desktop
 {
-  uint id; // _NET_CURRENT_DESKTOP
+  uint id;     // _NET_CURRENT_DESKTOP
+  bool active; ///< Whether this desktop contains a screenshot in the pixmap
   uint16_t width;
   uint16_t height;
+  uint16_t pixmap_width;
+  uint16_t pixmap_height;
   uint32_t pixmap_len;
   std::vector<uint8_t> pixmap; ///< Pixmap in RBGA format
 };
