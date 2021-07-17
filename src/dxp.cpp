@@ -19,18 +19,14 @@ main ()
   try
     {
       // Get screenshots from socket or create them manually
-      // if (dxp_do_screenshots)
-      //   {
-      dxp_socket client;
-      auto v = client.get_desktops ();
-      //   }
-      // else
-      //   {
-      //     auto v = get_desktops ();
-      //  }
+      std::vector<dxp_socket_desktop> v{};
+      if (dxp_do_screenshots)
+        {
+          dxp_socket client;
+          v = client.get_desktops ();
+        }
 
       window w (v);
-      auto windows = get_windows (window::c, window::root);
 
       // Handling incoming events
       // Freeing it with free() is not specified in the docs, but it works

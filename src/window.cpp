@@ -1,5 +1,6 @@
 #include "window.hpp"
 #include "config.hpp"   // for dxp_padding, dxp_border_pres_width, dxp_x
+#include "desktop.hpp"  // for pixmap
 #include "drawable.hpp" // for drawable::c, drawable::root, drawable::screen
 #include "xcb_util.hpp" // for monitor_info, dxp_keycodes, ewmh_change_desktop
 #include <array>        // for array
@@ -20,7 +21,16 @@ window::window (const std::vector<dxp_socket_desktop> &desktops)
 {
   this->xcb_id = xcb_generate_id (drawable::c);
   this->desktops = desktops;
+  this->windows = get_windows (window::c, window::root);
   this->pres = 0; ///< id of the preselected desktop
+
+  if (!dxp_do_screenshots)
+    {
+      // TODO(mmskv): Initialize this->desktops
+    }
+
+  // Draw window geometries over desktops without screenshots
+  draw_windows_layout ();
 
   // Construct recent_hover_desktop
   if (dxp_vertical_stacking)
@@ -197,6 +207,57 @@ window::draw_desktops ()
           y += desktop.pixmap_height;
           y += dxp_padding + 2 * dxp_border_pres_width;
         };
+    }
+}
+
+/**
+ * Draw windows layout on the desktop
+ *
+ * Used when there are no screenshot of the desktop available
+ */
+void
+window::draw_windows_layout ()
+{
+  for (auto &d : desktops)
+    {
+      if (d.active) // Ignore desktops for which screenshots exist
+        {
+          continue;
+        }
+
+      auto *pixmap = reinterpret_cast<uint32_t *> (d.pixmap.data ());
+
+      for (size_t i = 0; i < d.pixmap_width * d.pixmap_height; i++)
+        {
+          pixmap[i] = dxp_layout_background;
+        }
+
+      class pixmap p (pixmap, width);
+
+      for (const auto &src_w : windows)
+        {
+          // Translate coordinates
+          const float x_ratio = float (d.width) / d.pixmap_width;
+          const float y_ratio = float (d.height) / d.pixmap_height;
+
+          window_info w{
+            0,
+            uint (src_w.x / x_ratio),
+            uint (src_w.y / y_ratio),
+            uint (src_w.width / x_ratio),
+            uint (src_w.height / y_ratio),
+          };
+
+          // Fill window with dxp_layout_window_background color
+
+          // Draw top border
+
+          // Draw left border
+
+          // Draw right border
+
+          // Draw bottom border
+        }
     }
 }
 
