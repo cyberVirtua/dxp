@@ -71,11 +71,10 @@ dxp_desktop::save_screen ()
   // a low pass filter should be used on the source.
   int radius = this->width / this->pixmap_width / 2;
 
-  box_blur_horizontal (this->image_ptr, this->width, this->height, radius);
-  box_blur_vertical (this->image_ptr, this->width, this->height, radius);
+  this->box_blur_horizontal (radius);
+  this->box_blur_vertical (radius);
 
-  nn_resize (this->image_ptr, this->pixmap.data (), this->width, this->height,
-             this->pixmap_width, this->pixmap_height);
+  this->nn_resize ();
 }
 
 /**
@@ -86,9 +85,9 @@ dxp_desktop::save_screen ()
  * and here https://www.gamasutra.com/view/feature/3102
  */
 void
-box_blur_horizontal (uint8_t *image, int width, int height, uint radius)
+dxp_desktop::box_blur_horizontal (uint radius)
 {
-  auto *input32 = reinterpret_cast<uint32_t *> (image);
+  auto *input32 = reinterpret_cast<uint32_t *> (image_ptr);
   class pixmap img (input32, width); // Adds operator[][]
 
   constexpr uint32_t a_mask = 0xFF000000;
@@ -170,9 +169,9 @@ box_blur_horizontal (uint8_t *image, int width, int height, uint radius)
  * Apply a vertical box filter (low pass) to the image.
  */
 void
-box_blur_vertical (uint8_t *image, int width, int height, uint radius)
+dxp_desktop::box_blur_vertical (uint radius)
 {
-  auto *input32 = reinterpret_cast<uint32_t *> (image);
+  auto *input32 = reinterpret_cast<uint32_t *> (image_ptr);
   class pixmap img (input32, width);
 
   constexpr uint32_t r_mask = 0x00FF0000;
@@ -242,15 +241,10 @@ box_blur_vertical (uint8_t *image, int width, int height, uint radius)
  * https://stackoverflow.com/questions/28566290
  */
 void
-dxp_desktop::nn_resize (const uint8_t *__restrict input,
-                        uint8_t *__restrict output,
-                        int source_width, /* Source dimensions */
-                        int source_height,
-                        int target_width, /* Target dimensions */
-                        int target_height)
+dxp_desktop::nn_resize ()
 {
-  const auto *input32 = reinterpret_cast<const uint32_t *> (input);
-  auto *output32 = reinterpret_cast<uint32_t *> (output);
+  const auto *input32 = reinterpret_cast<const uint32_t *> (image_ptr);
+  auto *output32 = reinterpret_cast<uint32_t *> (pixmap.data ());
 
   //
   // Bitshifts are used to preserve precision in x_ratio and y_ratio.
@@ -263,17 +257,17 @@ dxp_desktop::nn_resize (const uint8_t *__restrict input,
   //
   constexpr int k_precision_bytes = 16;
 
-  const int x_ratio = (source_width << k_precision_bytes) / target_width;
-  const int y_ratio = (source_height << k_precision_bytes) / target_height;
+  const int x_ratio = (width << k_precision_bytes) / pixmap_width;
+  const int y_ratio = (height << k_precision_bytes) / pixmap_height;
 
-  for (int y = 0; y < target_height; y++)
+  for (int y = 0; y < pixmap_height; y++)
     {
-      int y_source = ((y * y_ratio) >> k_precision_bytes) * source_width;
-      int y_dest = y * target_width;
+      int y_source = ((y * y_ratio) >> k_precision_bytes) * width;
+      int y_dest = y * pixmap_width;
 
       int x_source = 0;
       const uint32_t *input32_line = input32 + y_source;
-      for (int x = 0; x < target_width; x++)
+      for (int x = 0; x < pixmap_width; x++)
         {
           x_source += x_ratio;
           output32[y_dest + x] = input32_line[x_source >> k_precision_bytes];
@@ -287,40 +281,35 @@ dxp_desktop::nn_resize (const uint8_t *__restrict input,
  * significantly better images. So this resize algorithm is not used.
  */
 void
-dxp_desktop::bilinear_resize (const uint8_t *__restrict input,
-                              uint8_t *__restrict output,
-                              int source_width, /* Source dimensions */
-                              int source_height,
-                              int target_width, /* Target dimensions */
-                              int target_height)
+dxp_desktop::bilinear_resize ()
 {
-  const float x_ratio = float (source_width) / target_width;
-  const float y_ratio = float (source_height) / target_height;
+  const float x_ratio = float (width) / pixmap_width;
+  const float y_ratio = float (height) / pixmap_height;
 
-  for (int y_dst = 0; y_dst < target_height; y_dst++)
+  for (int y_dst = 0; y_dst < pixmap_height; y_dst++)
     {
       float y_src = y_dst * y_ratio;
       int y = std::floor (y_src);
       float dy = y_src - y;
 
-      for (int x_dst = 0; x_dst < target_width; x_dst++)
+      for (int x_dst = 0; x_dst < pixmap_width; x_dst++)
         {
           float x_src = x_dst * x_ratio;
           int x = std::floor (x_src);
           float dx = x_src - x;
 
-          int y_offset = y_dst * target_width;
+          int y_offset = y_dst * pixmap_width;
 
-          int y0_offset = y * source_width;
-          int y1_offset = y0_offset + source_width;
+          int y0_offset = y * width;
+          int y1_offset = y0_offset + width;
 
           for (int ch = 0; ch < 4; ch++)
             {
-              output[(x_dst + y_offset) * 4 + ch]
-                  = (input[(x + y0_offset) * 4 + ch] * (1 - dx) * (1 - dy)
-                     + input[(x + y1_offset) * 4 + ch] * (1 - dx) * dy
-                     + input[(x + 1 + y0_offset) * 4 + ch] * dx * (1 - dy)
-                     + input[(x + 1 + y1_offset) * 4 + ch] * dx * dy);
+              pixmap[(x_dst + y_offset) * 4 + ch]
+                  = (image_ptr[(x + y0_offset) * 4 + ch] * (1 - dx) * (1 - dy)
+                     + image_ptr[(x + y1_offset) * 4 + ch] * (1 - dx) * dy
+                     + image_ptr[(x + 1 + y0_offset) * 4 + ch] * dx * (1 - dy)
+                     + image_ptr[(x + 1 + y1_offset) * 4 + ch] * dx * dy);
             }
         }
     }
