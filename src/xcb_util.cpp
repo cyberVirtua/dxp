@@ -18,7 +18,7 @@ check (xcb_generic_error_t *e, const std::string &msg)
 };
 
 /**
- * Get a vector with EWMH property values
+ * Get a vector with EWMH property values by name
  *
  * @note vector size is inconsistent so vector may contain other data
  */
@@ -208,7 +208,7 @@ get_desktops (xcb_connection_t *c, xcb_window_t root)
               "`dxp_viewport`.");
         }
 
-      info.push_back (desktop_info{ i, x, y, width, height });
+      info.emplace_back (/* i, */ x, y, width, height);
     }
 
   return info;
@@ -223,15 +223,14 @@ get_current_desktop (xcb_connection_t *c, xcb_window_t root)
   return get_property_value (c, root, "_NET_CURRENT_DESKTOP")[0];
 };
 
-constexpr uint8_t k_event_data32_length = 5;
+constexpr uint8_t ewmh_event_data32_number = 5; // From EWMH specs
 /**
  * Generating and sending client message to the x server
  */
 void
 send_xcb_message (xcb_connection_t *c, xcb_window_t root, const char *msg,
-                  const std::array<uint32_t, k_event_data32_length> &data)
+                  const std::array<uint32_t, ewmh_event_data32_number> &data)
 {
-  // Making a double pointer to error doesn't look right
   xcb_generic_error_t *e = nullptr;
 
   auto atom_cookie = xcb_intern_atom (c, 0, strlen (msg), msg);

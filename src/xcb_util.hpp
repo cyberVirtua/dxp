@@ -24,7 +24,7 @@
  */
 struct desktop_info
 {
-  uint id; // XXX Is it necessary?
+  // uint id;
   int x;
   int y;
   uint width;
@@ -52,7 +52,7 @@ struct monitor_info
  */
 struct window_info
 {
-  uint id; ///< Id of the desktop the window belongs to
+  uint desktop; ///< Id of the desktop the window belongs to
   uint x;
   uint y;
   uint width;
