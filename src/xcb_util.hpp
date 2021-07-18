@@ -57,7 +57,7 @@ struct window_info
   uint y;
   uint width;
   uint height;
-  // xcb_pixmap_t *icon ; TODO(sthussky): implement this
+  std::vector<uint32_t> icons; ///< _NET_WM_ICON value
 };
 
 class xcb_error : public std::runtime_error

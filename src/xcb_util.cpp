@@ -268,6 +268,10 @@ ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
   send_xcb_message (c, root, "_NET_CURRENT_DESKTOP", { destkop_id });
 }
 
+/**
+ * Get information about all windows, including ids, related desktops,
+ * geometries and icons
+ */
 std::vector<window_info>
 get_windows (xcb_connection_t *c, xcb_window_t root)
 {
@@ -291,11 +295,10 @@ get_windows (xcb_connection_t *c, xcb_window_t root)
 
       auto desktop_id = get_property_value (c, id, "_NET_WM_DESKTOP");
 
-      // TODO(sthussky): Get suitable window icon
-
       windows.emplace_back (desktop_id[0], uint (geometry->x),
                             uint (geometry->y), geometry->width,
-                            geometry->height);
+                            geometry->height,
+                            get_property_value (c, id, "_NET_WM_ICON"));
     }
   return windows;
 }
