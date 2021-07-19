@@ -21,7 +21,7 @@ window::window (const std::vector<dxp_socket_desktop> &desktops)
 {
   this->xcb_id = xcb_generate_id (drawable::c);
   this->desktops = desktops;
-  this->windows = get_windows (window::c, window::root);
+  this->windows = get_windows (window::c, window::root, this->desktops);
   this->pres = 0; ///< id of the preselected desktop
 
   if (!dxp_do_screenshots)
@@ -210,6 +210,119 @@ window::draw_desktops ()
     }
 }
 
+unsigned int
+blend_alpha (uint colora, uint colorb, uint alpha)
+{
+  uint rb1 = ((0x100 - alpha) * (colora & 0xFF00FF)) >> 8;
+  uint rb2 = (alpha * (colorb & 0xFF00FF)) >> 8;
+  uint g1 = ((0x100 - alpha) * (colora & 0x00FF00)) >> 8;
+  uint g2 = (alpha * (colorb & 0x00FF00)) >> 8;
+  return ((rb1 | rb2) & 0xFF00FF) + ((g1 | g2) & 0x00FF00);
+}
+
+void
+draw_window (pixmap &p, const dxp_socket_desktop &d, const window_info &src_w)
+{
+  /* Translate coordinates */
+  const float downsize_ratio = float (d.width) / d.pixmap_width;
+
+  window_info w{
+    0,
+    int (std::round (src_w.x / downsize_ratio)),
+    int (std::round (src_w.y / downsize_ratio)),
+    uint (std::round (src_w.width / downsize_ratio)),
+    uint (std::round (src_w.height / downsize_ratio)),
+  };
+
+  /* Cap x, y, width, height so no overflow occurs */
+
+  // Cap x
+  if (w.x < 0)
+    {
+      w.width = w.width - abs (w.x); // Subtract part that is off-screen
+      w.x = 0;
+    }
+  // Cap width
+  w.width = w.width + w.x < d.pixmap_width ? w.width : d.pixmap_width;
+
+  // Cap y
+  if (w.y < 0)
+    {
+      w.height = w.height - abs (w.y); // Subtract part that is off-screen
+      w.y = 0;
+    }
+  // Cap height
+  w.height = w.height + w.y < d.pixmap_height ? w.height : d.pixmap_height;
+
+  // Fill window with dxp_layout_window_background color
+  for (int y = w.y; y < w.y + w.height; y++)
+    {
+      for (int x = w.x; x < w.x + w.width; x++)
+        {
+          p[x][y] = dxp_layout_window_background;
+        }
+    }
+
+  if (src_w.icons.empty ())
+    {
+      return;
+    }
+
+  // Get available icon sizes
+  struct icon_info
+  {
+    uint32_t width;
+    uint32_t height;
+    uint32_t offset;
+  };
+
+  std::vector<icon_info> icon_infos; // x, y, offset
+  icon_infos.emplace_back (src_w.icons[0], src_w.icons[1]);
+  uint32_t next_icon_offset
+      = icon_infos.back ().width * icon_infos.back ().height + 2;
+
+  while (next_icon_offset < src_w.icons.size ())
+    {
+      icon_infos.emplace_back (src_w.icons[next_icon_offset],
+                               src_w.icons[next_icon_offset + 1],
+                               next_icon_offset);
+      next_icon_offset
+          += icon_infos.back ().width * icon_infos.back ().height + 2;
+    }
+
+  // Select icon that fits and does not occupy more than 50% of window space
+  icon_info best_icon{};
+  for (const auto &icon : icon_infos)
+    {
+      if (icon.width > w.width || icon.height > w.height)
+        {
+          continue;
+        }
+
+      // TODO(mmskv): Resize icon
+      best_icon = icon;
+      break;
+    }
+
+  constexpr uint32_t a_mask = 0xFF000000;
+  constexpr uint32_t r_mask = 0x00FF0000;
+  constexpr uint32_t g_mask = 0x0000FF00;
+  constexpr uint32_t b_mask = 0x000000FF;
+  // Draw icon
+  int icon_x = w.x + w.width / 2 - best_icon.width / 2;   // Relative to desktop
+  int icon_y = w.y + w.height / 2 - best_icon.height / 2; // Relative to desktop
+  for (int y1 = 0, y = icon_y; y < icon_y + best_icon.height; y++, y1++)
+    {
+      for (int x1 = 0, x = icon_x; x < icon_x + best_icon.width; x++, x1++)
+        {
+          int xy_offset = y1 * best_icon.width + x1;
+          uint32_t c = src_w.icons[best_icon.offset + 2 + xy_offset];
+          uint8_t alpha = c >> 24;
+          p[x][y] = blend_alpha (p[x][y], c, alpha);
+        }
+    }
+}
+
 /**
  * Draw windows layout on the desktop
  *
@@ -220,7 +333,7 @@ window::draw_windows_layout ()
 {
   for (auto &d : desktops)
     {
-      if (d.active) // Ignore desktops for which screenshots exist
+      if (d.active) // Ignore desktops for which screenshots already exist
         {
           continue;
         }
@@ -232,31 +345,14 @@ window::draw_windows_layout ()
           pixmap[i] = dxp_layout_background;
         }
 
-      class pixmap p (pixmap, width);
+      class pixmap p (pixmap, d.pixmap_width);
 
       for (const auto &src_w : windows)
         {
-          // Translate coordinates
-          const float x_ratio = float (d.width) / d.pixmap_width;
-          const float y_ratio = float (d.height) / d.pixmap_height;
-
-          window_info w{
-            0,
-            uint (src_w.x / x_ratio),
-            uint (src_w.y / y_ratio),
-            uint (src_w.width / x_ratio),
-            uint (src_w.height / y_ratio),
-          };
-
-          // Fill window with dxp_layout_window_background color
-
-          // Draw top border
-
-          // Draw left border
-
-          // Draw right border
-
-          // Draw bottom border
+          if (src_w.desktop == d.id) // Check if window is on same desktop
+            {
+              draw_window (p, d, src_w);
+            }
         }
     }
 }

@@ -79,8 +79,8 @@ struct monitor_info
 struct window_info
 {
   uint desktop; ///< Id of the desktop the window belongs to
-  uint x;
-  uint y;
+  int x;
+  int y;
   uint width;
   uint height;
   std::vector<uint32_t> icons; ///< _NET_WM_ICON value
@@ -156,9 +156,14 @@ void ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root,
                           uint destkop_id);
 
 /**
- * Returns an array of window informations
+ * Get information about all windows, including ids, related desktops,
+ * geometries and icons.
+ *
+ * Desktops are used to calculate real window coordinates
  */
-std::vector<window_info> get_windows (xcb_connection_t *c, xcb_window_t root);
+std::vector<window_info>
+get_windows (xcb_connection_t *c, xcb_window_t root,
+             std::vector<dxp_socket_desktop> &desktops);
 
 /*******************************************************************************
  * XKB Related code

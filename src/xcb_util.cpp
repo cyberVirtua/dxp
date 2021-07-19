@@ -1,5 +1,6 @@
 #include "xcb_util.hpp"
-#include "config.hpp"  // for dxp_viewport
+#include "config.hpp" // for dxp_viewport
+#include "socket.hpp"
 #include <cstdint>     // for uint32_t, uint8_t, UINT32_MAX
 #include <cstring>     // for strlen
 #include <xcb/randr.h> // for xcb_randr_get_crtc_info_reply_t, xcb_randr_ge...
@@ -51,7 +52,7 @@ get_property_value (xcb_connection_t *c, xcb_window_t root,
   // will be freed by prop_reply
   auto *prop = prop_length ? (reinterpret_cast<uint32_t *> (
                    xcb_get_property_value (prop_reply.get ())))
-                           : throw;
+                           : nullptr;
 
   std::vector<uint32_t> atom_data;
 
@@ -270,10 +271,14 @@ ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
 
 /**
  * Get information about all windows, including ids, related desktops,
- * geometries and icons
+ * geometries and icons.
+ *
+ * Desktops are used to calculate real window coordinates
  */
 std::vector<window_info>
-get_windows (xcb_connection_t *c, xcb_window_t root)
+get_windows (xcb_connection_t *c, xcb_window_t root,
+             std::vector<dxp_socket_desktop> &desktops)
+
 {
   xcb_generic_error_t *e = nullptr;
   std::vector<window_info> windows;
@@ -292,12 +297,17 @@ get_windows (xcb_connection_t *c, xcb_window_t root)
       check (e, "XCB error while getting geometry reply");
 
       /* Get window's desktop id */
+      auto net_wm_desktop = get_property_value (c, id, "_NET_WM_DESKTOP");
+      if (net_wm_desktop.empty ())
+        {
+          continue;
+        }
+      auto desktop_id = net_wm_desktop[0];
 
-      auto desktop_id = get_property_value (c, id, "_NET_WM_DESKTOP");
-
-      windows.emplace_back (desktop_id[0], uint (geometry->x),
-                            uint (geometry->y), geometry->width,
-                            geometry->height,
+      // Get window coordinates relative to the desktop
+      int x = geometry->x - desktops[desktop_id].x;
+      int y = geometry->y - desktops[desktop_id].y;
+      windows.emplace_back (desktop_id, x, y, geometry->width, geometry->height,
                             get_property_value (c, id, "_NET_WM_ICON"));
     }
   return windows;
