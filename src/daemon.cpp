@@ -36,6 +36,8 @@ dxp_daemon::dxp_daemon ()
 
       p.id = i;
       p.active = false;
+      p.x = desktops[i].x;
+      p.y = desktops[i].y;
       p.width = desktops[i].width;
       p.height = desktops[i].height;
       p.pixmap_len = desktops[i].pixmap_width * desktops[i].pixmap_height * 4U;

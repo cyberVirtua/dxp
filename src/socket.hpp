@@ -1,39 +1,16 @@
 #ifndef DEXPO_SOCKET_HPP
 #define DEXPO_SOCKET_HPP
 
-#include <atomic>      // for atomic
-#include <cstdint>     // for uint8_t, uint16_t, uint32_t
-#include <mutex>       // for mutex
-#include <stdexcept>   // for runtime_error
-#include <string>      // for string
-#include <sys/types.h> // for uint
-#include <vector>      // for vector
+#include "xcb_util.hpp" // for dxp_socket_desktop, dxp_event
+#include <atomic>       // for atomic
+#include <cstdint>      // for uint8_t, uint16_t, uint32_t
+#include <mutex>        // for mutex
+#include <stdexcept>    // for runtime_error
+#include <string>       // for string
+#include <sys/types.h>  // for uint
+#include <vector>       // for vector
 
 constexpr const char *k_socket_path = "/tmp/dxp.socket";
-
-/**
- * Dekstop struct that will be transferred over socket
- * Contains only necessary data
- */
-struct dxp_socket_desktop
-{
-  uint id;     // _NET_CURRENT_DESKTOP
-  bool active; ///< Whether this desktop contains a screenshot in the pixmap
-  uint16_t width;
-  uint16_t height;
-  uint16_t pixmap_width;
-  uint16_t pixmap_height;
-  uint32_t pixmap_len;
-  std::vector<uint8_t> pixmap; ///< Pixmap in RBGA format
-};
-
-/**
- * All commands that can be sent by client to daemon
- */
-enum dxp_event
-{
-  RequestDesktops = 1 // Request all pixmaps
-};
 
 class dxp_socket
 {

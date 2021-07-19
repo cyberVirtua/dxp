@@ -20,6 +20,32 @@
 #include <xcb/xproto.h>      // for xcb_keycode_t, xcb_window_t, xcb_keysym_t
 
 /**
+ * Dekstop struct that will be transferred over socket
+ * Contains only necessary data
+ */
+struct dxp_socket_desktop
+{
+  uint id;     // _NET_CURRENT_DESKTOP
+  bool active; ///< Whether this desktop contains a screenshot in the pixmap
+  int16_t x;   ///< Relative to the root
+  int16_t y;   ///< Relative to the root
+  uint16_t width;
+  uint16_t height;
+  uint16_t pixmap_width;
+  uint16_t pixmap_height;
+  uint32_t pixmap_len;
+  std::vector<uint8_t> pixmap; ///< Pixmap in RBGA format
+};
+
+/**
+ * All commands that can be sent by client to daemon
+ */
+enum dxp_event
+{
+  RequestDesktops = 1 // Request all pixmaps
+};
+
+/**
  * Virtual desktop information
  */
 struct desktop_info
