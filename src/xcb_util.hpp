@@ -20,11 +20,37 @@
 #include <xcb/xproto.h>      // for xcb_keycode_t, xcb_window_t, xcb_keysym_t
 
 /**
+ * Dekstop struct that will be transferred over socket
+ * Contains only necessary data
+ */
+struct dxp_socket_desktop
+{
+  uint id;     // _NET_CURRENT_DESKTOP
+  bool active; ///< Whether this desktop contains a screenshot in the pixmap
+  int16_t x;   ///< Relative to the root
+  int16_t y;   ///< Relative to the root
+  uint16_t width;
+  uint16_t height;
+  uint16_t pixmap_width;
+  uint16_t pixmap_height;
+  uint32_t pixmap_len;
+  std::vector<uint8_t> pixmap; ///< Pixmap in RBGA format
+};
+
+/**
+ * All commands that can be sent by client to daemon
+ */
+enum dxp_event
+{
+  RequestDesktops = 1 // Request all pixmaps
+};
+
+/**
  * Virtual desktop information
  */
 struct desktop_info
 {
-  uint id; // XXX Is it necessary?
+  // uint id;
   int x;
   int y;
   uint width;
@@ -43,6 +69,21 @@ struct monitor_info
   uint width;
   uint height;
   std::string name;
+};
+
+/**
+ * Information about window on a desktop.
+ *
+ * Used to draw desktop layouts in place of desktop screenshots
+ */
+struct window_info
+{
+  uint desktop; ///< Id of the desktop the window belongs to
+  int x;
+  int y;
+  uint width;
+  uint height;
+  std::vector<uint32_t> icons; ///< _NET_WM_ICON value
 };
 
 class xcb_error : public std::runtime_error
@@ -84,8 +125,7 @@ xcb_unique_ptr (T *ptr)
  * @note vector size is inconsistent so vector may contain other data
  */
 std::vector<uint32_t> get_property_value (xcb_connection_t *c,
-                                          xcb_window_t root,
-                                          const char *atom_name);
+                                          xcb_window_t root, std::string &name);
 
 /**
  * Get monitor_info for each connected monitor
@@ -114,6 +154,16 @@ uint get_current_desktop (xcb_connection_t *c, xcb_window_t root);
  */
 void ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root,
                           uint destkop_id);
+
+/**
+ * Get information about all windows, including ids, related desktops,
+ * geometries and icons.
+ *
+ * Desktops are used to calculate real window coordinates
+ */
+std::vector<window_info>
+get_windows (xcb_connection_t *c, xcb_window_t root,
+             std::vector<dxp_socket_desktop> &desktops);
 
 /*******************************************************************************
  * XKB Related code

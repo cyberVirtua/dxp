@@ -18,9 +18,13 @@ main ()
 {
   try
     {
-      // Get screenshots from socket
-      dxp_socket client;
-      auto v = client.get_desktops ();
+      // Get screenshots from socket or create them manually
+      std::vector<dxp_socket_desktop> v{};
+      if (dxp_do_screenshots)
+        {
+          dxp_socket client;
+          v = client.get_desktops ();
+        }
 
       window w (v);
 

@@ -1,5 +1,6 @@
 #include "xcb_util.hpp"
-#include "config.hpp"  // for dxp_viewport
+#include "config.hpp" // for dxp_viewport
+#include "socket.hpp"
 #include <cstdint>     // for uint32_t, uint8_t, UINT32_MAX
 #include <cstring>     // for strlen
 #include <xcb/randr.h> // for xcb_randr_get_crtc_info_reply_t, xcb_randr_ge...
@@ -18,25 +19,24 @@ check (xcb_generic_error_t *e, const std::string &msg)
 };
 
 /**
- * Get a vector with EWMH property values
+ * Get a vector with EWMH property values by name
  *
  * @note vector size is inconsistent so vector may contain other data
  */
 std::vector<uint32_t>
 get_property_value (xcb_connection_t *c, xcb_window_t root,
-                    const char *atom_name)
+                    const std::string &name)
 {
-  xcb_generic_error_t *e = nullptr; // TODO(mmskv): Check for memory leak
+  xcb_generic_error_t *e = nullptr;
 
-  auto atom_cookie = xcb_intern_atom (c, 0, strlen (atom_name), atom_name);
+  auto atom_cookie = xcb_intern_atom (c, 0, name.length (), name.c_str ());
   auto atom_reply = xcb_unique_ptr<xcb_intern_atom_reply_t> (
       xcb_intern_atom_reply (c, atom_cookie, &e));
   check (e, "XCB error while getting atom reply");
 
   auto atom = atom_reply
                   ? atom_reply->atom
-                  : throw std::runtime_error (
-                      std::string ("Could not get atom for ") + atom_name);
+                  : throw std::runtime_error ("Could not get atom for " + name);
 
   /* Getting property from atom */
 
@@ -52,7 +52,7 @@ get_property_value (xcb_connection_t *c, xcb_window_t root,
   // will be freed by prop_reply
   auto *prop = prop_length ? (reinterpret_cast<uint32_t *> (
                    xcb_get_property_value (prop_reply.get ())))
-                           : throw;
+                           : nullptr;
 
   std::vector<uint32_t> atom_data;
 
@@ -209,7 +209,7 @@ get_desktops (xcb_connection_t *c, xcb_window_t root)
               "`dxp_viewport`.");
         }
 
-      info.push_back (desktop_info{ i, x, y, width, height });
+      info.emplace_back (/* i, */ x, y, width, height);
     }
 
   return info;
@@ -224,15 +224,14 @@ get_current_desktop (xcb_connection_t *c, xcb_window_t root)
   return get_property_value (c, root, "_NET_CURRENT_DESKTOP")[0];
 };
 
-constexpr uint8_t k_event_data32_length = 5;
+constexpr uint8_t ewmh_event_data32_number = 5; // From EWMH specs
 /**
  * Generating and sending client message to the x server
  */
 void
 send_xcb_message (xcb_connection_t *c, xcb_window_t root, const char *msg,
-                  const std::array<uint32_t, k_event_data32_length> &data)
+                  const std::array<uint32_t, ewmh_event_data32_number> &data)
 {
-  // Making a double pointer to error doesn't look right
   xcb_generic_error_t *e = nullptr;
 
   auto atom_cookie = xcb_intern_atom (c, 0, strlen (msg), msg);
@@ -268,4 +267,48 @@ ewmh_change_desktop (xcb_connection_t *c, xcb_window_t root, uint destkop_id)
   // EWMH: Note that the timestamp may be 0 for clients using an older version
   // of this spec, in which case the timestamp field should be ignored.
   send_xcb_message (c, root, "_NET_CURRENT_DESKTOP", { destkop_id });
+}
+
+/**
+ * Get information about all windows, including ids, related desktops,
+ * geometries and icons.
+ *
+ * Desktops are used to calculate real window coordinates
+ */
+std::vector<window_info>
+get_windows (xcb_connection_t *c, xcb_window_t root,
+             std::vector<dxp_socket_desktop> &desktops)
+
+{
+  xcb_generic_error_t *e = nullptr;
+  std::vector<window_info> windows;
+
+  std::vector<uint32_t> desktop_windows_ids;
+  auto ids = get_property_value (c, root, "_NET_CLIENT_LIST");
+
+  windows.reserve (ids.size ());
+  for (const auto id : ids)
+    {
+      /* Get window dimensions */
+
+      auto geometry_cookie = xcb_get_geometry (c, id);
+      auto geometry = xcb_unique_ptr<xcb_get_geometry_reply_t> (
+          xcb_get_geometry_reply (c, geometry_cookie, &e));
+      check (e, "XCB error while getting geometry reply");
+
+      /* Get window's desktop id */
+      auto net_wm_desktop = get_property_value (c, id, "_NET_WM_DESKTOP");
+      if (net_wm_desktop.empty ())
+        {
+          continue;
+        }
+      auto desktop_id = net_wm_desktop[0];
+
+      // Get window coordinates relative to the desktop
+      int x = geometry->x - desktops[desktop_id].x;
+      int y = geometry->y - desktops[desktop_id].y;
+      windows.emplace_back (desktop_id, x, y, geometry->width, geometry->height,
+                            get_property_value (c, id, "_NET_WM_ICON"));
+    }
+  return windows;
 }

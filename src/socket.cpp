@@ -198,14 +198,14 @@ dxp_socket::send_desktops_on_event (
                       "Failed to send number of desktops to dxp");
 
           // Writes from second to `num+1` * 2 -- sending desktops
-          for (const auto &p : desktops)
+          for (const auto &d : desktops)
             {
               // Sending everything except raw pixmap
-              write_unix (data_fd, &p, offsetof (dxp_socket_desktop, pixmap),
+              write_unix (data_fd, &d, offsetof (dxp_socket_desktop, pixmap),
                           "Failed to send desktop data to dxp");
 
               // Sending pixmap
-              write_unix (data_fd, p.pixmap.data (), p.pixmap_len,
+              write_unix (data_fd, d.pixmap.data (), d.pixmap_len,
                           "Failed to send raw desktop pixmap to dxp");
             }
         }

@@ -12,6 +12,15 @@ using color = const uint32_t;
 using keys = std::array<std::string_view, keys_size>;
 
 ///
+/// Whether to show desktop screenshots.
+///
+/// True: Display desktop screenshots.
+///       Display desktop layouts if no screenshots are available.
+/// False: Always display desktop layouts.
+///
+const bool dxp_do_screenshots = true;
+
+///
 /// Dimensions of the screenshots that will be displayed.
 ///
 /// Specifying width will stack desktops vertically.
@@ -52,13 +61,16 @@ const bool dxp_center_y = false; ///< Center dxp on the monitor vertically
 
 const uint16_t dxp_padding = 3; ///< Padding around the screenshots
 
-color dxp_background = 0x444444;    ///< Window background
-color dxp_border_pres = 0xFFFFFF;   ///< Desktop preselection
-color dxp_border_nopres = 0x808080; ///< Desktop without preselection
+color dxp_background = 0x444444;               ///< Window background
+color dxp_border_pres = 0xFFFFFF;              ///< Desktop preselection
+color dxp_border_nopres = 0x808080;            ///< Desktop without preselection
+color dxp_layout_background = 0x000214;        ///< TODO(mmskv): Document
+color dxp_layout_window_border = 0x2c0069;     ///< TODO(mmskv): Document
+color dxp_layout_window_background = 0x04001a; ///< TODO(mmskv): Document
 
+const uint dxp_border_width = 0;          ///< dxp window border
 const uint16_t dxp_border_pres_width = 2; ///< Width of the preselection
-
-const uint dxp_border_width = 0; ///< dxp window border
+const uint dxp_desktop_layout_window_border_size = 2; ///< TODO(mmskv): Document
 
 ///
 /// How often to take screenshots.

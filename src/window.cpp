@@ -1,5 +1,6 @@
 #include "window.hpp"
 #include "config.hpp"   // for dxp_padding, dxp_border_pres_width, dxp_x
+#include "desktop.hpp"  // for pixmap
 #include "drawable.hpp" // for drawable::c, drawable::root, drawable::screen
 #include "xcb_util.hpp" // for monitor_info, dxp_keycodes, ewmh_change_desktop
 #include <array>        // for array
@@ -20,7 +21,16 @@ window::window (const std::vector<dxp_socket_desktop> &desktops)
 {
   this->xcb_id = xcb_generate_id (drawable::c);
   this->desktops = desktops;
+  this->windows = get_windows (window::c, window::root, this->desktops);
   this->pres = 0; ///< id of the preselected desktop
+
+  if (!dxp_do_screenshots)
+    {
+      // TODO(mmskv): Initialize this->desktops
+    }
+
+  // Draw window geometries over desktops without screenshots
+  draw_windows_layout ();
 
   // Construct recent_hover_desktop
   if (dxp_vertical_stacking)
@@ -60,7 +70,7 @@ window::set_window_dimensions ()
 
   for (const auto &d : this->desktops)
     {
-      dynamic += dxp_horizontal_stacking ? d.width : d.height;
+      dynamic += dxp_horizontal_stacking ? d.pixmap_width : d.pixmap_height;
       dynamic += dxp_padding + 2 * dxp_border_pres_width;
     }
 
@@ -179,9 +189,9 @@ window::draw_desktops ()
   for (const auto &desktop : this->desktops)
     {
       xcb_put_image (window::c, XCB_IMAGE_FORMAT_Z_PIXMAP,
-                     this->xcb_id,                  /* Pixmap to put image on */
-                     window::gc,                    /* Graphic context */
-                     desktop.width, desktop.height, /* Dimensions */
+                     this->xcb_id, /* Pixmap to put image on */
+                     window::gc,   /* Graphic context */
+                     desktop.pixmap_width, desktop.pixmap_height,
                      x, /* Destination X coordinate */
                      y, /* Destination Y coordinate */
                      0, window::screen->root_depth,
@@ -189,14 +199,161 @@ window::draw_desktops ()
                      desktop.pixmap.data ());
       if (dxp_horizontal_stacking)
         {
-          x += desktop.width;
+          x += desktop.pixmap_width;
           x += dxp_padding + 2 * dxp_border_pres_width;
         }
       else if (dxp_vertical_stacking)
         {
-          y += desktop.height;
+          y += desktop.pixmap_height;
           y += dxp_padding + 2 * dxp_border_pres_width;
         };
+    }
+}
+
+unsigned int
+blend_alpha (uint colora, uint colorb, uint alpha)
+{
+  uint rb1 = ((0x100 - alpha) * (colora & 0xFF00FF)) >> 8;
+  uint rb2 = (alpha * (colorb & 0xFF00FF)) >> 8;
+  uint g1 = ((0x100 - alpha) * (colora & 0x00FF00)) >> 8;
+  uint g2 = (alpha * (colorb & 0x00FF00)) >> 8;
+  return ((rb1 | rb2) & 0xFF00FF) + ((g1 | g2) & 0x00FF00);
+}
+
+void
+draw_window (pixmap &p, const dxp_socket_desktop &d, const window_info &src_w)
+{
+  /* Translate coordinates */
+  const float downsize_ratio = float (d.width) / d.pixmap_width;
+
+  window_info w{
+    0,
+    int (std::round (src_w.x / downsize_ratio)),
+    int (std::round (src_w.y / downsize_ratio)),
+    uint (std::round (src_w.width / downsize_ratio)),
+    uint (std::round (src_w.height / downsize_ratio)),
+  };
+
+  /* Cap x, y, width, height so no overflow occurs */
+
+  // Cap x
+  if (w.x < 0)
+    {
+      w.width = w.width - abs (w.x); // Subtract part that is off-screen
+      w.x = 0;
+    }
+  // Cap width
+  w.width = w.width + w.x < d.pixmap_width ? w.width : d.pixmap_width;
+
+  // Cap y
+  if (w.y < 0)
+    {
+      w.height = w.height - abs (w.y); // Subtract part that is off-screen
+      w.y = 0;
+    }
+  // Cap height
+  w.height = w.height + w.y < d.pixmap_height ? w.height : d.pixmap_height;
+
+  // Fill window with dxp_layout_window_background color
+  for (int y = w.y; y < w.y + w.height; y++)
+    {
+      for (int x = w.x; x < w.x + w.width; x++)
+        {
+          p[x][y] = dxp_layout_window_background;
+        }
+    }
+
+  if (src_w.icons.empty ())
+    {
+      return;
+    }
+
+  // Get available icon sizes
+  struct icon_info
+  {
+    uint32_t width;
+    uint32_t height;
+    uint32_t offset;
+  };
+
+  std::vector<icon_info> icon_infos; // x, y, offset
+  icon_infos.emplace_back (src_w.icons[0], src_w.icons[1]);
+  uint32_t next_icon_offset
+      = icon_infos.back ().width * icon_infos.back ().height + 2;
+
+  while (next_icon_offset < src_w.icons.size ())
+    {
+      icon_infos.emplace_back (src_w.icons[next_icon_offset],
+                               src_w.icons[next_icon_offset + 1],
+                               next_icon_offset);
+      next_icon_offset
+          += icon_infos.back ().width * icon_infos.back ().height + 2;
+    }
+
+  // Select icon that fits and does not occupy more than 50% of window space
+  icon_info best_icon{};
+  for (const auto &icon : icon_infos)
+    {
+      if (icon.width > w.width || icon.height > w.height)
+        {
+          continue;
+        }
+
+      // TODO(mmskv): Resize icon
+      best_icon = icon;
+      break;
+    }
+
+  constexpr uint32_t a_mask = 0xFF000000;
+  constexpr uint32_t r_mask = 0x00FF0000;
+  constexpr uint32_t g_mask = 0x0000FF00;
+  constexpr uint32_t b_mask = 0x000000FF;
+  // Draw icon
+  int icon_x = w.x + w.width / 2 - best_icon.width / 2;   // Relative to desktop
+  int icon_y = w.y + w.height / 2 - best_icon.height / 2; // Relative to desktop
+  for (int y1 = 0, y = icon_y; y < icon_y + best_icon.height; y++, y1++)
+    {
+      for (int x1 = 0, x = icon_x; x < icon_x + best_icon.width; x++, x1++)
+        {
+          int xy_offset = y1 * best_icon.width + x1;
+          uint32_t c = src_w.icons[best_icon.offset + 2 + xy_offset];
+          uint8_t alpha = c >> 24;
+          p[x][y] = blend_alpha (p[x][y], c, alpha);
+        }
+    }
+}
+
+/**
+ * Draw windows layout on the desktop
+ *
+ * Used when there are no screenshot of the desktop available
+ */
+void
+window::draw_windows_layout ()
+{
+  for (auto &d : desktops)
+    {
+      if (d.active) // Ignore desktops for which screenshots already exist
+        {
+          continue;
+        }
+
+      auto *pixmap = reinterpret_cast<uint32_t *> (d.pixmap.data ());
+
+      for (size_t i = 0; i < d.pixmap_width * d.pixmap_height; i++)
+        {
+          pixmap[i] = dxp_layout_background;
+        }
+
+      class pixmap p (pixmap, d.pixmap_width);
+
+      for (const auto &src_w : windows)
+        {
+          if (src_w.desktop == d.id) // Check if window is on same desktop
+            {
+              draw_window (p, d, src_w);
+            }
+        }
     }
 }
 
@@ -218,7 +375,8 @@ window::get_desktop_coord (uint desktop_id)
         }
 
       // Append width for horizontal stacking and height for vertical
-      pos += dxp_horizontal_stacking ? desktop.width : desktop.height;
+      pos += dxp_horizontal_stacking ? desktop.pixmap_width
+                                     : desktop.pixmap_height;
       pos += dxp_padding + 2 * dxp_border_pres_width;
     }
   return 0;
@@ -237,10 +395,10 @@ window::get_hover_desktop (int16_t x, int16_t y)
   if (dxp_vertical_stacking)
     {
       // Check if cursor is inside of the desktop
-      if (x >= dxp_padding &&           // Not to the left
-          x <= d.width + dxp_padding && // Not to the right
-          y >= d.y &&                   // Not above
-          y <= d.height + d.y)          // Not below
+      if (x >= dxp_padding &&                  // Not to the left
+          x <= d.pixmap_width + dxp_padding && // Not to the right
+          y >= d.y &&                          // Not above
+          y <= d.pixmap_height + d.y)          // Not below
         {
           return d.id;
         }
@@ -248,10 +406,10 @@ window::get_hover_desktop (int16_t x, int16_t y)
   else if (dxp_horizontal_stacking)
     {
       // Check if cursor is inside of the desktop
-      if (x >= d.x &&                  // To the right of left border
-          x <= d.width + d.x &&        // To the left of right border
-          y >= dxp_padding &&          // Not above
-          y <= d.height + dxp_padding) // Not below
+      if (x >= d.x &&                         // To the right of left border
+          x <= d.pixmap_width + d.x &&        // To the left of right border
+          y >= dxp_padding &&                 // Not above
+          y <= d.pixmap_height + dxp_padding) // Not below
         {
           return d.id;
         }
@@ -269,10 +427,10 @@ window::get_hover_desktop (int16_t x, int16_t y)
         {
           auto desktop_y = get_desktop_coord (d.id);
           // Check if cursor is inside of the desktop
-          if (x >= dxp_padding &&           // Not to the left
-              x <= d.width + dxp_padding && // Not to the right
-              y >= desktop_y &&             // Not above
-              y <= d.height + desktop_y)    // Not below
+          if (x >= dxp_padding &&                  // Not to the left
+              x <= d.pixmap_width + dxp_padding && // Not to the right
+              y >= desktop_y &&                    // Not above
+              y <= d.pixmap_height + desktop_y)    // Not below
             {
               // Cache new desktop
               recent_hover_desktop = { { d }, 0, desktop_y };
@@ -283,10 +441,10 @@ window::get_hover_desktop (int16_t x, int16_t y)
         {
           auto desktop_x = get_desktop_coord (d.id);
           // Check if cursor is inside of the desktop
-          if (x >= desktop_x &&            // To the right of left border
-              x <= d.width + desktop_x &&  // To the left of right border
-              y >= dxp_padding &&          // Not above
-              y <= d.height + dxp_padding) // Not below
+          if (x >= desktop_x &&                   // To the right of left border
+              x <= d.pixmap_width + desktop_x &&  // To the left of right border
+              y >= dxp_padding &&                 // Not above
+              y <= d.pixmap_height + dxp_padding) // Not below
             {
               // Cache new desktop
               recent_hover_desktop = { { d }, desktop_x, 0 };
@@ -308,8 +466,8 @@ window::draw_desktop_border (uint desktop_id, uint32_t color)
   int16_t x = 0;
   int16_t y = 0;
 
-  uint16_t width = this->desktops[desktop_id].width;
-  uint16_t height = this->desktops[desktop_id].height;
+  uint16_t width = this->desktops[desktop_id].pixmap_width;
+  uint16_t height = this->desktops[desktop_id].pixmap_height;
 
   if (dxp_vertical_stacking)
     {

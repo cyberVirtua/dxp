@@ -3,6 +3,7 @@
 
 #include "drawable.hpp" // for drawable
 #include "socket.hpp"   // for dxp_socket_desktop
+#include "xcb_util.hpp" // for window_info
 #include <cstdint>      // for int16_t, uint32_t
 #include <sys/types.h>  // for uint
 #include <vector>       // for vector
@@ -30,7 +31,8 @@ public:
   uint32_t xcb_id;
   std::vector<dxp_socket_desktop> desktops; ///< Desktops received from daemon
   dxp_window_desktop recent_hover_desktop;  ///< Recently cached hover desktop
-  uint pres;                                ///< id of the preselected desktop
+  std::vector<window_info> windows; ///< List window_info for all windows
+  uint pres;                        ///< id of the preselected desktop
 
   explicit window (const std::vector<dxp_socket_desktop> &desktops);
   ~window ();
@@ -51,6 +53,22 @@ public:
    * Create an empty window to later place gui in it.
    */
   void create_window ();
+
+  /**
+   * Draw windows layout on the desktop
+   *
+   * Used to fill a desktop with windows layout when there are no screenshots
+   * of the desktop available
+   */
+  void draw_windows_layout ();
+
+  /**
+   * Draw border over window
+   *
+   * Used to highlight window when it is preselected
+   * Or to highlight all windows that are not preselected
+   */
+  void draw_window_border (window_info window, uint32_t color);
 
   /**
    * Draw desktops on the window
