@@ -22,7 +22,7 @@ using keys = std::array<std::string_view, keys_size>;
 /// Actual window width will be equal to dxp_width + (dxp_padding * 2)
 ///
 const uint dxp_width = 0;
-const uint dxp_height = 200;
+const uint dxp_height = 150;
 
 ///
 /// Name of the monitor to put window on. Will use primary if unset.
@@ -48,7 +48,7 @@ const float dxp_y = 0; ///< Y coordinate of window's corner
 /// If centering is enabled, corresponding coordinate will be ignored
 ///
 const bool dxp_center_x = true; ///< Center dxp on the monitor horizontally
-const bool dxp_center_y = true; ///< Center dxp on the monitor vertically
+const bool dxp_center_y = false; ///< Center dxp on the monitor vertically
 
 const uint16_t dxp_padding = 3; ///< Padding around the screenshots
 
@@ -68,7 +68,7 @@ const uint dxp_border_width = 0; ///< dxp window border
 ///
 /// NOTE: Setting timeout to values below 5 ms may severely increase CPU load.
 ///
-const auto dxp_screenshot_period = std::chrono::seconds (2);
+const auto dxp_screenshot_period = std::chrono::seconds (10);
 
 ///
 /// Desktop viewport:
@@ -81,7 +81,7 @@ const auto dxp_screenshot_period = std::chrono::seconds (2);
 ///
 /// Otherwise leave empty.
 ///
-const std::vector<uint32_t> dxp_viewport = { 0, 0, 0, 0, 0, 0, 0, 0 };
+const std::vector<uint32_t> dxp_viewport = {};
 
 ///
 /// Key bindings:
@@ -90,6 +90,8 @@ const std::vector<uint32_t> dxp_viewport = { 0, 0, 0, 0, 0, 0, 0, 0 };
 /// prev: preselect previous desktop
 /// exit: kill dxp
 /// slct: switch to preselected desktop
+/// copy: copy windows from preselected
+/// move: paste copied windows to preselected
 ///
 /// View keynames.hpp for a list of supported keys
 /// and their names
