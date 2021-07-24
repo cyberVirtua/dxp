@@ -30,7 +30,8 @@ public:
   uint32_t xcb_id;
   std::vector<dxp_socket_desktop> desktops; ///< Desktops received from daemon
   dxp_window_desktop recent_hover_desktop;  ///< Recently cached hover desktop
-  uint pres;                                ///< id of the preselected desktop
+  uint pres;                                ///< Id of the preselected desktop
+  std::vector<uint> desktops_to_move_from;  ///< Which ws to move windows from
 
   explicit window (const std::vector<dxp_socket_desktop> &desktops);
   ~window ();

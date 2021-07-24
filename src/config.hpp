@@ -47,7 +47,7 @@ const float dxp_y = 0; ///< Y coordinate of window's corner
 ///
 /// If centering is enabled, corresponding coordinate will be ignored
 ///
-const bool dxp_center_x = true;  ///< Center dxp on the monitor horizontally
+const bool dxp_center_x = true; ///< Center dxp on the monitor horizontally
 const bool dxp_center_y = false; ///< Center dxp on the monitor vertically
 
 const uint16_t dxp_padding = 3; ///< Padding around the screenshots
@@ -55,6 +55,7 @@ const uint16_t dxp_padding = 3; ///< Padding around the screenshots
 color dxp_background = 0x444444;    ///< Window background
 color dxp_border_pres = 0xFFFFFF;   ///< Desktop preselection
 color dxp_border_nopres = 0x808080; ///< Desktop without preselection
+color dxp_border_copied = 0x00ABFF; ///< Currently copied desktop
 
 const uint16_t dxp_border_pres_width = 2; ///< Width of the preselection
 
@@ -89,6 +90,8 @@ const std::vector<uint32_t> dxp_viewport = {};
 /// prev: preselect previous desktop
 /// exit: kill dxp
 /// slct: switch to preselected desktop
+/// copy: copy windows from preselected
+/// move: paste copied windows to preselected
 ///
 /// View keynames.hpp for a list of supported keys
 /// and their names
@@ -98,6 +101,8 @@ struct dxp_keys
   static constexpr keys next = { "Down", "Right", "l", "j" };
   static constexpr keys prev = { "Left", "Up", "h", "k" };
   static constexpr keys slct = { "Return" };
+  static constexpr keys copy = { "c" };
+  static constexpr keys move = { "m", "v" };
   static constexpr keys exit = { "Escape" };
 };
 
