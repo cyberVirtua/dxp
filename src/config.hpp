@@ -55,6 +55,7 @@ const uint16_t dxp_padding = 3; ///< Padding around the screenshots
 color dxp_background = 0x444444;    ///< Window background
 color dxp_border_pres = 0xFFFFFF;   ///< Desktop preselection
 color dxp_border_nopres = 0x808080; ///< Desktop without preselection
+color dxp_border_copied = 0x00ABFF; ///< Currently copied desktop
 
 const uint16_t dxp_border_pres_width = 2; ///< Width of the preselection
 

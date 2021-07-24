@@ -370,10 +370,15 @@ window::draw_desktop_border (uint desktop_id, uint32_t color)
 
 /**
  * Draw a preselection border around current preselected desktop
+ * and copied border around every copied desktop
  */
 void
 window::draw_preselection ()
 {
+  for (uint copied_desktop : desktops_to_move_from)
+    {
+      draw_desktop_border (copied_desktop, dxp_border_copied);
+    }
   draw_desktop_border (this->pres, dxp_border_pres);
 };
 
@@ -454,6 +459,10 @@ window::handle_event (xcb_generic_event_t *event)
         if (move)
           {
             move_relative_desktops (c, root, desktops_to_move_from, pres);
+            for (uint copied_desktop : desktops_to_move_from)
+              {
+                draw_desktop_border (copied_desktop, dxp_border_nopres);
+              }
             desktops_to_move_from.clear ();
           }
         if (exit)
