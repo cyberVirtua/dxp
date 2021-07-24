@@ -21,6 +21,7 @@ window::window (const std::vector<dxp_socket_desktop> &desktops)
   this->xcb_id = xcb_generate_id (drawable::c);
   this->desktops = desktops;
   this->pres = 0; ///< id of the preselected desktop
+  this->desktops_to_move_from = {};
 
   // Construct recent_hover_desktop
   if (dxp_vertical_stacking)
@@ -424,6 +425,8 @@ window::handle_event (xcb_generic_event_t *event)
         bool next = dxp_keycodes::has (keycodes.next, kp->detail);
         bool prev = dxp_keycodes::has (keycodes.prev, kp->detail);
         bool slct = dxp_keycodes::has (keycodes.slct, kp->detail);
+        bool copy = dxp_keycodes::has (keycodes.copy, kp->detail);
+        bool move = dxp_keycodes::has (keycodes.move, kp->detail);
         bool exit = dxp_keycodes::has (keycodes.exit, kp->detail);
 
         clear_preselection ();
@@ -443,6 +446,15 @@ window::handle_event (xcb_generic_event_t *event)
             ewmh_change_desktop (c, root, pres);
             xcb_flush (c);
             return 0; // Kill dxp
+          }
+        if (copy)
+          {
+            desktops_to_move_from.push_back (pres);
+          }
+        if (move)
+          {
+            move_relative_desktops (c, root, desktops_to_move_from, pres);
+            desktops_to_move_from.clear ();
           }
         if (exit)
           {

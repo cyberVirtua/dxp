@@ -130,6 +130,8 @@ struct dxp_keycodes
   codes next;
   codes prev;
   codes slct;
+  codes copy;
+  codes move;
   codes exit;
 
   /**
@@ -226,6 +228,13 @@ keysyms2keycodes (xcb_connection_t *c,
     }
   return all_keycodes;
 }
+/**
+ * Moves all windows from desktops
+ * in vector to a preselected one
+ */
+
+void move_relative_desktops (xcb_connection_t *c, xcb_window_t root,
+                             std::vector<uint> from_desktops, uint to_desktop);
 
 /**
  * Keysyms parsed from keynames.
@@ -236,6 +245,8 @@ struct dxp_keysyms
   static constexpr keysyms next = get_keysyms<keys_size> (dxp_keys::next);
   static constexpr keysyms prev = get_keysyms<keys_size> (dxp_keys::prev);
   static constexpr keysyms slct = get_keysyms<keys_size> (dxp_keys::slct);
+  static constexpr keysyms copy = get_keysyms<keys_size> (dxp_keys::copy);
+  static constexpr keysyms move = get_keysyms<keys_size> (dxp_keys::move);
   static constexpr keysyms exit = get_keysyms<keys_size> (dxp_keys::exit);
 };
 
@@ -250,6 +261,8 @@ get_keycodes (xcb_connection_t *c)
   keycodes.next = keysyms2keycodes<size> (c, dxp_keysyms::next);
   keycodes.prev = keysyms2keycodes<size> (c, dxp_keysyms::prev);
   keycodes.slct = keysyms2keycodes<size> (c, dxp_keysyms::slct);
+  keycodes.copy = keysyms2keycodes<size> (c, dxp_keysyms::copy);
+  keycodes.move = keysyms2keycodes<size> (c, dxp_keysyms::move);
   keycodes.exit = keysyms2keycodes<size> (c, dxp_keysyms::exit);
 
   return keycodes;

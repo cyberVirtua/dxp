@@ -229,7 +229,8 @@ constexpr uint8_t k_event_data32_length = 5;
  * Generating and sending client message to the x server
  */
 void
-send_xcb_message (xcb_connection_t *c, xcb_window_t root, const char *msg,
+send_xcb_message (xcb_connection_t *c, xcb_window_t destination_window,
+                  const char *msg,
                   const std::array<uint32_t, k_event_data32_length> &data)
 {
   // Making a double pointer to error doesn't look right
@@ -247,15 +248,44 @@ send_xcb_message (xcb_connection_t *c, xcb_window_t root, const char *msg,
   event.response_type = XCB_CLIENT_MESSAGE;
   // EWMH asks to set format to 32
   // https://specifications.freedesktop.org/wm-spec/wm-spec-1.3.html
-  constexpr uint8_t k_net_current_desktop_format = 32;
-  event.format = k_net_current_desktop_format;
+  constexpr uint8_t emwh_specified_format = 32;
+  event.format = emwh_specified_format;
   event.sequence = 0;
-  event.window = root;
+  event.window = destination_window;
   event.type = atom_id;
   std::copy (data.begin (), data.end (), std::begin (event.data.data32));
-  xcb_send_event (c, 0, root, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT,
+  xcb_send_event (c, 0, destination_window,
+                  XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
+                      | XCB_EVENT_MASK_STRUCTURE_NOTIFY
+                      | XCB_EVENT_MASK_PROPERTY_CHANGE,
                   reinterpret_cast<const char *> (&event));
   // xcb_flush (c);
+}
+
+/**
+ * Moves all windows from desktops
+ * in vector to a preselected one
+ */
+
+void
+move_relative_desktops (xcb_connection_t *c, xcb_window_t root,
+                        std::vector<uint> from_desktops, uint to_desktop)
+{
+  auto all_windows = get_property_value (c, root, "_NET_CLIENT_LIST");
+  for (uint32_t window : all_windows)
+    {
+      for (uint desktop : from_desktops)
+        {
+          if (get_property_value (c, window, "_NET_WM_DESKTOP")[0] == desktop)
+            {
+              // 2 stands for source indicator
+              // Sources with 2 as indicator are
+              // perceived as direct user actions
+              send_xcb_message (c, window, "_NET_WM_DESKTOP",
+                                { to_desktop, 2 });
+            }
+        }
+    }
 }
 
 /**
